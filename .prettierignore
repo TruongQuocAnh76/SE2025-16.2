@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.nuxt/
+.output/
+dist/
+build/
+
+# Laravel specific
+backend/vendor/
+backend/storage/logs/
+backend/bootstrap/cache/
+
+# Database
+*.sqlite
+*.db
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Package manager lock files (optional, but can be formatted separately)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
