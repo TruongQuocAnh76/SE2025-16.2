@@ -1,4 +1,4 @@
-# Use PHP 8.2 with FPM
+# Development Dockerfile for Laravel
 FROM php:8.2-fpm-alpine
 
 # Install system dependencies
@@ -8,7 +8,8 @@ RUN apk add --no-cache \
     zip \
     unzip \
     git \
-    curl
+    curl \
+    bash
 
 # Install PHP extensions
 RUN docker-php-ext-install pdo pdo_pgsql zip bcmath
@@ -19,13 +20,13 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www
 
-# Copy composer files
+# Copy composer files first for better caching
 COPY composer.json composer.lock ./
 
-# Install PHP dependencies without running artisan commands
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+# Install PHP dependencies without scripts first
+RUN composer install --no-scripts --no-interaction
 
-# Copy application code
+# Copy the rest of the application
 COPY . .
 
 # Create necessary directories and set permissions
@@ -34,15 +35,16 @@ RUN mkdir -p bootstrap/cache storage/logs storage/framework/cache storage/framew
     && chmod -R 755 /var/www/storage \
     && chmod -R 755 /var/www/bootstrap/cache
 
-# Run post-install scripts now that all files are available
+# Run the post-install scripts
 RUN composer run-script post-autoload-dump
 
-# Set permissions
+# Set permissions again after running scripts
 RUN chown -R www-data:www-data /var/www \
-    && chmod -R 755 /var/www/storage
+    && chmod -R 755 /var/www/storage \
+    && chmod -R 755 /var/www/bootstrap/cache
 
 # Expose port
-EXPOSE 9000
+EXPOSE 8000
 
-# Start PHP-FPM
-CMD ["php-fpm"]
+# Start Laravel development server
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]

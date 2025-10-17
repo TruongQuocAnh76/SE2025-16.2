@@ -1,0 +1,11 @@
+vendor
+storage/logs
+bootstrap/cache
+.git
+.gitignore
+README.md
+.env*
+.DS_Store
+Thumbs.db
+*.log
+node_modules

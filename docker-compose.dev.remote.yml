@@ -1,0 +1,18 @@
+# Docker Compose override for using remote Neon DB in development
+# To use: docker-compose -f docker-compose.dev.yml -f docker-compose.dev.remote.yml up
+services:
+  backend:
+    environment:
+      - DB_CONNECTION=pgsql
+      - DB_HOST=ep-red-silence-adwf2gyh-pooler.c-2.us-east-1.aws.neon.tech
+      - DB_PORT=5432
+      - DB_DATABASE=neondb
+      - DB_USERNAME=neondb_owner
+      - DB_PASSWORD=npg_fZmgpv5eGr9J
+      - DB_SSLMODE=require
+    depends_on:
+      - redis
+      # Remove db dependency since we're using remote DB
+
+  # Remove local db service since we're using remote
+  # db: null

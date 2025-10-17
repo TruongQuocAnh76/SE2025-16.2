@@ -1,0 +1,24 @@
+# Development Dockerfile for Nuxt.js
+FROM node:20
+
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy package files
+COPY package*.json ./
+COPY pnpm-lock.yaml ./
+
+# Clean install without frozen lockfile to avoid native binding issues
+RUN rm -rf node_modules && pnpm install
+RUN pnpm add @oxc-parser/binding-linux-x64-gnu --ignore-scripts
+
+# Copy source code
+COPY . .
+
+# Expose port
+EXPOSE 3000
+
+# Start development server
+CMD ["pnpm", "dev"]
