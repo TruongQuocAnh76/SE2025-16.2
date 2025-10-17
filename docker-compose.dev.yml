@@ -1,16 +1,13 @@
-version: '3.8'
-
 services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
       - "3000:3000"
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    command: pnpm dev
     environment:
       - NODE_ENV=development
     depends_on:
@@ -19,14 +16,14 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/var/www
-    command: php artisan serve --host=0.0.0.0 --port=8000
     environment:
       - APP_ENV=local
+      - APP_DEBUG=true
       - DB_CONNECTION=pgsql
       - DB_HOST=db
       - DB_PORT=5432

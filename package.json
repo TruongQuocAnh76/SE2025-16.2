@@ -4,8 +4,10 @@
   "description": "Certchain - Online Learning Platform with Blockchain Certificates",
   "scripts": {
     "dev": "docker-compose -f docker-compose.dev.yml up --build",
+    "dev:remote": "docker-compose -f docker-compose.dev.yml -f docker-compose.dev.remote.yml up --build",
     "prod": "docker-compose up --build",
     "dev:down": "docker-compose -f docker-compose.dev.yml down",
+    "dev:remote:down": "docker-compose -f docker-compose.dev.yml -f docker-compose.dev.remote.yml down",
     "prod:down": "docker-compose down",
     "build:dev": "docker-compose -f docker-compose.dev.yml build",
     "build:prod": "docker-compose build",
