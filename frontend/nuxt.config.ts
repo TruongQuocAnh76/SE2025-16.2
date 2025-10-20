@@ -19,6 +19,9 @@ export default defineNuxtConfig({
       }
     }
   },
+  ignore: [
+  'node_modules/**'
+  ],
   extends: [
     './app/base',
     './app/domains/landing'

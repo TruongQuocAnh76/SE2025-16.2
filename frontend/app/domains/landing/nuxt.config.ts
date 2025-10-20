@@ -6,11 +6,12 @@ export default defineNuxtConfig({
   ],
   pages: true,
   components: [
-    { path: './components', pathPrefix: false },
-    { path: '../../base/components', pathPrefix: false }
+    { path: './app/domains/landing/components', pathPrefix: false },
+    { path: './app/base/components', pathPrefix: false }
   ],
   css: [
-    './assets/css/main.css'
+    './app/domains/landing/assets/css/main.css',
+    './app/base/assets/css/base.css'
   ],
   devServer: {
     host: '0.0.0.0',
