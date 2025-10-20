@@ -41,6 +41,7 @@ Route::middleware('auth:sanctum')->prefix('users')->group(function () {
     Route::delete('/{id}', [UserController::class, 'destroy']); // Admin only
     Route::get('/{id}/reviews', [UserController::class, 'getUserReviews']);
     Route::get('/{id}/certificates', [UserController::class, 'getUserCertificates']);
+    Route::get('/{id}/enrollments', [UserController::class, 'getUserEnrollments']);
 });
 
 /* ========================
@@ -66,6 +67,7 @@ Route::middleware('auth:sanctum')->prefix('learning')->group(function () {
     Route::post('/lesson/{lessonId}/complete', [LearningController::class, 'markLessonCompleted']);
     Route::post('/lesson/{lessonId}/time', [LearningController::class, 'updateTimeSpent']);
     Route::post('/course/{courseId}/complete', [LearningController::class, 'completeCourse']);
+    Route::get('/student/{studentId}/courses/time-spent', [LearningController::class, 'getCoursesTimeSpent']);
 });
 
 /* ========================

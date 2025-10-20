@@ -9,17 +9,6 @@ use Illuminate\Support\Facades\Auth;
  *     url="http://localhost:8000/api",
  *     description="Local development server"
  * )
- * @OA\Schema(
- *     schema="Quiz",
- *     type="object",
- *     @OA\Property(property="id", type="integer", example=1),
- *     @OA\Property(property="title", type="string", example="Basic Programming Quiz"),
- *     @OA\Property(property="description", type="string", example="Test your programming knowledge"),
- *     @OA\Property(property="course_id", type="integer", example=1),
- *     @OA\Property(property="duration", type="integer", example=30),
- *     @OA\Property(property="passing_score", type="number", format="float", example=70.0),
- *     @OA\Property(property="created_at", type="string", format="date-time")
- * )
  */
 class QuizController extends Controller {
     protected $quizService;
@@ -54,6 +43,53 @@ class QuizController extends Controller {
         return response()->json($this->quizService->getQuizzesByCourse($courseId));
     }
     
+    /**
+     * @OA\Post(
+     *     path="/quizzes/course/{courseId}",
+     *     summary="Create a new quiz",
+     *     description="Create a quiz for a specific course (teacher only)",
+     *     operationId="createQuiz",
+     *     tags={"Quizzes"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="courseId",
+     *         in="path",
+     *         required=true,
+     *         description="Course ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"title", "order_index"},
+     *             @OA\Property(property="title", type="string", example="Basic Programming Quiz"),
+     *             @OA\Property(property="description", type="string", nullable=true, example="Test your programming knowledge"),
+     *             @OA\Property(property="quiz_type", type="string", enum={"PRACTICE", "GRADED", "FINAL"}, default="PRACTICE"),
+     *             @OA\Property(property="passing_score", type="integer", default=70, example=70),
+     *             @OA\Property(property="time_limit", type="integer", nullable=true, example=30),
+     *             @OA\Property(property="max_attempts", type="integer", nullable=true, example=3),
+     *             @OA\Property(property="order_index", type="integer", example=1)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Quiz created successfully",
+     *         @OA\JsonContent(ref="#/components/schemas/Quiz")
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden - not course teacher"
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error"
+     *     )
+     * )
+     */
     public function store(Request $request, $courseId) {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -70,10 +106,91 @@ class QuizController extends Controller {
         return response()->json($quiz, 201);
     }
     
+    /**
+     * @OA\Get(
+     *     path="/quizzes/{quizId}",
+     *     summary="Get quiz details",
+     *     description="Get detailed information about a specific quiz including questions",
+     *     operationId="getQuiz",
+     *     tags={"Quizzes"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="quizId",
+     *         in="path",
+     *         required=true,
+     *         description="Quiz ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Quiz details with questions",
+     *         @OA\JsonContent(ref="#/components/schemas/Quiz")
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Quiz not found"
+     *     )
+     * )
+     */
     public function show($quizId) {
         return response()->json($this->quizService->getQuizById($quizId));
     }
     
+    /**
+     * @OA\Put(
+     *     path="/quizzes/{quizId}",
+     *     summary="Update quiz",
+     *     description="Update an existing quiz (teacher only)",
+     *     operationId="updateQuiz",
+     *     tags={"Quizzes"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="quizId",
+     *         in="path",
+     *         required=true,
+     *         description="Quiz ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="title", type="string", example="Updated Quiz Title"),
+     *             @OA\Property(property="description", type="string", nullable=true),
+     *             @OA\Property(property="quiz_type", type="string", enum={"PRACTICE", "GRADED", "FINAL"}),
+     *             @OA\Property(property="passing_score", type="integer", example=75),
+     *             @OA\Property(property="time_limit", type="integer", nullable=true),
+     *             @OA\Property(property="max_attempts", type="integer", nullable=true),
+     *             @OA\Property(property="order_index", type="integer"),
+     *             @OA\Property(property="is_active", type="boolean")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Quiz updated successfully",
+     *         @OA\JsonContent(ref="#/components/schemas/Quiz")
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden - not quiz owner"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Quiz not found"
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error"
+     *     )
+     * )
+     */
     public function update(Request $request, $quizId) {
         $validated = $request->validate([
             'title' => 'sometimes|string|max:255',
@@ -90,17 +207,143 @@ class QuizController extends Controller {
         return response()->json($quiz);
     }
     
+    /**
+     * @OA\Delete(
+     *     path="/quizzes/{quizId}",
+     *     summary="Delete quiz",
+     *     description="Delete a quiz (teacher only)",
+     *     operationId="deleteQuiz",
+     *     tags={"Quizzes"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="quizId",
+     *         in="path",
+     *         required=true,
+     *         description="Quiz ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Quiz deleted successfully",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden - not quiz owner"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Quiz not found"
+     *     )
+     * )
+     */
     public function destroy($quizId) {
         $this->quizService->deleteQuiz($quizId);
         return response()->json(['message' => 'Quiz deleted successfully']);
     }
     
+    /**
+     * @OA\Post(
+     *     path="/quizzes/{quizId}/start",
+     *     summary="Start quiz attempt",
+     *     description="Start a new attempt for a quiz",
+     *     operationId="startQuizAttempt",
+     *     tags={"Quizzes"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="quizId",
+     *         in="path",
+     *         required=true,
+     *         description="Quiz ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Quiz attempt started",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="attempt", ref="#/components/schemas/QuizAttempt"),
+     *             @OA\Property(property="questions", type="array", @OA\Items(ref="#/components/schemas/Question"))
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Maximum attempts reached or not enrolled"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Quiz not found"
+     *     )
+     * )
+     */
     public function startAttempt($quizId) {
         $attempt = $this->attemptService->startAttempt(Auth::id(), $quizId);
         $quiz = $this->quizService->getQuizById($quizId);
         return response()->json(['attempt' => $attempt, 'questions' => $quiz->questions]);
     }
     
+    /**
+     * @OA\Post(
+     *     path="/quizzes/attempt/{attemptId}/submit",
+     *     summary="Submit quiz attempt",
+     *     description="Submit answers for a quiz attempt",
+     *     operationId="submitQuizAttempt",
+     *     tags={"Quizzes"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="attemptId",
+     *         in="path",
+     *         required=true,
+     *         description="Attempt ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"answers"},
+     *             @OA\Property(property="answers", type="array", @OA\Items(type="string"), description="Array of answers corresponding to questions"),
+     *             @OA\Property(property="time_spent", type="integer", nullable=true, description="Time spent in seconds")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Quiz submitted successfully",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="score", type="number", format="decimal"),
+     *             @OA\Property(property="passed", type="boolean"),
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Not the attempt owner"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Attempt not found"
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error"
+     *     )
+     * )
+     */
     public function submitAttempt(Request $request, $attemptId) {
         $validated = $request->validate(['answers' => 'required|array', 'time_spent' => 'nullable|integer']);
         $attempt = $this->attemptService->submitAttemptWithDetails($attemptId, $validated['answers']);
@@ -111,6 +354,39 @@ class QuizController extends Controller {
         ]);
     }
     
+    /**
+     * @OA\Get(
+     *     path="/quizzes/{quizId}/attempts",
+     *     summary="Get quiz attempt history",
+     *     description="Get all attempts made by the current user for a specific quiz",
+     *     operationId="getQuizAttemptsHistory",
+     *     tags={"Quizzes"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="quizId",
+     *         in="path",
+     *         required=true,
+     *         description="Quiz ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of quiz attempts",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(ref="#/components/schemas/QuizAttempt")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Quiz not found"
+     *     )
+     * )
+     */
     public function attemptsHistory($quizId) {
         return response()->json($this->attemptService->getAttemptHistory(Auth::id(), $quizId));
     }

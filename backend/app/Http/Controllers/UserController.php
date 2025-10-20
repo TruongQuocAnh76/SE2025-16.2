@@ -12,32 +12,9 @@ use App\Models\Review;
 use App\Models\Certificate;
 
 /**
- * @OA\Info(
- *     title="Learning Platform API",
- *     version="1.0.0",
- *     description="API for Learning Platform"
- * )
  * @OA\Server(
  *     url="http://localhost:8000/api",
  *     description="Local development server"
- * )
- * @OA\SecurityScheme(
- *     securityScheme="sanctum",
- *     type="apiKey",
- *     name="Authorization",
- *     in="header",
- *     description="Bearer token for authentication"
- * )
- * @OA\Schema(
- *     schema="User",
- *     type="object",
- *     @OA\Property(property="id", type="integer", example=1),
- *     @OA\Property(property="first_name", type="string", example="John"),
- *     @OA\Property(property="last_name", type="string", example="Doe"),
- *     @OA\Property(property="email", type="string", format="email", example="john.doe@example.com"),
- *     @OA\Property(property="role", type="string", enum={"student", "instructor", "admin"}, example="student"),
- *     @OA\Property(property="is_active", type="boolean", example=true),
- *     @OA\Property(property="created_at", type="string", format="date-time")
  * )
  */
 class UserController extends Controller
@@ -82,7 +59,7 @@ class UserController extends Controller
      *         name="id",
      *         in="path",
      *         required=true,
-     *         @OA\Schema(type="integer")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -110,7 +87,7 @@ class UserController extends Controller
      *         name="id",
      *         in="path",
      *         required=true,
-     *         @OA\Schema(type="integer")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\RequestBody(
      *         required=true,
@@ -175,7 +152,7 @@ class UserController extends Controller
      *         name="id",
      *         in="path",
      *         required=true,
-     *         @OA\Schema(type="integer")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -207,7 +184,7 @@ class UserController extends Controller
      *         name="id",
      *         in="path",
      *         required=true,
-     *         @OA\Schema(type="integer")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -237,7 +214,7 @@ class UserController extends Controller
      *         name="id",
      *         in="path",
      *         required=true,
-     *         @OA\Schema(type="integer")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -255,6 +232,54 @@ class UserController extends Controller
             ->get();
 
         return response()->json($certs);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/users/{id}/enrollments",
+     *     summary="Get user enrollments",
+     *     tags={"Users"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of user enrollments",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(
+     *                 type="object",
+     *                 @OA\Property(property="id", type="string", format="uuid"),
+     *                 @OA\Property(property="student_id", type="string", format="uuid"),
+     *                 @OA\Property(property="course_id", type="string", format="uuid"),
+     *                 @OA\Property(property="status", type="string", enum={"ACTIVE", "COMPLETED", "DROPPED"}),
+     *                 @OA\Property(property="progress", type="number", format="decimal"),
+     *                 @OA\Property(property="completed_at", type="string", format="date-time", nullable=true),
+     *                 @OA\Property(property="enrolled_at", type="string", format="date-time"),
+     *                 @OA\Property(property="course", ref="#/components/schemas/Course")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Forbidden"),
+     *     @OA\Response(response=404, description="User not found")
+     * )
+     */
+    public function getUserEnrollments($id)
+    {
+        $user = User::findOrFail($id);
+        $this->authorize('viewEnrollments', $user);
+
+        $enrollments = Enrollment::where('student_id', $id)
+            ->with(['course:id,title,description,price,duration,level,category,status,teacher_id',
+                    'course.teacher:id,first_name,last_name'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json($enrollments);
     }
 
     /**
