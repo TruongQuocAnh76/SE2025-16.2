@@ -13,10 +13,44 @@ use App\Models\Progress;
 use App\Models\Module;
 use App\Models\Course;
 
+/**
+ * @OA\Server(
+ *     url="http://localhost:8000/api",
+ *     description="Local development server"
+ * )
+ * @OA\Schema(
+ *     schema="Lesson",
+ *     type="object",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="title", type="string", example="Introduction to Variables"),
+ *     @OA\Property(property="content", type="string", example="Lesson content here"),
+ *     @OA\Property(property="module_id", type="integer", example=1),
+ *     @OA\Property(property="order", type="integer", example=1),
+ *     @OA\Property(property="duration", type="integer", example=30)
+ * )
+ */
 class LearningController extends Controller
 {
     /**
-     * 📘 Lấy danh sách bài học (và tiến độ) trong khóa học của học viên
+     * @OA\Get(
+     *     path="/courses/{courseId}/progress",
+     *     summary="Get course progress for student",
+     *     tags={"Learning"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="courseId",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Course progress with lessons",
+     *         @OA\JsonContent(type="object")
+     *     ),
+     *     @OA\Response(response=403, description="Not enrolled in course"),
+     *     @OA\Response(response=404, description="Course not found")
+     * )
      */
     public function getCourseProgress($courseId)
     {

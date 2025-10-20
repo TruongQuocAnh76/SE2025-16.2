@@ -11,8 +11,57 @@ use App\Models\User;
 use App\Models\Review;
 use App\Models\Certificate;
 
+/**
+ * @OA\Info(
+ *     title="Learning Platform API",
+ *     version="1.0.0",
+ *     description="API for Learning Platform"
+ * )
+ * @OA\Server(
+ *     url="http://localhost:8000/api",
+ *     description="Local development server"
+ * )
+ * @OA\SecurityScheme(
+ *     securityScheme="sanctum",
+ *     type="apiKey",
+ *     name="Authorization",
+ *     in="header",
+ *     description="Bearer token for authentication"
+ * )
+ * @OA\Schema(
+ *     schema="User",
+ *     type="object",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="first_name", type="string", example="John"),
+ *     @OA\Property(property="last_name", type="string", example="Doe"),
+ *     @OA\Property(property="email", type="string", format="email", example="john.doe@example.com"),
+ *     @OA\Property(property="role", type="string", enum={"student", "instructor", "admin"}, example="student"),
+ *     @OA\Property(property="is_active", type="boolean", example=true),
+ *     @OA\Property(property="created_at", type="string", format="date-time")
+ * )
+ */
 class UserController extends Controller
 {
+    /**
+     * @OA\Get(
+     *     path="/users",
+     *     summary="Get all users",
+     *     tags={"Users"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of users",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/User")),
+     *             @OA\Property(property="current_page", type="integer"),
+     *             @OA\Property(property="last_page", type="integer"),
+     *             @OA\Property(property="per_page", type="integer"),
+     *             @OA\Property(property="total", type="integer")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthorized")
+     * )
+     */
     public function index()
     {
         $this->authorize('viewAny', User::class);
@@ -23,6 +72,26 @@ class UserController extends Controller
         return response()->json($users);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/users/{id}",
+     *     summary="Get user by ID",
+     *     tags={"Users"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="User details",
+     *         @OA\JsonContent(ref="#/components/schemas/User")
+     *     ),
+     *     @OA\Response(response=404, description="User not found")
+     * )
+     */
     public function show($id)
     {
         $user = User::withCount(['reviews', 'certificates'])
@@ -31,6 +100,40 @@ class UserController extends Controller
         return response()->json($user);
     }
 
+    /**
+     * @OA\Put(
+     *     path="/users/{id}",
+     *     summary="Update user",
+     *     tags={"Users"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="first_name", type="string", example="John"),
+     *             @OA\Property(property="last_name", type="string", example="Doe"),
+     *             @OA\Property(property="bio", type="string", example="Bio description"),
+     *             @OA\Property(property="avatar", type="string", format="url", example="https://example.com/avatar.jpg"),
+     *             @OA\Property(property="password", type="string", format="password", example="newpassword")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="User updated successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="user", ref="#/components/schemas/User")
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Unauthorized"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
     public function update(Request $request, $id)
     {
         $user = User::findOrFail($id);
@@ -62,6 +165,29 @@ class UserController extends Controller
         return response()->json(['message' => 'Profile updated successfully', 'user' => $user]);
     }
 
+    /**
+     * @OA\Delete(
+     *     path="/users/{id}",
+     *     summary="Delete user",
+     *     tags={"Users"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="User deleted successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Unauthorized"),
+     *     @OA\Response(response=404, description="User not found")
+     * )
+     */
     public function destroy($id)
     {
         $this->authorize('delete', User::class);
@@ -71,6 +197,26 @@ class UserController extends Controller
 
         return response()->json(['message' => 'User deleted successfully']);
     }
+    /**
+     * @OA\Get(
+     *     path="/users/{id}/reviews",
+     *     summary="Get user reviews",
+     *     tags={"Users"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of user reviews",
+     *         @OA\JsonContent(type="array", @OA\Items(type="object"))
+     *     ),
+     *     @OA\Response(response=404, description="User not found")
+     * )
+     */
     public function getUserReviews($id)
     {
         $reviews = Review::where('student_id', $id)
@@ -81,6 +227,26 @@ class UserController extends Controller
         return response()->json($reviews);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/users/{id}/certificates",
+     *     summary="Get user certificates",
+     *     tags={"Users"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of user certificates",
+     *         @OA\JsonContent(type="array", @OA\Items(type="object"))
+     *     ),
+     *     @OA\Response(response=404, description="User not found")
+     * )
+     */
     public function getUserCertificates($id)
     {
         $certs = Certificate::where('student_id', $id)
@@ -91,6 +257,25 @@ class UserController extends Controller
         return response()->json($certs);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/users/filter",
+     *     summary="Filter users by role",
+     *     tags={"Users"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="role",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"student", "instructor", "admin"}, default="student")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Filtered list of users",
+     *         @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/User"))
+     *     )
+     * )
+     */
     public function filterByRole(Request $request)
     {
         $role = $request->query('role', 'STUDENT');

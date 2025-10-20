@@ -4,6 +4,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * @OA\Server(
+ *     url="http://localhost:8000/api",
+ *     description="Local development server"
+ * )
+ */
 class SystemController extends Controller {
     protected $logService;
     

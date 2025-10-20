@@ -13,6 +13,23 @@ use App\Models\QuizAttempt;
 use App\Models\BlockchainTransaction;
 use PDF; // nếu bạn dùng barryvdh/laravel-dompdf để tạo PDF
 
+/**
+ * @OA\Server(
+ *     url="http://localhost:8000/api",
+ *     description="Local development server"
+ * )
+ * @OA\Schema(
+ *     schema="Certificate",
+ *     type="object",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="student_id", type="integer", example=1),
+ *     @OA\Property(property="course_id", type="integer", example=1),
+ *     @OA\Property(property="certificate_number", type="string", example="CERT-001"),
+ *     @OA\Property(property="issued_at", type="string", format="date-time"),
+ *     @OA\Property(property="expires_at", type="string", format="date-time", nullable=true),
+ *     @OA\Property(property="status", type="string", enum={"active", "expired", "revoked"}, example="active")
+ * )
+ */
 class CertificateController extends Controller
 {
     /**

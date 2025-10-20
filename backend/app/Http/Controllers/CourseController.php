@@ -14,10 +14,50 @@ use App\Models\Enrollment;
 use App\Models\Review;
 use App\Models\User;
 
+/**
+ * @OA\Server(
+ *     url="http://localhost:8000/api",
+ *     description="Local development server"
+ * )
+ * @OA\Schema(
+ *     schema="Course",
+ *     type="object",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="title", type="string", example="Introduction to Programming"),
+ *     @OA\Property(property="description", type="string", example="Learn the basics of programming"),
+ *     @OA\Property(property="price", type="number", format="float", example=99.99),
+ *     @OA\Property(property="level", type="string", enum={"beginner", "intermediate", "advanced"}, example="beginner"),
+ *     @OA\Property(property="category", type="string", example="Programming"),
+ *     @OA\Property(property="instructor_id", type="integer", example=1),
+ *     @OA\Property(property="created_at", type="string", format="date-time")
+ * )
+ */
 class CourseController extends Controller
 {
     /**
-     * 📚 Danh sách tất cả khoá học (có filter)
+     * @OA\Get(
+     *     path="/courses",
+     *     summary="Get all courses",
+     *     tags={"Courses"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="status",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="level",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"beginner", "intermediate", "advanced"})
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of courses",
+     *         @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/Course"))
+     *     )
+     * )
      */
     public function index(Request $request)
     {
@@ -43,7 +83,32 @@ class CourseController extends Controller
     }
 
     /**
-     * ➕ Tạo mới khoá học (TEACHER hoặc ADMIN)
+     * @OA\Post(
+     *     path="/courses",
+     *     summary="Create a new course",
+     *     tags={"Courses"},
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"title","description"},
+     *             @OA\Property(property="title", type="string", example="Introduction to Programming"),
+     *             @OA\Property(property="description", type="string", example="Learn the basics of programming"),
+     *             @OA\Property(property="thumbnail", type="string", format="url", example="https://example.com/thumbnail.jpg"),
+     *             @OA\Property(property="level", type="string", enum={"BEGINNER","INTERMEDIATE","ADVANCED","EXPERT"}, example="BEGINNER"),
+     *             @OA\Property(property="price", type="number", format="float", example=99.99),
+     *             @OA\Property(property="duration", type="integer", example=30),
+     *             @OA\Property(property="passing_score", type="integer", example=70)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Course created successfully",
+     *         @OA\JsonContent(ref="#/components/schemas/Course")
+     *     ),
+     *     @OA\Response(response=403, description="Unauthorized"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
      */
     public function store(Request $request)
     {
@@ -75,7 +140,24 @@ class CourseController extends Controller
     }
 
     /**
-     * 🔍 Xem chi tiết khoá học + module + lesson
+     * @OA\Get(
+     *     path="/courses/{id}",
+     *     summary="Get course details",
+     *     tags={"Courses"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Course details",
+     *         @OA\JsonContent(ref="#/components/schemas/Course")
+     *     ),
+     *     @OA\Response(response=404, description="Course not found")
+     * )
      */
     public function show($id)
     {
@@ -89,7 +171,38 @@ class CourseController extends Controller
     }
 
     /**
-     * ✏️ Cập nhật thông tin khoá học
+     * @OA\Put(
+     *     path="/courses/{id}",
+     *     summary="Update course",
+     *     tags={"Courses"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="title", type="string", example="Updated Course Title"),
+     *             @OA\Property(property="description", type="string", example="Updated description"),
+     *             @OA\Property(property="thumbnail", type="string", format="url"),
+     *             @OA\Property(property="level", type="string", enum={"BEGINNER","INTERMEDIATE","ADVANCED","EXPERT"}),
+     *             @OA\Property(property="price", type="number", format="float"),
+     *             @OA\Property(property="duration", type="integer"),
+     *             @OA\Property(property="passing_score", type="integer"),
+     *             @OA\Property(property="status", type="string", enum={"DRAFT","PUBLISHED","ARCHIVED"})
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Course updated successfully",
+     *         @OA\JsonContent(ref="#/components/schemas/Course")
+     *     ),
+     *     @OA\Response(response=403, description="Unauthorized"),
+     *     @OA\Response(response=404, description="Course not found")
+     * )
      */
     public function update(Request $request, $id)
     {
@@ -118,7 +231,27 @@ class CourseController extends Controller
     }
 
     /**
-     * ❌ Xoá khoá học
+     * @OA\Delete(
+     *     path="/courses/{id}",
+     *     summary="Delete course",
+     *     tags={"Courses"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Course deleted successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Unauthorized"),
+     *     @OA\Response(response=404, description="Course not found")
+     * )
      */
     public function destroy($id)
     {

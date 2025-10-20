@@ -9,10 +9,39 @@ use Illuminate\Support\Str;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * @OA\Server(
+ *     url="http://localhost:8000/api",
+ *     description="Local development server"
+ * )
+ */
 class AuthController extends Controller
 {
     /**
-     * 🧩 Đăng ký tài khoản mới
+     * @OA\Post(
+     *     path="/auth/register",
+     *     summary="Register a new user",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"email","password","first_name","last_name"},
+     *             @OA\Property(property="email", type="string", format="email", example="user@example.com"),
+     *             @OA\Property(property="password", type="string", format="password", minLength=6, example="password123"),
+     *             @OA\Property(property="first_name", type="string", example="John"),
+     *             @OA\Property(property="last_name", type="string", example="Doe")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="User registered successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="user", ref="#/components/schemas/User")
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
      */
     public function register(Request $request)
     {
@@ -40,7 +69,36 @@ class AuthController extends Controller
     }
 
     /**
-     * 🔑 Đăng nhập
+     * @OA\Post(
+     *     path="/auth/login",
+     *     summary="Login user",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"email","password"},
+     *             @OA\Property(property="email", type="string", format="email", example="user@example.com"),
+     *             @OA\Property(property="password", type="string", format="password", example="password123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Login successful",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="user", ref="#/components/schemas/User"),
+     *             @OA\Property(property="token", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Invalid credentials",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Invalid email or password."),
+     *             @OA\Property(property="error", type="string", example="authentication_failed")
+     *         )
+     *     )
+     * )
      */
     public function login(Request $request)
     {
@@ -52,9 +110,10 @@ class AuthController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['Invalid email or password.'],
-            ]);
+            return response()->json([
+                'message' => 'Invalid email or password.',
+                'error' => 'authentication_failed'
+            ], 401);
         }
 
         // Tạo token (Laravel Sanctum)
@@ -69,7 +128,20 @@ class AuthController extends Controller
     }
 
     /**
-     * 🚪 Đăng xuất (xóa token hiện tại)
+     * @OA\Post(
+     *     path="/auth/logout",
+     *     summary="Logout user",
+     *     tags={"Authentication"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Logged out successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthorized")
+     * )
      */
     public function logout(Request $request)
     {
@@ -81,7 +153,18 @@ class AuthController extends Controller
     }
 
     /**
-     * 👤 Lấy thông tin user hiện tại
+     * @OA\Get(
+     *     path="/auth/me",
+     *     summary="Get current user info",
+     *     tags={"Authentication"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Current user information",
+     *         @OA\JsonContent(ref="#/components/schemas/User")
+     *     ),
+     *     @OA\Response(response=401, description="Unauthorized")
+     * )
      */
     public function me(Request $request)
     {
