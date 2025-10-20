@@ -12,6 +12,7 @@
     "build:dev": "docker-compose -f docker-compose.dev.yml build",
     "build:prod": "docker-compose build",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "clean": "docker compose down --rmi local -v --remove-orphans && docker system prune -f"
   }
 }
