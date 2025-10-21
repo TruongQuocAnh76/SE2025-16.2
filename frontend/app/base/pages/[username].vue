@@ -70,39 +70,105 @@
         </MetricCard>
       </div>
 
-      <!-- Continue Learning Section -->
-      <div class="mb-8">
-        <h2 class="text-h3 text-neutral-900 mb-6">Continue Learning</h2>
-        <div v-if="loading.continueLearning" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div v-for="n in 3" :key="n" class="bg-neutral-0 border border-neutral-50 rounded-lg p-6 shadow-sm animate-pulse">
-            <div class="flex items-start space-x-4">
-              <div class="w-20 h-20 bg-neutral-50 rounded-lg"></div>
-              <div class="flex-1">
-                <div class="h-4 bg-neutral-50 rounded mb-2"></div>
-                <div class="h-3 bg-neutral-50 rounded mb-4"></div>
-                <div class="h-2 bg-neutral-50 rounded-full mb-4"></div>
+      <!-- Main Dashboard Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <!-- Left Section (3/4) -->
+        <div class="lg:col-span-3 space-y-8 bg-neutral-0 border border-neutral-50 rounded-lg shadow-sm p-6">
+          <!-- Continue Learning Section -->
+          <div>
+            <h2 class="text-h3 text-neutral-900 mb-6">Continue Learning</h2>
+            <div v-if="loading.continueLearning" class="flex flex-col gap-6">
+              <div v-for="n in 3" :key="n" class="bg-neutral-0 border border-neutral-50 rounded-lg p-6 shadow-sm animate-pulse">
+                <div class="flex items-start space-x-4">
+                  <div class="w-20 h-20 bg-neutral-50 rounded-lg"></div>
+                  <div class="flex-1">
+                    <div class="h-4 bg-neutral-50 rounded mb-2"></div>
+                    <div class="h-3 bg-neutral-50 rounded mb-4"></div>
+                    <div class="h-2 bg-neutral-50 rounded-full mb-4"></div>
+                  </div>
+                </div>
+                <div class="mt-6 h-10 bg-neutral-50 rounded-lg"></div>
               </div>
             </div>
-            <div class="mt-6 h-10 bg-neutral-50 rounded-lg"></div>
+            <div v-else-if="continueLearningCourses.length > 0" class="flex flex-col gap-6">
+              <CourseInfoCard
+                v-for="course in continueLearningCourses"
+                :key="course.courseId"
+                :thumbnail="course.thumbnail"
+                :name="course.name"
+                :last-accessed="course.lastAccessed"
+                :progress="course.progress"
+                :course-id="course.courseId"
+              />
+            </div>
+            <div v-else class="text-center py-12">
+              <p class="text-body text-neutral-600">No courses to continue learning. Start a new course to see it here!</p>
+            </div>
+          </div>
+
+          <!-- Recommended for You Section -->
+          <div>
+            <h2 class="text-h3 text-neutral-900 mb-6">Recommended for You</h2>
+            <div class="flex flex-col gap-4">
+              <RecommendedCourseCard
+                v-for="course in recommendedCourses"
+                :key="course.name"
+                :thumbnail="course.thumbnail"
+                :name="course.name"
+                :author="course.author"
+                :rating="course.rating"
+                :students-count="course.studentsCount"
+              />
+            </div>
           </div>
         </div>
-        <div v-else-if="continueLearningCourses.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <CourseInfoCard
-            v-for="course in continueLearningCourses"
-            :key="course.courseId"
-            :thumbnail="course.thumbnail"
-            :name="course.name"
-            :last-accessed="course.lastAccessed"
-            :progress="course.progress"
-            :course-id="course.courseId"
-          />
-        </div>
-        <div v-else class="text-center py-12">
-          <p class="text-body text-neutral-600">No courses to continue learning. Start a new course to see it here!</p>
+
+        <!-- Right Section (1/4) -->
+        <div class="lg:col-span-1 space-y-6 ">
+          <!-- Recent Certificates Section -->
+          <div class="">
+            <h3 class="text-h4 text-neutral-900 mb-4">Recent Certificates</h3>
+            <div v-if="recentCertificates.length > 0" class="flex flex-col gap-4">
+              <CertificateCard
+                v-for="certificate in recentCertificates"
+                :key="certificate.courseName"
+                :course-name="certificate.courseName"
+                :date-issued="certificate.dateIssued"
+              />
+            </div>
+            <div v-else class="bg-neutral-0 border border-neutral-50 rounded-lg p-4 shadow-sm">
+              <p class="text-body-sm text-neutral-600">Your recent certificates will appear here...</p>
+            </div>
+          </div>
+
+          <!-- Quick Action Section -->
+          <div class="bg-neutral-0 border border-neutral-50 rounded-lg shadow-sm p-6">
+            <h3 class="text-h4 text-neutral-900 mb-4">Quick Action</h3>
+            <div class="flex flex-col gap-3">
+              <NuxtLink
+                to="/courses"
+                class="inline-flex items-center justify-center px-4 py-3 bg-neutral-900 text-neutral-0 text-body font-medium rounded-lg hover:bg-primary-600 transition-colors duration-200"
+              >
+                Browse Courses
+              </NuxtLink>
+              <button class="inline-flex items-center justify-center px-4 py-3 bg-neutral-900 text-neutral-0 text-body font-medium rounded-lg hover:bg-neutral-700 transition-colors duration-200">
+                Verify Certificate
+              </button>
+              <button class="inline-flex items-center justify-center px-4 py-3 bg-neutral-900 text-neutral-0 text-body font-medium rounded-lg hover:bg-neutral-700 transition-colors duration-200">
+                Invite Friends
+              </button>
+            </div>
+          </div>
+
+          <!-- Minor Section 2 (Placeholder) -->
+          <div>
+            <h3 class="text-h4 text-neutral-900 mb-4">Learning Streak</h3>
+            <div class="bg-neutral-0 border border-neutral-50 rounded-lg p-4 shadow-sm">
+              <p class="text-body-sm text-neutral-600">Your learning streak will appear here...</p>
+            </div>
+          </div>
         </div>
       </div>
-
-      <!-- Additional Content -->
 
     </div>
   </div>
@@ -111,6 +177,8 @@
 <script setup lang="ts">
 import MetricCard from '../components/ui/MetricCard.vue'
 import CourseInfoCard from '../components/ui/CourseInfoCard.vue'
+import CertificateCard from '../components/ui/CertificateCard.vue'
+import RecommendedCourseCard from '../components/ui/RecommendedCourseCard.vue'
 
 const route = useRoute()
 const username = route.params.username as string
@@ -129,6 +197,19 @@ const continueLearningCourses = ref<Array<{
   thumbnail: string
   lastAccessed: string
   progress: number
+}>>([])
+
+const recentCertificates = ref<Array<{
+  courseName: string
+  dateIssued: string
+}>>([])
+
+const recommendedCourses = ref<Array<{
+  thumbnail: string
+  name: string
+  author: string
+  rating: number
+  studentsCount: number
 }>>([])
 
 const loading = reactive({
@@ -189,6 +270,45 @@ onMounted(async () => {
     ]
     loading.continueLearning = false
   }, 1300)
+
+  setTimeout(() => {
+    recentCertificates.value = [
+      {
+        courseName: 'HTML & CSS Fundamentals',
+        dateIssued: '2025-10-15'
+      },
+      {
+        courseName: 'JavaScript Basics',
+        dateIssued: '2025-10-10'
+      }
+    ]
+  }, 1400)
+
+  setTimeout(() => {
+    recommendedCourses.value = [
+      {
+        thumbnail: '/placeholder-course.jpg',
+        name: 'Advanced React Patterns',
+        author: 'Sarah Johnson',
+        rating: 4.8,
+        studentsCount: 1250
+      },
+      {
+        thumbnail: '/placeholder-course.jpg',
+        name: 'Node.js Backend Development',
+        author: 'Mike Chen',
+        rating: 4.6,
+        studentsCount: 890
+      },
+      {
+        thumbnail: '/placeholder-course.jpg',
+        name: 'UI/UX Design Principles',
+        author: 'Emma Davis',
+        rating: 4.9,
+        studentsCount: 2100
+      }
+    ]
+  }, 1500)
 })
 
 // Set page title
