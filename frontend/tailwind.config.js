@@ -8,7 +8,9 @@ export default {
     "./app.vue",
     "./error.vue",
     "./app/components/**/*.{vue,ts}",
-    "./app/domains/**/*.vue",
+    "./app/domains/*/components/**/*.vue",
+    "./app/domains/*/pages/**/*.vue",
+    "./app/domains/*/layouts/**/*.vue",
     "./app/base/**/*.{vue,ts}"
   ],
   theme: {
