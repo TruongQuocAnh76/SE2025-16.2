@@ -408,4 +408,134 @@ class LearningController extends Controller
 
         return response()->json($coursesTimeSpent);
     }
+
+    /**
+     * @OA\Get(
+     *     path="/learning/student/{studentId}/courses/progress",
+     *     summary="Get progress for all enrolled courses",
+     *     tags={"Learning"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="studentId",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="string", format="uuid"),
+     *         description="Student ID"
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Courses progress data",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(
+     *                 type="object",
+     *                 @OA\Property(property="course_id", type="string", format="uuid"),
+     *                 @OA\Property(property="course_title", type="string"),
+     *                 @OA\Property(property="enrollment_status", type="string"),
+     *                 @OA\Property(property="enrolled_at", type="string", format="date-time"),
+     *                 @OA\Property(property="progress", type="integer", description="Progress percentage"),
+     *                 @OA\Property(property="total_lessons", type="integer"),
+     *                 @OA\Property(property="completed_lessons", type="integer"),
+     *                 @OA\Property(property="total_time_spent", type="integer", description="Time spent in seconds")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Forbidden"),
+     *     @OA\Response(response=404, description="Student not found")
+     * )
+     */
+    public function getCoursesProgress($studentId)
+    {
+        $currentUser = Auth::user();
+
+        // Check if user can view this student's data
+        if ($currentUser->id !== $studentId && !in_array($currentUser->role, ['ADMIN', 'TEACHER'])) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        // Verify student exists
+        $student = \App\Models\User::findOrFail($studentId);
+
+        $coursesProgress = DB::table('enrollments')
+            ->join('courses', 'enrollments.course_id', '=', 'courses.id')
+            ->leftJoin('modules', 'courses.id', '=', 'modules.course_id')
+            ->leftJoin('lessons', 'modules.id', '=', 'lessons.module_id')
+            ->leftJoin('progress', function($join) use ($studentId) {
+                $join->on('progress.lesson_id', '=', 'lessons.id')
+                     ->where('progress.student_id', '=', $studentId);
+            })
+            ->where('enrollments.student_id', $studentId)
+            ->select(
+                'courses.id as course_id',
+                'courses.title as course_title',
+                'enrollments.status as enrollment_status',
+                'enrollments.progress',
+                'enrollments.enrolled_at',
+                DB::raw('COUNT(DISTINCT lessons.id) as total_lessons'),
+                DB::raw('COUNT(DISTINCT CASE WHEN progress.is_completed = 1 THEN progress.lesson_id END) as completed_lessons'),
+                DB::raw('COALESCE(SUM(progress.time_spent), 0) as total_time_spent')
+            )
+            ->groupBy('courses.id', 'courses.title', 'enrollments.status', 'enrollments.progress', 'enrollments.enrolled_at')
+            ->orderByDesc('enrollments.enrolled_at')
+            ->get();
+
+        return response()->json($coursesProgress);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/learning/courses/progress",
+     *     summary="Get progress for all enrolled courses (current user)",
+     *     tags={"Learning"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Courses progress data",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(
+     *                 type="object",
+     *                 @OA\Property(property="course_id", type="string", format="uuid"),
+     *                 @OA\Property(property="course_title", type="string"),
+     *                 @OA\Property(property="enrollment_status", type="string"),
+     *                 @OA\Property(property="enrolled_at", type="string", format="date-time"),
+     *                 @OA\Property(property="progress", type="integer", description="Progress percentage"),
+     *                 @OA\Property(property="total_lessons", type="integer"),
+     *                 @OA\Property(property="completed_lessons", type="integer"),
+     *                 @OA\Property(property="total_time_spent", type="integer", description="Time spent in seconds")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthorized")
+     * )
+     */
+    public function getMyCoursesProgress(Request $request)
+    {
+        $studentId = $request->user()->id;
+
+        $coursesProgress = DB::table('enrollments')
+            ->join('courses', 'enrollments.course_id', '=', 'courses.id')
+            ->leftJoin('modules', 'courses.id', '=', 'modules.course_id')
+            ->leftJoin('lessons', 'modules.id', '=', 'lessons.module_id')
+            ->leftJoin('progress', function($join) use ($studentId) {
+                $join->on('progress.lesson_id', '=', 'lessons.id')
+                     ->where('progress.student_id', '=', $studentId);
+            })
+            ->where('enrollments.student_id', $studentId)
+            ->select(
+                'courses.id as course_id',
+                'courses.title as course_title',
+                'enrollments.status as enrollment_status',
+                'enrollments.progress',
+                'enrollments.enrolled_at',
+                DB::raw('COUNT(DISTINCT lessons.id) as total_lessons'),
+                DB::raw('COUNT(DISTINCT CASE WHEN progress.is_completed = 1 THEN progress.lesson_id END) as completed_lessons'),
+                DB::raw('COALESCE(SUM(progress.time_spent), 0) as total_time_spent')
+            )
+            ->groupBy('courses.id', 'courses.title', 'enrollments.status', 'enrollments.progress', 'enrollments.enrolled_at')
+            ->orderByDesc('enrollments.enrolled_at')
+            ->get();
+
+        return response()->json($coursesProgress);
+    }
 }

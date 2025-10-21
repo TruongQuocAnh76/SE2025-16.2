@@ -1561,6 +1561,145 @@
                 ]
             }
         },
+        "/learning/student/{studentId}/courses/progress": {
+            "get": {
+                "tags": [
+                    "Learning"
+                ],
+                "summary": "Get progress for all enrolled courses",
+                "operationId": "403f215a02c01b9f3ab229f11dc962e2",
+                "parameters": [
+                    {
+                        "name": "studentId",
+                        "in": "path",
+                        "description": "Student ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Courses progress data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "course_id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "course_title": {
+                                                "type": "string"
+                                            },
+                                            "enrollment_status": {
+                                                "type": "string"
+                                            },
+                                            "enrolled_at": {
+                                                "type": "string",
+                                                "format": "date-time"
+                                            },
+                                            "progress": {
+                                                "description": "Progress percentage",
+                                                "type": "integer"
+                                            },
+                                            "total_lessons": {
+                                                "type": "integer"
+                                            },
+                                            "completed_lessons": {
+                                                "type": "integer"
+                                            },
+                                            "total_time_spent": {
+                                                "description": "Time spent in seconds",
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Student not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/learning/courses/progress": {
+            "get": {
+                "tags": [
+                    "Learning"
+                ],
+                "summary": "Get progress for all enrolled courses (current user)",
+                "operationId": "df9f058d423984f5ea2c376fd91a5cea",
+                "responses": {
+                    "200": {
+                        "description": "Courses progress data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "course_id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "course_title": {
+                                                "type": "string"
+                                            },
+                                            "enrollment_status": {
+                                                "type": "string"
+                                            },
+                                            "enrolled_at": {
+                                                "type": "string",
+                                                "format": "date-time"
+                                            },
+                                            "progress": {
+                                                "description": "Progress percentage",
+                                                "type": "integer"
+                                            },
+                                            "total_lessons": {
+                                                "type": "integer"
+                                            },
+                                            "completed_lessons": {
+                                                "type": "integer"
+                                            },
+                                            "total_time_spent": {
+                                                "description": "Time spent in seconds",
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/courses/{courseId}/quizzes": {
             "get": {
                 "tags": [

@@ -68,6 +68,8 @@ Route::middleware('auth:sanctum')->prefix('learning')->group(function () {
     Route::post('/lesson/{lessonId}/time', [LearningController::class, 'updateTimeSpent']);
     Route::post('/course/{courseId}/complete', [LearningController::class, 'completeCourse']);
     Route::get('/student/{studentId}/courses/time-spent', [LearningController::class, 'getCoursesTimeSpent']);
+    Route::get('/student/{studentId}/courses/progress', [LearningController::class, 'getCoursesProgress']);
+    Route::get('/courses/progress', [LearningController::class, 'getMyCoursesProgress']);
 });
 
 /* ========================

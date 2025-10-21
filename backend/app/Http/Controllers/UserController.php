@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\Review;
 use App\Models\Certificate;
+use App\Models\Enrollment;
 
 /**
  * @OA\Server(
