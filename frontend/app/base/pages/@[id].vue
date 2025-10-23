@@ -6,7 +6,7 @@
         <div class="flex items-center space-x-4">
           <div class="w-16 h-16 bg-gray-300 rounded-full"></div>
           <div>
-            <h1 class="text-3xl font-bold text-gray-900">{{ username }}</h1>
+            <h1 class="text-3xl font-bold text-gray-900">{{ userId }}</h1>
             <p class="text-gray-600">Student Dashboard</p>
           </div>
         </div>
@@ -179,12 +179,10 @@ import MetricCard from '../components/ui/MetricCard.vue'
 import CourseInfoCard from '../components/ui/CourseInfoCard.vue'
 import CertificateCard from '../components/ui/CertificateCard.vue'
 import RecommendedCourseCard from '../components/ui/RecommendedCourseCard.vue'
+import { useUserStats } from '../composables/useUserStats'
 
 const route = useRoute()
-const username = route.params.username as string
-
-// Get current user ID - hardcode for now or get from auth
-const userId = ref('some-user-id') // You'll need to replace this with actual user ID
+const userId = route.params.id as string
 
 // Reactive state
 const enrollmentCount = ref(0)
@@ -222,68 +220,68 @@ const loading = reactive({
 
 // TODO: Replace mock data with actual API calls
 onMounted(async () => {
+  const { 
+    getEnrollmentCount, 
+    getCertificateCount, 
+    getUserLearningHours, 
+    getAverageCourseProgress, 
+    getContinueLearningCourses,
+    getRecentCertificates 
+  } = useUserStats()
 
-  // Simulate API calls with mock data
-  setTimeout(() => {
-    enrollmentCount.value = 5
+  // Fetch enrollment count
+  try {
+    enrollmentCount.value = await getEnrollmentCount(userId)
+  } catch (error) {
+    console.error('Failed to load enrollment count:', error)
+  } finally {
     loading.enrollments = false
-  }, 500)
+  }
 
-  setTimeout(() => {
-    certificateCount.value = 2
+  // Fetch certificate count
+  try {
+    certificateCount.value = await getCertificateCount(userId)
+  } catch (error) {
+    console.error('Failed to load certificate count:', error)
+  } finally {
     loading.certificates = false
-  }, 700)
+  }
 
-  setTimeout(() => {
-    learningHours.value = 24.5
+  // Fetch learning hours
+  try {
+    learningHours.value = await getUserLearningHours(userId)
+  } catch (error) {
+    console.error('Failed to load learning hours:', error)
+  } finally {
     loading.hours = false
-  }, 900)
+  }
 
-  setTimeout(() => {
-    averageProgress.value = 75
+  // Fetch average progress
+  try {
+    averageProgress.value = await getAverageCourseProgress(userId)
+  } catch (error) {
+    console.error('Failed to load average progress:', error)
+  } finally {
     loading.progress = false
-  }, 1100)
+  }
 
-  setTimeout(async () => {
-    continueLearningCourses.value = [
-      {
-        courseId: '1',
-        name: 'Introduction to Web Development',
-        thumbnail: '/placeholder-course.jpg',
-        lastAccessed: '2025-10-20',
-        progress: 65
-      },
-      {
-        courseId: '2',
-        name: 'Advanced JavaScript Concepts',
-        thumbnail: '/placeholder-course.jpg',
-        lastAccessed: '2025-10-19',
-        progress: 40
-      },
-      {
-        courseId: '3',
-        name: 'React Fundamentals',
-        thumbnail: '/placeholder-course.jpg',
-        lastAccessed: '2025-10-18',
-        progress: 80
-      }
-    ]
+  // Fetch continue learning courses
+  try {
+    continueLearningCourses.value = await getContinueLearningCourses(userId)
+  } catch (error) {
+    console.error('Failed to load continue learning courses:', error)
+  } finally {
     loading.continueLearning = false
-  }, 1300)
+  }
 
-  setTimeout(() => {
-    recentCertificates.value = [
-      {
-        courseName: 'HTML & CSS Fundamentals',
-        dateIssued: '2025-10-15'
-      },
-      {
-        courseName: 'JavaScript Basics',
-        dateIssued: '2025-10-10'
-      }
-    ]
-  }, 1400)
+  // Fetch recent certificates
+  try {
+    recentCertificates.value = await getRecentCertificates(userId)
+  } catch (error) {
+    console.error('Failed to load recent certificates:', error)
+  }
 
+  // Mock recommended courses (keep as mock for now)
   setTimeout(() => {
     recommendedCourses.value = [
       {
@@ -313,6 +311,6 @@ onMounted(async () => {
 
 // Set page title
 useSeoMeta({
-  title: `${username} - Dashboard`
+  title: `${userId} - Dashboard`
 })
 </script>

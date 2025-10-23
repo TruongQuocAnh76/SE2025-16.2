@@ -26,4 +26,9 @@ export default defineNuxtConfig({
     './app/base',
     './app/domains/landing'
   ],
+  runtimeConfig: {
+    public: {
+      apiBase: process.env.BACKEND_URL || 'http://localhost:8000'
+    }
+  }
 })

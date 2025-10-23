@@ -8,8 +8,6 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    environment:
-      - NODE_ENV=development
     depends_on:
       - backend
 
@@ -21,17 +19,6 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/var/www
-    environment:
-      - APP_ENV=local
-      - APP_DEBUG=true
-      - DB_CONNECTION=pgsql
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_DATABASE=certchain
-      - DB_USERNAME=postgres
-      - DB_PASSWORD=password
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
     depends_on:
       - db
       - redis

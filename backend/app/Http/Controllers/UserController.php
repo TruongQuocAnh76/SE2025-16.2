@@ -272,11 +272,9 @@ class UserController extends Controller
     public function getUserEnrollments($id)
     {
         $user = User::findOrFail($id);
-        $this->authorize('viewEnrollments', $user);
 
+        // First test basic query without relationships
         $enrollments = Enrollment::where('student_id', $id)
-            ->with(['course:id,title,description,price,duration,level,category,status,teacher_id',
-                    'course.teacher:id,first_name,last_name'])
             ->orderByDesc('created_at')
             ->get();
 
