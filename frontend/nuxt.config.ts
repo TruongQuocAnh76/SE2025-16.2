@@ -19,8 +19,16 @@ export default defineNuxtConfig({
       }
     }
   },
+  ignore: [
+  'node_modules/**'
+  ],
   extends: [
     './app/base',
     './app/domains/landing'
   ],
+  runtimeConfig: {
+    public: {
+      apiBase: process.env.BACKEND_URL || 'http://localhost:8000'
+    }
+  }
 })

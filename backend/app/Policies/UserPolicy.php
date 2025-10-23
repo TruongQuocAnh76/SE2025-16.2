@@ -80,6 +80,15 @@ class UserPolicy
     }
 
     /**
+     * Determine whether the user can view user enrollments.
+     */
+    public function viewEnrollments(User $user, User $model): bool
+    {
+        // Users can view their own enrollments, ADMIN and TEACHER can view any enrollments
+        return $user->id === $model->id || in_array($user->role, ['ADMIN', 'TEACHER']);
+    }
+
+    /**
      * Determine whether the user can restore the model.
      */
     public function restore(User $user, User $model): bool

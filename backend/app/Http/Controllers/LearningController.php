@@ -18,16 +18,6 @@ use App\Models\Course;
  *     url="http://localhost:8000/api",
  *     description="Local development server"
  * )
- * @OA\Schema(
- *     schema="Lesson",
- *     type="object",
- *     @OA\Property(property="id", type="integer", example=1),
- *     @OA\Property(property="title", type="string", example="Introduction to Variables"),
- *     @OA\Property(property="content", type="string", example="Lesson content here"),
- *     @OA\Property(property="module_id", type="integer", example=1),
- *     @OA\Property(property="order", type="integer", example=1),
- *     @OA\Property(property="duration", type="integer", example=30)
- * )
  */
 class LearningController extends Controller
 {
@@ -106,7 +96,46 @@ class LearningController extends Controller
     }
 
     /**
-     * ✅ Đánh dấu bài học đã hoàn thành
+     * @OA\Post(
+     *     path="/learning/lesson/{lessonId}/complete",
+     *     summary="Mark lesson as completed",
+     *     description="Mark a lesson as completed for the authenticated student",
+     *     operationId="markLessonCompleted",
+     *     tags={"Learning"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="lessonId",
+     *         in="path",
+     *         required=true,
+     *         description="Lesson ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lesson marked as completed",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="progress", ref="#/components/schemas/Progress")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Not enrolled in course",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="error", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Lesson not found"
+     *     )
+     * )
      */
     public function markLessonCompleted($lessonId)
     {
@@ -143,7 +172,57 @@ class LearningController extends Controller
     }
 
     /**
-     * ⏱️ Cập nhật thời gian học 1 bài
+     * @OA\Post(
+     *     path="/learning/lesson/{lessonId}/time",
+     *     summary="Update time spent on lesson",
+     *     description="Update the time spent studying a lesson",
+     *     operationId="updateTimeSpent",
+     *     tags={"Learning"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="lessonId",
+     *         in="path",
+     *         required=true,
+     *         description="Lesson ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"time_spent"},
+     *             @OA\Property(property="time_spent", type="integer", minimum=1, description="Time spent in seconds", example=300)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Time updated successfully",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="progress", ref="#/components/schemas/Progress")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Not enrolled in course",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="error", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Lesson not found"
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error"
+     *     )
+     * )
      */
     public function updateTimeSpent(Request $request, $lessonId)
     {
@@ -204,7 +283,45 @@ class LearningController extends Controller
     }
 
     /**
-     * 🏁 Hoàn thành toàn khóa học (nếu đủ điều kiện)
+     * @OA\Post(
+     *     path="/learning/course/{courseId}/complete",
+     *     summary="Complete course",
+     *     description="Mark the entire course as completed (requires all lessons to be completed)",
+     *     operationId="completeCourse",
+     *     tags={"Learning"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="courseId",
+     *         in="path",
+     *         required=true,
+     *         description="Course ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Course completed successfully",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Not all lessons completed",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="error", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Course not found or not enrolled"
+     *     )
+     * )
      */
     public function completeCourse($courseId)
     {
@@ -224,5 +341,201 @@ class LearningController extends Controller
         ]);
 
         return response()->json(['message' => 'Course completed successfully']);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/learning/student/{studentId}/courses/time-spent",
+     *     summary="Get total time spent on each enrolled course for a student",
+     *     tags={"Learning"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="studentId",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Time spent on each enrolled course",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(
+     *                 type="object",
+     *                 @OA\Property(property="course_id", type="string", format="uuid"),
+     *                 @OA\Property(property="course_title", type="string"),
+     *                 @OA\Property(property="total_time_spent", type="integer", description="Total time spent in seconds"),
+     *                 @OA\Property(property="enrollment_status", type="string"),
+     *                 @OA\Property(property="enrolled_at", type="string", format="date-time")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Forbidden"),
+     *     @OA\Response(response=404, description="Student not found")
+     * )
+     */
+    public function getCoursesTimeSpent($studentId)
+    {
+        $currentUser = Auth::user();
+
+        // Check if user can view this student's data
+        if ($currentUser->id !== $studentId && !in_array($currentUser->role, ['ADMIN', 'TEACHER'])) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        // Verify student exists
+        $student = \App\Models\User::findOrFail($studentId);
+
+        $coursesTimeSpent = DB::table('enrollments')
+            ->join('courses', 'enrollments.course_id', '=', 'courses.id')
+            ->leftJoin('modules', 'courses.id', '=', 'modules.course_id')
+            ->leftJoin('lessons', 'modules.id', '=', 'lessons.module_id')
+            ->leftJoin('progress', function($join) use ($studentId) {
+                $join->on('progress.lesson_id', '=', 'lessons.id')
+                     ->where('progress.student_id', '=', $studentId);
+            })
+            ->where('enrollments.student_id', $studentId)
+            ->select(
+                'courses.id as course_id',
+                'courses.title as course_title',
+                'enrollments.status as enrollment_status',
+                'enrollments.enrolled_at',
+                DB::raw('COALESCE(SUM(progress.time_spent), 0) as total_time_spent')
+            )
+            ->groupBy('courses.id', 'courses.title', 'enrollments.status', 'enrollments.enrolled_at')
+            ->orderByDesc('enrollments.enrolled_at')
+            ->get();
+
+        return response()->json($coursesTimeSpent);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/learning/student/{studentId}/courses/progress",
+     *     summary="Get progress for all enrolled courses",
+     *     tags={"Learning"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="studentId",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="string", format="uuid"),
+     *         description="Student ID"
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Courses progress data",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(
+     *                 type="object",
+     *                 @OA\Property(property="course_id", type="string", format="uuid"),
+     *                 @OA\Property(property="course_title", type="string"),
+     *                 @OA\Property(property="enrollment_status", type="string"),
+     *                 @OA\Property(property="enrolled_at", type="string", format="date-time"),
+     *                 @OA\Property(property="progress", type="integer", description="Progress percentage"),
+     *                 @OA\Property(property="total_lessons", type="integer"),
+     *                 @OA\Property(property="completed_lessons", type="integer"),
+     *                 @OA\Property(property="total_time_spent", type="integer", description="Time spent in seconds")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Forbidden"),
+     *     @OA\Response(response=404, description="Student not found")
+     * )
+     */
+    public function getCoursesProgress($studentId)
+    {
+        $currentUser = Auth::user();
+
+        // Check if user can view this student's data
+        if ($currentUser->id !== $studentId && !in_array($currentUser->role, ['ADMIN', 'TEACHER'])) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        // Verify student exists
+        $student = \App\Models\User::findOrFail($studentId);
+
+        $coursesProgress = DB::table('enrollments')
+            ->join('courses', 'enrollments.course_id', '=', 'courses.id')
+            ->leftJoin('modules', 'courses.id', '=', 'modules.course_id')
+            ->leftJoin('lessons', 'modules.id', '=', 'lessons.module_id')
+            ->leftJoin('progress', function($join) use ($studentId) {
+                $join->on('progress.lesson_id', '=', 'lessons.id')
+                     ->where('progress.student_id', '=', $studentId);
+            })
+            ->where('enrollments.student_id', $studentId)
+            ->select(
+                'courses.id as course_id',
+                'courses.title as course_title',
+                'enrollments.status as enrollment_status',
+                'enrollments.progress',
+                'enrollments.enrolled_at',
+                DB::raw('COUNT(DISTINCT lessons.id) as total_lessons'),
+                DB::raw('COUNT(DISTINCT CASE WHEN progress.is_completed = 1 THEN progress.lesson_id END) as completed_lessons'),
+                DB::raw('COALESCE(SUM(progress.time_spent), 0) as total_time_spent')
+            )
+            ->groupBy('courses.id', 'courses.title', 'enrollments.status', 'enrollments.progress', 'enrollments.enrolled_at')
+            ->orderByDesc('enrollments.enrolled_at')
+            ->get();
+
+        return response()->json($coursesProgress);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/learning/courses/progress",
+     *     summary="Get progress for all enrolled courses (current user)",
+     *     tags={"Learning"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Courses progress data",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(
+     *                 type="object",
+     *                 @OA\Property(property="course_id", type="string", format="uuid"),
+     *                 @OA\Property(property="course_title", type="string"),
+     *                 @OA\Property(property="enrollment_status", type="string"),
+     *                 @OA\Property(property="enrolled_at", type="string", format="date-time"),
+     *                 @OA\Property(property="progress", type="integer", description="Progress percentage"),
+     *                 @OA\Property(property="total_lessons", type="integer"),
+     *                 @OA\Property(property="completed_lessons", type="integer"),
+     *                 @OA\Property(property="total_time_spent", type="integer", description="Time spent in seconds")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthorized")
+     * )
+     */
+    public function getMyCoursesProgress(Request $request)
+    {
+        $studentId = $request->user()->id;
+
+        $coursesProgress = DB::table('enrollments')
+            ->join('courses', 'enrollments.course_id', '=', 'courses.id')
+            ->leftJoin('modules', 'courses.id', '=', 'modules.course_id')
+            ->leftJoin('lessons', 'modules.id', '=', 'lessons.module_id')
+            ->leftJoin('progress', function($join) use ($studentId) {
+                $join->on('progress.lesson_id', '=', 'lessons.id')
+                     ->where('progress.student_id', '=', $studentId);
+            })
+            ->where('enrollments.student_id', $studentId)
+            ->select(
+                'courses.id as course_id',
+                'courses.title as course_title',
+                'enrollments.status as enrollment_status',
+                'enrollments.progress',
+                'enrollments.enrolled_at',
+                DB::raw('COUNT(DISTINCT lessons.id) as total_lessons'),
+                DB::raw('COUNT(DISTINCT CASE WHEN progress.is_completed = 1 THEN progress.lesson_id END) as completed_lessons'),
+                DB::raw('COALESCE(SUM(progress.time_spent), 0) as total_time_spent')
+            )
+            ->groupBy('courses.id', 'courses.title', 'enrollments.status', 'enrollments.progress', 'enrollments.enrolled_at')
+            ->orderByDesc('enrollments.enrolled_at')
+            ->get();
+
+        return response()->json($coursesProgress);
     }
 }

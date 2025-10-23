@@ -17,7 +17,7 @@ class UserSeeder extends Seeder
         DB::table('users')->insert([
             // Admin User
             [
-                'id' => Str::uuid(),
+                'id' => '550e8400-e29b-41d4-a716-446655440000',
                 'email' => 'admin@certchain.com',
                 'password' => Hash::make('password123'),
                 'first_name' => 'Admin',
@@ -33,7 +33,7 @@ class UserSeeder extends Seeder
             ],
             // Teacher Users
             [
-                'id' => Str::uuid(),
+                'id' => '550e8400-e29b-41d4-a716-446655440001',
                 'email' => 'john.teacher@certchain.com',
                 'password' => Hash::make('password123'),
                 'first_name' => 'John',
@@ -48,7 +48,7 @@ class UserSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'id' => Str::uuid(),
+                'id' => '550e8400-e29b-41d4-a716-446655440002',
                 'email' => 'sarah.johnson@certchain.com',
                 'password' => Hash::make('password123'),
                 'first_name' => 'Sarah',
@@ -64,7 +64,7 @@ class UserSeeder extends Seeder
             ],
             // Student Users
             [
-                'id' => Str::uuid(),
+                'id' => '550e8400-e29b-41d4-a716-446655440003',
                 'email' => 'alice.student@example.com',
                 'password' => Hash::make('password123'),
                 'first_name' => 'Alice',
@@ -79,7 +79,7 @@ class UserSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'id' => Str::uuid(),
+                'id' => '550e8400-e29b-41d4-a716-446655440004',
                 'email' => 'bob.learner@example.com',
                 'password' => Hash::make('password123'),
                 'first_name' => 'Bob',
@@ -94,7 +94,7 @@ class UserSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'id' => Str::uuid(),
+                'id' => '550e8400-e29b-41d4-a716-446655440005',
                 'email' => 'charlie.dev@example.com',
                 'password' => Hash::make('password123'),
                 'first_name' => 'Charlie',

@@ -18,22 +18,30 @@ use PDF; // nếu bạn dùng barryvdh/laravel-dompdf để tạo PDF
  *     url="http://localhost:8000/api",
  *     description="Local development server"
  * )
- * @OA\Schema(
- *     schema="Certificate",
- *     type="object",
- *     @OA\Property(property="id", type="integer", example=1),
- *     @OA\Property(property="student_id", type="integer", example=1),
- *     @OA\Property(property="course_id", type="integer", example=1),
- *     @OA\Property(property="certificate_number", type="string", example="CERT-001"),
- *     @OA\Property(property="issued_at", type="string", format="date-time"),
- *     @OA\Property(property="expires_at", type="string", format="date-time", nullable=true),
- *     @OA\Property(property="status", type="string", enum={"active", "expired", "revoked"}, example="active")
- * )
  */
 class CertificateController extends Controller
 {
     /**
-     * ✅ Lấy danh sách chứng chỉ của học viên hiện tại
+     * @OA\Get(
+     *     path="/api/certificates/mine",
+     *     summary="Get current user's certificates",
+     *     description="Retrieve all certificates issued to the authenticated user",
+     *     operationId="getMyCertificates",
+     *     tags={"Certificates"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of user's certificates",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(ref="#/components/schemas/Certificate")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     )
+     * )
      */
     public function myCertificates()
     {
@@ -46,7 +54,46 @@ class CertificateController extends Controller
     }
 
     /**
-     * ✅ Tạo chứng chỉ sau khi học viên hoàn thành khóa học
+     * @OA\Post(
+     *     path="/api/certificates/issue/{courseId}",
+     *     summary="Issue certificate for course completion",
+     *     description="Issue a certificate after student completes a course and passes the final quiz",
+     *     operationId="issueCertificate",
+     *     tags={"Certificates"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="courseId",
+     *         in="path",
+     *         required=true,
+     *         description="Course ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Certificate issued successfully",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="certificate", ref="#/components/schemas/Certificate")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Bad request - student hasn't passed final quiz or certificate already exists",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="error", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Course not found"
+     *     )
+     * )
      */
     public function issueCertificate(Request $request, $courseId)
     {
@@ -111,7 +158,38 @@ class CertificateController extends Controller
     }
 
     /**
-     * ✅ Xem chi tiết chứng chỉ
+     * @OA\Get(
+     *     path="/api/certificates/{certificateId}",
+     *     summary="Get certificate details",
+     *     description="Retrieve detailed information about a specific certificate",
+     *     operationId="getCertificate",
+     *     tags={"Certificates"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="certificateId",
+     *         in="path",
+     *         required=true,
+     *         description="Certificate ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Certificate details",
+     *         @OA\JsonContent(ref="#/components/schemas/Certificate")
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden - user doesn't own this certificate",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="error", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Certificate not found"
+     *     )
+     * )
      */
     public function show($certificateId)
     {
@@ -127,7 +205,48 @@ class CertificateController extends Controller
     }
 
     /**
-     * ✅ Thu hồi chứng chỉ (giảng viên hoặc admin)
+     * @OA\Post(
+     *     path="/api/certificates/{certificateId}/revoke",
+     *     summary="Revoke certificate",
+     *     description="Revoke a certificate (only course teacher or admin can perform this action)",
+     *     operationId="revokeCertificate",
+     *     tags={"Certificates"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="certificateId",
+     *         in="path",
+     *         required=true,
+     *         description="Certificate ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=false,
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="reason", type="string", description="Reason for revocation")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Certificate revoked successfully",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden - user is not the course teacher",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="error", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Certificate not found"
+     *     )
+     * )
      */
     public function revoke(Request $request, $certificateId)
     {
@@ -148,7 +267,35 @@ class CertificateController extends Controller
     }
 
     /**
-     * ✅ Kiểm tra tính hợp lệ chứng chỉ (verify hash)
+     * @OA\Get(
+     *     path="/api/certificates/verify/{certificateNumber}",
+     *     summary="Verify certificate validity",
+     *     description="Verify the authenticity of a certificate using its certificate number",
+     *     operationId="verifyCertificate",
+     *     tags={"Certificates"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="certificateNumber",
+     *         in="path",
+     *         required=true,
+     *         description="Certificate number (e.g., CERT-2025-ABCDEF)",
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Certificate verification result",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="valid", type="boolean"),
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="certificate", ref="#/components/schemas/Certificate", nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     )
+     * )
      */
     public function verifyCertificate($certificateNumber)
     {
@@ -173,7 +320,57 @@ class CertificateController extends Controller
     }
 
     /**
-     * ✅ Liên kết chứng chỉ với giao dịch blockchain (sau khi ghi on-chain)
+     * @OA\Post(
+     *     path="/api/certificates/{certificateId}/attach-blockchain",
+     *     summary="Attach blockchain transaction data",
+     *     description="Link a certificate with its blockchain transaction data after on-chain recording",
+     *     operationId="attachBlockchainData",
+     *     tags={"Certificates"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="certificateId",
+     *         in="path",
+     *         required=true,
+     *         description="Certificate ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             type="object",
+     *             required={"transaction_hash", "network", "certificate_hash"},
+     *             @OA\Property(property="transaction_hash", type="string", description="Blockchain transaction hash"),
+     *             @OA\Property(property="network", type="string", enum={"ETHEREUM", "POLYGON", "HYPERLEDGER"}),
+     *             @OA\Property(property="certificate_hash", type="string", description="Hash of certificate data stored on blockchain"),
+     *             @OA\Property(property="metadata", type="object", description="Additional blockchain metadata", nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Blockchain data attached successfully",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="transaction", ref="#/components/schemas/BlockchainTransaction")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Validation error or duplicate transaction hash",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="error", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Certificate not found"
+     *     )
+     * )
      */
     public function attachBlockchainData(Request $request, $certificateId)
     {

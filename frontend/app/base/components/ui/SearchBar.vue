@@ -25,6 +25,13 @@
       @keydown.enter="$emit('search', modelValue)"
       type="text"
     />
+    <button
+      class="absolute inset-y-0 right-0 flex items-center pr-3 text-sm font-medium text-blue-600 hover:underline"
+      :disabled="disabled"
+      @click="goToCourses"
+    >
+      Courses
+    </button>
   </div>
 </template>
 
@@ -49,6 +56,13 @@ const emit = defineEmits<{
   'update:modelValue': [value: string]
   'search': [query: string]
 }>()
+
+const router = useRouter()
+
+function goToCourses() {
+  if (props.disabled) return
+  router.push('/courses')
+}
 
 const inputClasses = computed(() => {
   const baseClasses = [

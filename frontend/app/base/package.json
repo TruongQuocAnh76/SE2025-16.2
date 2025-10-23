@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Playground for base UI components",
   "scripts": {
-    "dev": "nuxt dev",
+    "dev": "nuxt dev --host --port 3001",
+    "playground": "nuxt dev .playground --host --port 3001",
     "build": "nuxt build",
     "generate": "nuxt generate",
     "preview": "nuxt preview"

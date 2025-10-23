@@ -19,18 +19,6 @@ use App\Models\User;
  *     url="http://localhost:8000/api",
  *     description="Local development server"
  * )
- * @OA\Schema(
- *     schema="Course",
- *     type="object",
- *     @OA\Property(property="id", type="integer", example=1),
- *     @OA\Property(property="title", type="string", example="Introduction to Programming"),
- *     @OA\Property(property="description", type="string", example="Learn the basics of programming"),
- *     @OA\Property(property="price", type="number", format="float", example=99.99),
- *     @OA\Property(property="level", type="string", enum={"beginner", "intermediate", "advanced"}, example="beginner"),
- *     @OA\Property(property="category", type="string", example="Programming"),
- *     @OA\Property(property="instructor_id", type="integer", example=1),
- *     @OA\Property(property="created_at", type="string", format="date-time")
- * )
  */
 class CourseController extends Controller
 {
@@ -267,7 +255,46 @@ class CourseController extends Controller
     }
 
     /**
-     * 🧑‍🎓 Đăng ký khoá học (Student)
+     * @OA\Post(
+     *     path="/courses/{id}/enroll",
+     *     summary="Enroll in a course",
+     *     description="Enroll the authenticated student in a course",
+     *     operationId="enrollInCourse",
+     *     tags={"Courses"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="Course ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Enrollment successful",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="enrollment", ref="#/components/schemas/Enrollment")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Course not found"
+     *     ),
+     *     @OA\Response(
+     *         response=409,
+     *         description="Already enrolled",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string", example="Already enrolled")
+     *         )
+     *     )
+     * )
      */
     public function enroll($id)
     {
@@ -293,7 +320,50 @@ class CourseController extends Controller
     }
 
     /**
-     * ⭐ Thêm hoặc cập nhật review khoá học
+     * @OA\Post(
+     *     path="/courses/{id}/review",
+     *     summary="Add or update course review",
+     *     description="Add a review for a course or update existing review",
+     *     operationId="addCourseReview",
+     *     tags={"Courses"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="Course ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"rating"},
+     *             @OA\Property(property="rating", type="integer", minimum=1, maximum=5, example=5),
+     *             @OA\Property(property="comment", type="string", nullable=true, example="Great course!")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Review submitted successfully",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="review", ref="#/components/schemas/Review")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Course not found"
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error"
+     *     )
+     * )
      */
     public function addReview(Request $request, $id)
     {
@@ -321,7 +391,37 @@ class CourseController extends Controller
     }
 
     /**
-     * 🧩 Lấy danh sách module + lesson của khoá học
+     * @OA\Get(
+     *     path="/courses/{id}/modules",
+     *     summary="Get course modules with lessons",
+     *     description="Retrieve all modules and their lessons for a specific course",
+     *     operationId="getCourseModules",
+     *     tags={"Courses"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="Course ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of modules with lessons",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(ref="#/components/schemas/Module")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Course not found"
+     *     )
+     * )
      */
     public function getModulesWithLessons($id)
     {
@@ -336,7 +436,50 @@ class CourseController extends Controller
     }
 
     /**
-     * 🧮 Lấy danh sách học viên của khoá học
+     * @OA\Get(
+     *     path="/courses/{id}/students",
+     *     summary="Get enrolled students",
+     *     description="Get list of students enrolled in a course (teacher only)",
+     *     operationId="getEnrolledStudents",
+     *     tags={"Courses"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="Course ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of enrolled students",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(
+     *                 type="object",
+     *                 @OA\Property(property="id", type="string", format="uuid"),
+     *                 @OA\Property(property="student", type="object",
+     *                     @OA\Property(property="id", type="string", format="uuid"),
+     *                     @OA\Property(property="first_name", type="string"),
+     *                     @OA\Property(property="last_name", type="string"),
+     *                     @OA\Property(property="email", type="string", format="email")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden - not the course teacher"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Course not found"
+     *     )
+     * )
      */
     public function getEnrolledStudents($id)
     {
