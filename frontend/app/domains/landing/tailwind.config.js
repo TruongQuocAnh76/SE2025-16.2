@@ -33,29 +33,23 @@ export default {
         '12': '3rem'     // 48px - Extra large spacing
       },
       colors: {
-        'primary': {
-          '500': '#0ea5aa',
-          '600': '#0c8e93'
-        },
-        'accent': {
-          '500': '#8534c2'
-        },
-        'success': {
-          '500': '#34c178'
-        },
-        'error': {
-          '500': '#ee3434'
-        },
-        'warning': {
-          '500': '#ff9000'
-        },
-        'neutral': {
-          '0': '#ffffff',
-          '50': '#fafbfc',
-          '600': '#566a80',
-          '700': '#3d4f60',
-          '900': '#0b1a20'
-        }
+        // --- Primary Brand Colors (Teal/Blue Gradient) ---
+        // This is the primary action color, used for the main buttons and hero background gradient
+        'brand-primary': '#00A89A', // A vibrant teal/cyan color (start of the gradient)
+        'brand-secondary': '#00B9D6', // A brighter cyan/sky blue (mid/end of the gradient)
+
+        // --- Accent Colors ---
+        // Used for the different icon/feature boxes and other highlights
+        'accent-purple': '#6366F1', // Purple/Indigo accent (e.g., one of the icon circles)
+        'accent-blue': '#3B82F6', // Standard Blue accent (e.g., another icon circle)
+        'accent-red': '#EF4444', // Red accent (e.g., the downward arrow and one of the icons)
+        'accent-star': '#FFC107', // Yellow/Gold accent (e.g., the star graphic in 'Learning Analytics')
+        'accent-orange': '#F97316', // Orange/Amber accent (e.g., one of the icons)
+
+        // --- Neutrals / Background ---
+        'background': '#F8F8F8', // The main light off-white background color
+        'text-dark': '#1F2937', // A very dark gray/nearly black for primary text
+        'text-muted': '#6B7280', // A medium gray for secondary/paragraph text
       },
       animation: {
         'chain-pulse': 'chainPulse 3s ease-in-out infinite',
