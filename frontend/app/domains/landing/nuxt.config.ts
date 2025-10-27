@@ -6,8 +6,8 @@ export default defineNuxtConfig({
   ],
   pages: true,
   components: [
-    { path: './app/domains/landing/components', pathPrefix: false },
-    { path: './app/base/components', pathPrefix: false }
+    { path: './components', pathPrefix: false },
+    { path: '../base/components', pathPrefix: false }
   ],
   css: [
     './assets/css/main.css'

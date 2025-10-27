@@ -11,7 +11,7 @@ export default {
     "./app/domains/*/components/**/*.vue",
     "./app/domains/*/pages/**/*.vue",
     "./app/domains/*/layouts/**/*.vue",
-    "./app/base/**/*.{vue,ts}"
+    "./app/base/components/**/*.{vue,ts}",
   ],
   theme: {
     extend: {
@@ -90,4 +90,5 @@ export default {
     },
   },
   plugins: [],
+  safelist: ['text-muted'],
 }

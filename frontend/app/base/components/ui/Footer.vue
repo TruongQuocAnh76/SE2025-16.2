@@ -1,134 +1,54 @@
 <template>
-  <footer class="bg-gray-900 text-white">
+  <footer class="text-white" style="background-color: #282C43;">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8">
-        <!-- Company Info -->
-        <div class="lg:col-span-2">
-          <div class="flex items-center mb-4">
-            <CertchainLogo variant="horizontal" :size="28" class="brightness-0 invert" />
-          </div>
-          <p class="text-gray-300 text-sm leading-relaxed mb-4">
-            Blockchain-verified online learning platform. Secure, transparent, and trusted certificate verification.
-          </p>
+      <!-- Top Section -->
+      <div class="flex flex-row justify-center items-center mb-12 gap-8">
+        <div class="flex items-center">
+          <img
+            src="../../../../public/logo2.svg"
+            :width="128"
+            :height="128"
+            alt="CertChain Logo"
+            class="brightness-0 invert flex-shrink-0"
+          />
         </div>
-
-        <!-- Product -->
-        <div>
-          <h3 class="text-white font-semibold mb-4">Product</h3>
-          <ul class="space-y-2">
-            <li>
-              <NuxtLink to="/how-it-works" class="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                How it Works
-              </NuxtLink>
-            </li>
-            <li>
-              <NuxtLink to="/courses" class="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                Courses
-              </NuxtLink>
-            </li>
-            <li>
-              <NuxtLink to="/certificates" class="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                Certificates
-              </NuxtLink>
-            </li>
-            <li>
-              <NuxtLink to="/pricing" class="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                Pricing
-              </NuxtLink>
-            </li>
-          </ul>
+        <div class="h-16" style="width: 2px; background-color: #6B7280;"></div>
+        <div class="text-center">
+          <p class="text-white text-5xl font-semibold">Learn Anywhere. Prove Everywhere.</p>
         </div>
+      </div>
 
-        <!-- For Educators -->
-        <div>
-          <h3 class="text-white font-semibold mb-4">For Educators</h3>
-          <ul class="space-y-2">
-            <li>
-              <NuxtLink to="/teach" class="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                Teach on Certchain
-              </NuxtLink>
-            </li>
-            <li>
-              <NuxtLink to="/teacher-resources" class="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                Teacher Resources
-              </NuxtLink>
-            </li>
-            <li>
-              <NuxtLink to="/course-guidelines" class="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                Course Guidelines
-              </NuxtLink>
-            </li>
-            <li>
-              <NuxtLink to="/support" class="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                Support
-              </NuxtLink>
-            </li>
-          </ul>
-        </div>
-
-        <!-- Company -->
-        <div>
-          <h3 class="text-white font-semibold mb-4">Company</h3>
-          <ul class="space-y-2">
-            <li>
-              <NuxtLink to="/about" class="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                About Us
-              </NuxtLink>
-            </li>
-            <li>
-              <NuxtLink to="/blog" class="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                Blog
-              </NuxtLink>
-            </li>
-            <li>
-              <NuxtLink to="/careers" class="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                Careers
-              </NuxtLink>
-            </li>
-            <li>
-              <NuxtLink to="/contact" class="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                Contact
-              </NuxtLink>
-            </li>
-          </ul>
-        </div>
-
-        <!-- Legal -->
-        <div>
-          <h3 class="text-white font-semibold mb-4">Legal</h3>
-          <ul class="space-y-2">
-            <li>
-              <NuxtLink to="/privacy" class="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                Privacy Policy
-              </NuxtLink>
-            </li>
-            <li>
-              <NuxtLink to="/terms" class="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                Terms of Service
-              </NuxtLink>
-            </li>
-            <li>
-              <NuxtLink to="/blockchain-policy" class="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                Blockchain Policy
-              </NuxtLink>
-            </li>
-            <li>
-              <NuxtLink to="/cookies" class="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                Cookie Policy
-              </NuxtLink>
-            </li>
-          </ul>
+      <!-- Newsletter Section -->
+      <div class="text-center mb-12">
+        <h3 class="text-base font-semibold mb-4" style="color: #6B7280;">Subscribe to get our Newsletter</h3>
+        <div class="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-md mx-auto">
+          <input
+            type="email"
+            placeholder="Your Email"
+            class="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
+          />
+          <button class="px-6 py-2 bg-white text-gray-900 font-semibold rounded-md hover:bg-gray-100 transition-colors duration-200">
+            Subscribe
+          </button>
         </div>
       </div>
 
       <!-- Bottom Section -->
-      <div class="border-t border-gray-800 mt-8 pt-8">
+      <div class="border-t border-gray-800 pt-8">
         <div class="flex flex-col md:flex-row justify-between items-center">
-          <div class="text-gray-400 text-sm mb-4 md:mb-0">
-            © 2025 Certchain. All rights reserved.
+          <div class="flex space-x-6 mb-4 md:mb-0">
+            <NuxtLink to="/careers" class="hover:text-white text-base transition-colors duration-200" style="color: #6B7280;">
+              Career
+            </NuxtLink>
+            <NuxtLink to="/privacy" class="hover:text-white text-base transition-colors duration-200" style="color: #6B7280;">
+              Privacy Policy
+            </NuxtLink>
+            <NuxtLink to="/terms" class="hover:text-white text-base transition-colors duration-200" style="color: #6B7280;">
+              Terms & Condition
+            </NuxtLink>
           </div>
-          <div class="text-gray-400 text-xs max-w-md text-center md:text-right">
-            No personally identifiable information (PII) is stored on the blockchain. Only certificate hashes and minimal metadata are recorded.
+          <div class="text-base" style="color: #6B7280;">
+            © 2025 CertChain Technologies Inc.
           </div>
         </div>
       </div>
