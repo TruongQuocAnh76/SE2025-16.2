@@ -1,6 +1,11 @@
-<?php namespace App\Http\Controllers;
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Quiz;
 use App\Services\QuizService;
 use App\Services\QuizAttemptService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -10,15 +15,17 @@ use Illuminate\Support\Facades\Auth;
  *     description="Local development server"
  * )
  */
-class QuizController extends Controller {
+class QuizController extends Controller
+{
     protected $quizService;
     protected $attemptService;
-    
-    public function __construct(QuizService $quizService, QuizAttemptService $attemptService) {
+
+    public function __construct(QuizService $quizService, QuizAttemptService $attemptService)
+    {
         $this->quizService = $quizService;
         $this->attemptService = $attemptService;
     }
-    
+
     /**
      * @OA\Get(
      *     path="/courses/{courseId}/quizzes",
@@ -39,10 +46,52 @@ class QuizController extends Controller {
      *     @OA\Response(response=404, description="Course not found")
      * )
      */
-    public function index($courseId) {
-        return response()->json($this->quizService->getQuizzesByCourse($courseId));
+    public function index(Request $request): JsonResponse
+    {
+        try {
+            $courseId = $request->route('courseId');
+            if (!$courseId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Course ID is required'
+                ], 400);
+            }
+
+            $quizzes = $this->quizService->getQuizzesByCourse($courseId);
+
+            $formattedQuizzes = $quizzes->map(function ($quiz) {
+                return [
+                    'id' => $quiz->id,
+                    'title' => $quiz->title,
+                    'description' => $quiz->description,
+                    'quiz_type' => $quiz->quiz_type,
+                    'time_limit' => $quiz->time_limit,
+                    'passing_score' => $quiz->passing_score,
+                    'max_attempts' => $quiz->max_attempts,
+                    'order_index' => $quiz->order_index,
+                    'is_active' => $quiz->is_active,
+                    'total_questions' => $quiz->questions->count(),
+                    'total_points' => $quiz->getTotalPoints(),
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $formattedQuizzes,
+                'meta' => [
+                    'total' => $formattedQuizzes->count(),
+                    'course_id' => $courseId,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve quizzes',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
     }
-    
+
     /**
      * @OA\Post(
      *     path="/quizzes/course/{courseId}",
@@ -90,22 +139,42 @@ class QuizController extends Controller {
      *     )
      * )
      */
-    public function store(Request $request, $courseId) {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'quiz_type' => 'in:PRACTICE,GRADED,FINAL',
-            'passing_score' => 'numeric|min:0|max:100',
-            'time_limit' => 'nullable|integer|min:1',
-            'max_attempts' => 'nullable|integer|min:1',
-            'order_index' => 'required|integer',
-        ]);
-        
-        $validated['course_id'] = $courseId;
-        $quiz = $this->quizService->createQuiz($validated);
-        return response()->json($quiz, 201);
+    public function store(Request $request, string $courseId): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'quiz_type' => 'nullable|in:PRACTICE,GRADED,FINAL',
+                'passing_score' => 'nullable|numeric|min:0|max:100',
+                'time_limit' => 'nullable|integer|min:1',
+                'max_attempts' => 'nullable|integer|min:1',
+                'order_index' => 'required|integer',
+            ]);
+
+            $validated['course_id'] = $courseId;
+            $quiz = $this->quizService->createQuiz($validated);
+
+            return response()->json([
+                'success' => true,
+                'data' => $quiz,
+                'message' => 'Quiz created successfully'
+            ], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create quiz',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
     }
-    
+
     /**
      * @OA\Get(
      *     path="/quizzes/{quizId}",
@@ -136,10 +205,52 @@ class QuizController extends Controller {
      *     )
      * )
      */
-    public function show($quizId) {
-        return response()->json($this->quizService->getQuizById($quizId));
+    public function show(string $quizId): JsonResponse
+    {
+        try {
+            $quiz = Quiz::with(['questions' => function ($query) {
+                $query->orderBy('order_index');
+            }, 'course'])->find($quizId);
+
+            if (!$quiz) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Quiz not found',
+                ], 404);
+            }
+
+            // Format questions for student view (hide correct answers)
+            $questions = $quiz->questions->map(function ($question) {
+                return $question->toStudentArray();
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $quiz->id,
+                    'title' => $quiz->title,
+                    'description' => $quiz->description,
+                    'quiz_type' => $quiz->quiz_type,
+                    'time_limit' => $quiz->time_limit,
+                    'passing_score' => $quiz->passing_score,
+                    'max_attempts' => $quiz->max_attempts,
+                    'total_points' => $quiz->getTotalPoints(),
+                    'course' => $quiz->course ? [
+                        'id' => $quiz->course->id,
+                        'title' => $quiz->course->title,
+                    ] : null,
+                    'questions' => $questions,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve quiz',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
     }
-    
+
     /**
      * @OA\Put(
      *     path="/quizzes/{quizId}",
@@ -191,22 +302,42 @@ class QuizController extends Controller {
      *     )
      * )
      */
-    public function update(Request $request, $quizId) {
-        $validated = $request->validate([
-            'title' => 'sometimes|string|max:255',
-            'description' => 'sometimes|string',
-            'quiz_type' => 'sometimes|in:PRACTICE,GRADED,FINAL',
-            'passing_score' => 'sometimes|numeric|min:0|max:100',
-            'time_limit' => 'sometimes|integer|min:1',
-            'max_attempts' => 'sometimes|integer|min:1',
-            'order_index' => 'sometimes|integer',
-            'is_active' => 'sometimes|boolean',
-        ]);
-        
-        $quiz = $this->quizService->updateQuiz($quizId, $validated);
-        return response()->json($quiz);
+    public function update(Request $request, string $quizId): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'title' => 'sometimes|string|max:255',
+                'description' => 'sometimes|nullable|string',
+                'quiz_type' => 'sometimes|in:PRACTICE,GRADED,FINAL',
+                'passing_score' => 'sometimes|numeric|min:0|max:100',
+                'time_limit' => 'sometimes|nullable|integer|min:1',
+                'max_attempts' => 'sometimes|nullable|integer|min:1',
+                'order_index' => 'sometimes|integer',
+                'is_active' => 'sometimes|boolean',
+            ]);
+
+            $quiz = $this->quizService->updateQuiz($quizId, $validated);
+
+            return response()->json([
+                'success' => true,
+                'data' => $quiz,
+                'message' => 'Quiz updated successfully'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update quiz',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
     }
-    
+
     /**
      * @OA\Delete(
      *     path="/quizzes/{quizId}",
@@ -244,11 +375,24 @@ class QuizController extends Controller {
      *     )
      * )
      */
-    public function destroy($quizId) {
-        $this->quizService->deleteQuiz($quizId);
-        return response()->json(['message' => 'Quiz deleted successfully']);
+    public function destroy(string $quizId): JsonResponse
+    {
+        try {
+            $this->quizService->deleteQuiz($quizId);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Quiz deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete quiz',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
     }
-    
+
     /**
      * @OA\Post(
      *     path="/quizzes/{quizId}/start",
@@ -287,12 +431,60 @@ class QuizController extends Controller {
      *     )
      * )
      */
-    public function startAttempt($quizId) {
-        $attempt = $this->attemptService->startAttempt(Auth::id(), $quizId);
-        $quiz = $this->quizService->getQuizById($quizId);
-        return response()->json(['attempt' => $attempt, 'questions' => $quiz->questions]);
+    public function startAttempt(string $quizId): JsonResponse
+    {
+        try {
+            $attempt = $this->attemptService->startAttempt(Auth::id(), $quizId);
+            $quiz = $this->quizService->getQuizById($quizId);
+
+            // Format questions for student view (hide correct answers)
+            $questions = $quiz->questions->map(function ($question) {
+                return $question->toStudentArray();
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'attempt' => $attempt,
+                    'questions' => $questions
+                ],
+                'message' => 'Quiz attempt started successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to start quiz attempt',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
     }
-    
+
+    /**
+     * @OA\Post(
+     *     path="/quizzes/attempt/{attemptId}/submit",
+     *     summary="Submit quiz attempt",
+     *     description="Submit answers for a quiz attempt",
+     *     operationId="submitQuizAttempt",
+     *     tags={"Quizzes"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="attemptId",
+     *         in="path",
+     *         required=true,
+     *         description="Attempt ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"answers"},
+     *             @OA\Property(property="answers", type="array", @OA\Items(type="string"), description="Array of answers corresponding to questions"),
+     *             @OA\Property(property="time_spent", type="integer", nullable=true, description="Time spent in seconds")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Quiz submitted successfully",
     /**
      * @OA\Post(
      *     path="/quizzes/attempt/{attemptId}/submit",
@@ -344,16 +536,40 @@ class QuizController extends Controller {
      *     )
      * )
      */
-    public function submitAttempt(Request $request, $attemptId) {
-        $validated = $request->validate(['answers' => 'required|array', 'time_spent' => 'nullable|integer']);
-        $attempt = $this->attemptService->submitAttemptWithDetails($attemptId, $validated['answers']);
-        return response()->json([
-            'score' => $attempt->score,
-            'passed' => $attempt->is_passed,
-            'message' => $attempt->is_passed ? 'Quiz passed!' : 'Quiz failed'
-        ]);
+    public function submitAttempt(Request $request, string $attemptId): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'answers' => 'required|array',
+                'time_spent' => 'nullable|integer'
+            ]);
+
+            $attempt = $this->attemptService->submitAttemptWithDetails($attemptId, $validated['answers']);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'score' => $attempt->score,
+                    'passed' => $attempt->is_passed,
+                    'message' => $attempt->is_passed ? 'Quiz passed!' : 'Quiz failed'
+                ],
+                'message' => 'Quiz submitted successfully'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to submit quiz attempt',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
     }
-    
+
     /**
      * @OA\Get(
      *     path="/quizzes/{quizId}/attempts",
@@ -387,7 +603,156 @@ class QuizController extends Controller {
      *     )
      * )
      */
-    public function attemptsHistory($quizId) {
-        return response()->json($this->attemptService->getAttemptHistory(Auth::id(), $quizId));
+    public function attemptsHistory(string $quizId): JsonResponse
+    {
+        try {
+            $studentId = Auth::id();
+            $attempts = $this->attemptService->getAttemptHistory($studentId, $quizId);
+
+            return response()->json([
+                'success' => true,
+                'data' => $attempts,
+                'meta' => [
+                    'total' => $attempts->count(),
+                    'quiz_id' => $quizId,
+                    'student_id' => $studentId,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve attempt history',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get quiz statistics for a student.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param string $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getStudentStats(Request $request, string $id): JsonResponse
+    {
+        try {
+            $quiz = Quiz::find($id);
+
+            if (!$quiz) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Quiz not found',
+                ], 404);
+            }
+
+            // TODO: Replace with $request->user()->id after Auth module is done
+            $studentId = $request->query('student_id');
+
+            if (!$studentId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'student_id is required (temporary - will use auth after Task #4)',
+                ], 400);
+            }
+
+            $attemptsCount = $quiz->quizAttempts()
+                ->where('student_id', $studentId)
+                ->count();
+
+            $bestScore = $quiz->quizAttempts()
+                ->where('student_id', $studentId)
+                ->whereNotNull('score')
+                ->max('score');
+
+            $latestAttempt = $quiz->quizAttempts()
+                ->where('student_id', $studentId)
+                ->latest()
+                ->first();
+
+            $hasPassed = $quiz->quizAttempts()
+                ->where('student_id', $studentId)
+                ->where('is_passed', true)
+                ->exists();
+
+            $remainingAttempts = $quiz->max_attempts !== null
+                ? max(0, $quiz->max_attempts - $attemptsCount)
+                : null;
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'quiz_id' => $quiz->id,
+                    'quiz_title' => $quiz->title,
+                    'attempts_count' => $attemptsCount,
+                    'best_score' => $bestScore,
+                    'latest_score' => $latestAttempt->score ?? null,
+                    'has_passed' => $hasPassed,
+                    'remaining_attempts' => $remainingAttempts,
+                    'max_attempts' => $quiz->max_attempts,
+                    'can_take_quiz' => $remainingAttempts === null || $remainingAttempts > 0,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve student stats',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all attempts for a quiz by a student.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param string $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getStudentAttempts(Request $request, string $id): JsonResponse
+    {
+        try {
+            $quiz = Quiz::find($id);
+
+            if (!$quiz) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Quiz not found',
+                ], 404);
+            }
+
+            // TODO: Replace with $request->user()->id after Auth module is done
+            $studentId = $request->query('student_id');
+
+            if (!$studentId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'student_id is required (temporary - will use auth after Task #4)',
+                ], 400);
+            }
+
+            $attempts = $quiz->quizAttempts()
+                ->where('student_id', $studentId)
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($attempt) {
+                    return $attempt->getSummary();
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $attempts,
+                'meta' => [
+                    'total' => $attempts->count(),
+                    'quiz_id' => $quiz->id,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve student attempts',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
     }
 }
