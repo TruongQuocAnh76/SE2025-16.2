@@ -43,9 +43,9 @@
         </div>
 
         <!-- Right Image -->
-        <div class="relative z-30 mt-[-100px]">
+        <div class="relative z-30 mt-[-100px] pointer-events-none">
           <img src="../../public/images/hero.png" alt="CertChain Learning Platform"
-            class="w-full h-auto scale-[2]" />
+            class="w-full h-auto scale-[2] pointer-events-none" />
         </div>
       </div>
     </div>
