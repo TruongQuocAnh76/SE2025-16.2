@@ -1,11 +1,11 @@
 <template>
-  <footer class="text-white" style="background-color: #282C43;">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  <footer class="text-white w-full" style="background-color: #282C43;">
+    <div class="w-full px-4 sm:px-6 lg:px-8 py-12">
       <!-- Top Section -->
       <div class="flex flex-row justify-center items-center mb-12 gap-8">
         <div class="flex items-center">
           <img
-            src="../../../../public/logo2.svg"
+            src="/logo2.svg"
             :width="128"
             :height="128"
             alt="CertChain Logo"
@@ -14,7 +14,7 @@
         </div>
         <div class="h-16" style="width: 2px; background-color: #6B7280;"></div>
         <div class="text-center">
-          <p class="text-white text-5xl font-semibold">Learn Anywhere. Prove Everywhere.</p>
+          <p class="text-white text-h4 font-semibold">Learn Anywhere. Prove Everywhere.</p>
         </div>
       </div>
 

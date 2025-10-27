@@ -9,7 +9,7 @@
       <div class="absolute bottom-20 right-32 w-24 h-24 bg-accent-star/10 rounded-full animate-pulse delay-1000"></div>
     </div>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+    <div class="w-full px-4 sm:px-6 lg:px-8 relative z-10">
       <!-- Header Section -->
       <div class="text-center mb-16">
         <h2 class="text-h2 text-text-dark font-inter mb-6">

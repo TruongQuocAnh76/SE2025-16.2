@@ -1,34 +1,25 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  modules: [
-    '@nuxtjs/tailwindcss'
+  extends: [
+    './app/domains/landing'
   ],
-  compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
+
+  modules: ['@nuxtjs/tailwindcss'],
+
+  components: [
+    { path: './app/domains/landing/components', pathPrefix: false },
+    { path: './app/base/components', pathPrefix: false }
+  ],
+
   devServer: {
     host: '0.0.0.0',
     port: 3000
   },
-  css: [
-    './app/base/assets/css/base.css'
-  ],
+
   vite: {
     server: {
-      hmr: {
-        host: '0.0.0.0'
-      }
+      hmr: { host: '0.0.0.0' }
     }
   },
-  ignore: [
-  'node_modules/**'
-  ],
-  extends: [
-    './app/base',
-    './app/domains/landing'
-  ],
-  runtimeConfig: {
-    public: {
-      apiBase: process.env.BACKEND_URL || 'http://localhost:8000'
-    }
-  }
+
+  compatibilityDate: '2025-10-18'
 })

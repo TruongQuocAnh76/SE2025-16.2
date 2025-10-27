@@ -4,13 +4,9 @@ export default defineNuxtConfig({
   modules: [
     '@nuxtjs/tailwindcss'
   ],
-  pages: true,
   components: [
     { path: './components', pathPrefix: false },
     { path: '../base/components', pathPrefix: false }
-  ],
-  css: [
-    './assets/css/main.css'
   ],
   devServer: {
     host: '0.0.0.0',

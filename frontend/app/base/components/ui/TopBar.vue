@@ -5,7 +5,7 @@
         <!-- Left: Logo -->
         <div class="flex-shrink-0">
           <NuxtLink to="/" class="flex items-center">
-            <img src="../../../../public/logo2.svg" alt="" class="h-8 w-auto" />
+            <img src="/logo2.svg" alt="" class="h-8 w-auto" />
           </NuxtLink>
         </div>
 
@@ -73,7 +73,7 @@
           <Button
             variant="transparent"
             @click="navigateTo('/signin')"
-            class="hidden sm:flex text-text-dark hover:text-accent-star border-white/20 hover:border-accent-star/50 bg-background rounded-3xl cursor-pointer p-4"
+            class="bg-white hidden sm:flex text-text-dark hover:text-accent-star border-white/20 hover:border-accent-star/50 bg-background rounded-3xl cursor-pointer p-4"
           >
             Login
           </Button>

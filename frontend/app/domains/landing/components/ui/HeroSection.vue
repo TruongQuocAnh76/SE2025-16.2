@@ -1,6 +1,6 @@
 <template>
   <section class="bg-brand-primary py-12 lg:py-16 overflow-visible">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="w-full px-4 sm:px-6 lg:px-8">
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
         <!-- Left Content -->
         <div class="space-y-6">
@@ -45,7 +45,7 @@
         <!-- Right Image -->
         <div class="relative z-30 mt-[-100px] pointer-events-none">
           <img src="../../public/images/hero.png" alt="CertChain Learning Platform"
-            class="w-full h-auto scale-[2] pointer-events-none" />
+            class="w-full h-auto scale-100 pointer-events-none" />
         </div>
       </div>
     </div>

@@ -11,7 +11,6 @@
 <script setup>
 import HeroSection from '../components/ui/HeroSection.vue';
 import TestimonialsSection from '../components/ui/TestimonialsSection.vue';
-import PricingSection from '../components/ui/PricingSection.vue';
 import OverviewSection from '../components/ui/OverviewSection.vue';
 import FeaturesSection from '../components/ui/FeaturesSection.vue';
     
