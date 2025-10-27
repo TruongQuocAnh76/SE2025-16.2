@@ -1,0 +1,77 @@
+/* Landing Domain Styles - Custom components that extend Tailwind */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom button component */
+.btn {
+  @apply inline-block px-6 py-3 bg-blue-600 text-white no-underline rounded-lg transition-colors duration-200;
+}
+
+.btn:hover {
+  @apply bg-blue-700;
+}
+
+.btn-secondary {
+  @apply bg-gray-100 text-gray-800 border border-gray-300;
+}
+
+.btn-secondary:hover {
+  @apply bg-gray-200;
+}
+
+/* Hero section components */
+.hero-section {
+  @apply py-16 text-center;
+}
+
+.hero-title {
+  @apply text-5xl font-bold mb-4 text-gray-800;
+}
+
+.hero-subtitle {
+  @apply text-xl text-gray-600 mb-8;
+}
+
+/* Card components */
+.card {
+  @apply bg-white rounded-xl shadow-lg p-6 border border-gray-100;
+}
+
+.card-header {
+  @apply mb-4 pb-4 border-b border-gray-200;
+}
+
+.card-title {
+  @apply text-xl font-semibold text-gray-800;
+}
+
+.card-content {
+  @apply text-gray-600;
+}
+
+/* Course card specific styles */
+.course-card {
+  @apply bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200;
+}
+
+.course-card-image {
+  @apply w-full h-48 object-cover;
+}
+
+.course-card-content {
+  @apply p-4;
+}
+
+.course-card-title {
+  @apply text-lg font-semibold text-gray-800 mb-2;
+}
+
+.course-card-description {
+  @apply text-gray-600 text-sm mb-4;
+}
+
+.course-card-meta {
+  @apply flex items-center justify-between text-sm text-gray-500;
+}
