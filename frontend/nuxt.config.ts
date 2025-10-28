@@ -1,7 +1,8 @@
 export default defineNuxtConfig({
   extends: [
     './app/domains/landing',
-    './app/domains/auth'
+    './app/domains/auth',
+    './app/base'
   ],
 
   modules: ['@nuxtjs/tailwindcss'],

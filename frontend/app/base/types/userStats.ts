@@ -1,3 +1,19 @@
+export interface User {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  password?: string | null
+  avatar?: string | null
+  bio?: string | null
+  role: 'STUDENT' | 'TEACHER' | 'ADMIN'
+  auth_provider: 'EMAIL' | 'GOOGLE' | 'FACEBOOK' | 'GITHUB'
+  is_email_verified: boolean
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface Enrollment {
   id: string
   student_id: string
