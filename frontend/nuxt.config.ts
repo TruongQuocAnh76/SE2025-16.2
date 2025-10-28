@@ -1,12 +1,20 @@
 export default defineNuxtConfig({
   extends: [
-    './app/domains/landing'
+    './app/domains/landing',
+    './app/domains/auth'
   ],
 
   modules: ['@nuxtjs/tailwindcss'],
 
+  runtimeConfig: {
+    public: {
+      backendUrl: process.env.BACKEND_URL || 'http://localhost:8000'
+    }
+  },
+
   components: [
     { path: './app/domains/landing/components', pathPrefix: false },
+    { path: './app/domains/auth/components', pathPrefix: false },
     { path: './app/base/components', pathPrefix: false }
   ],
 
