@@ -49,28 +49,38 @@
                         "application/json": {
                             "schema": {
                                 "required": [
+                                    "username",
                                     "email",
                                     "password",
                                     "first_name",
                                     "last_name"
                                 ],
                                 "properties": {
+                                    "username": {
+                                        "description": "Username",
+                                        "type": "string",
+                                        "example": "johndoe"
+                                    },
                                     "email": {
+                                        "description": "Email address",
                                         "type": "string",
                                         "format": "email",
                                         "example": "user@example.com"
                                     },
                                     "password": {
+                                        "description": "Password (min 6 characters)",
                                         "type": "string",
                                         "format": "password",
                                         "minLength": 6,
                                         "example": "password123"
                                     },
                                     "first_name": {
+                                        "description": "First name",
                                         "type": "string",
                                         "example": "John"
                                     },
                                     "last_name": {
+                                        "description": "Last name",
                                         "type": "string",
                                         "example": "Doe"
                                     }
@@ -118,16 +128,17 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "email",
+                                    "login",
                                     "password"
                                 ],
                                 "properties": {
-                                    "email": {
+                                    "login": {
+                                        "description": "Email or username",
                                         "type": "string",
-                                        "format": "email",
                                         "example": "user@example.com"
                                     },
                                     "password": {
+                                        "description": "Password (min 6 characters)",
                                         "type": "string",
                                         "format": "password",
                                         "example": "password123"
@@ -1229,6 +1240,153 @@
                 ]
             }
         },
+        "/grading/attempts/{attemptId}/auto-grade": {
+            "post": {
+                "tags": [
+                    "Grading"
+                ],
+                "summary": "Auto-grade quiz attempt",
+                "operationId": "58cfe543501dd853650762e90a3a3236",
+                "parameters": [
+                    {
+                        "name": "attemptId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Attempt auto-graded successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/grading/answers/{answerId}/manual-grade": {
+            "post": {
+                "tags": [
+                    "Grading"
+                ],
+                "summary": "Manually grade an answer",
+                "operationId": "68abe5ad5ba2cd62877a82a0f6a96843",
+                "parameters": [
+                    {
+                        "name": "answerId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "points_awarded"
+                                ],
+                                "properties": {
+                                    "points_awarded": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                    },
+                                    "is_correct": {
+                                        "type": "boolean",
+                                        "nullable": true
+                                    },
+                                    "feedback": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Answer graded successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/grading/attempts/{attemptId}/pending": {
+            "get": {
+                "tags": [
+                    "Grading"
+                ],
+                "summary": "Get pending answers for manual grading",
+                "operationId": "5363acaf5f26231e20200d735091e532",
+                "parameters": [
+                    {
+                        "name": "attemptId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pending answers for grading"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/grading/attempts/{attemptId}/review": {
+            "get": {
+                "tags": [
+                    "Grading"
+                ],
+                "summary": "Get attempt results for review",
+                "operationId": "0b26b565904fbd626e70105898fcb086",
+                "parameters": [
+                    {
+                        "name": "attemptId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Attempt review data"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/courses/{courseId}/progress": {
             "get": {
                 "tags": [
@@ -1691,6 +1849,255 @@
                     },
                     "401": {
                         "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/quizzes/{quizId}/questions": {
+            "get": {
+                "tags": [
+                    "Questions"
+                ],
+                "summary": "Get questions for a quiz",
+                "operationId": "8a042cb88af67edc55989f50b8f628eb",
+                "parameters": [
+                    {
+                        "name": "quizId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of questions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Question"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Questions"
+                ],
+                "summary": "Create a new question",
+                "operationId": "5c9f901cd140f565401fd30590b30dbe",
+                "parameters": [
+                    {
+                        "name": "quizId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "question_text",
+                                    "question_type",
+                                    "points",
+                                    "correct_answer"
+                                ],
+                                "properties": {
+                                    "question_text": {
+                                        "type": "string",
+                                        "example": "What is Vue.js?"
+                                    },
+                                    "question_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "MULTIPLE_CHOICE",
+                                            "TRUE_FALSE",
+                                            "SHORT_ANSWER",
+                                            "ESSAY"
+                                        ]
+                                    },
+                                    "points": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "order_index": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "options": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "correct_answer": {
+                                        "type": "string"
+                                    },
+                                    "explanation": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Question created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/questions/{questionId}": {
+            "get": {
+                "tags": [
+                    "Questions"
+                ],
+                "summary": "Get question details",
+                "operationId": "edfc0c72ca1e9f11e6c94e16cd6d5daa",
+                "parameters": [
+                    {
+                        "name": "questionId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Question details"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Questions"
+                ],
+                "summary": "Update question",
+                "operationId": "e2aa92271e8d907e73fcbedc0577bce5",
+                "parameters": [
+                    {
+                        "name": "questionId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "question_text": {
+                                        "type": "string"
+                                    },
+                                    "question_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "MULTIPLE_CHOICE",
+                                            "TRUE_FALSE",
+                                            "SHORT_ANSWER",
+                                            "ESSAY"
+                                        ]
+                                    },
+                                    "points": {
+                                        "type": "integer"
+                                    },
+                                    "order_index": {
+                                        "type": "integer"
+                                    },
+                                    "options": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "correct_answer": {
+                                        "type": "string"
+                                    },
+                                    "explanation": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Question updated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Questions"
+                ],
+                "summary": "Delete question",
+                "operationId": "7bad0f55b1e4fba994977337462e153f",
+                "parameters": [
+                    {
+                        "name": "questionId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Question deleted successfully"
                     }
                 },
                 "security": [
@@ -3094,6 +3501,10 @@
                         "format": "email",
                         "example": "john.doe@example.com"
                     },
+                    "username": {
+                        "type": "string",
+                        "example": "johndoe"
+                    },
                     "password": {
                         "type": "string",
                         "format": "password",
@@ -3778,14 +4189,22 @@
         },
         "securitySchemes": {
             "sanctum": {
-                "type": "apiKey",
-                "description": "Enter token in format (Bearer <token>)",
-                "name": "Authorization",
-                "in": "header"
+                "type": "http",
+                "description": "Enter your Sanctum token (without 'Bearer ' prefix)",
+                "bearerFormat": "Token",
+                "scheme": "bearer"
             }
         }
     },
     "tags": [
+        {
+            "name": "Grading",
+            "description": "Grading and assessment endpoints"
+        },
+        {
+            "name": "Questions",
+            "description": "Question management endpoints"
+        },
         {
             "name": "Authentication",
             "description": "Authentication"
@@ -3813,11 +4232,6 @@
         {
             "name": "Users",
             "description": "Users"
-        }
-    ],
-    "security": [
-        {
-            "sanctum": []
         }
     ]
 }

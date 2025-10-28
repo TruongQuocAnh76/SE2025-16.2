@@ -12,7 +12,7 @@ RUN apk add --no-cache \
     bash
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo pdo_pgsql zip bcmath
+RUN docker-php-ext-install pdo pdo_pgsql zip bcmath pcntl
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -23,8 +23,8 @@ WORKDIR /var/www
 # Copy composer files first for better caching
 COPY composer.json composer.lock ./
 
-# Install PHP dependencies without scripts first
-RUN composer install --no-scripts --no-interaction
+# Skip composer install in image build (we mount source + vendor at runtime)
+# RUN composer install --no-scripts --no-interaction
 
 # Copy the rest of the application
 COPY . .
@@ -35,8 +35,8 @@ RUN mkdir -p bootstrap/cache storage/logs storage/framework/cache storage/framew
     && chmod -R 755 /var/www/storage \
     && chmod -R 755 /var/www/bootstrap/cache
 
-# Run the post-install scripts
-RUN composer run-script post-autoload-dump
+# Skip composer post-install; will run in container if needed
+# RUN composer run-script post-autoload-dump
 
 # Set permissions again after running scripts
 RUN chown -R www-data:www-data /var/www \
@@ -46,5 +46,5 @@ RUN chown -R www-data:www-data /var/www \
 # Expose port
 EXPOSE 8000
 
-# Start Laravel development server
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+# Start Laravel with artisan serve (Pail đã bị xóa khỏi composer.json)
+CMD php artisan serve --host=0.0.0.0 --port=8000 2>&1
