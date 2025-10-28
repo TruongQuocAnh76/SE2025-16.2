@@ -177,7 +177,7 @@ const registerForm = reactive({
 const handleLogin = async () => {
   try {
     await auth.login(loginForm.username, loginForm.password)
-    await navigateTo(`/@${auth.user.value?.username}`)
+    await navigateTo(`/s/${auth.user.value?.username}`)
   } catch (error) {
     console.error('Login failed:', error)
   }
@@ -186,7 +186,7 @@ const handleLogin = async () => {
 const handleRegister = async () => {
   try {
     await auth.register(registerForm.email, registerForm.username, registerForm.password)
-    await navigateTo(`/@${auth.user.value?.username}`)
+    await navigateTo(`/s/${auth.user.value?.username}`)
   } catch (error) {
     console.error('Register failed:', error)
   }

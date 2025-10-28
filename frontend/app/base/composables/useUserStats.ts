@@ -1,14 +1,24 @@
-import type { Enrollment, Certificate, CourseTimeSpent, CourseProgress } from '../types/userStats'
+import type { Enrollment, Certificate, CourseTimeSpent, CourseProgress, User } from '../types/userStats'
 
 export const useUserStats = () => {
   const config = useRuntimeConfig()
   
+  // Global variable storing user data
+  const currentUser = ref<User | null>(null)
+  
+  const setCurrentUser = (user: User | null) => {
+    currentUser.value = user
+  }
+  
   // Get current user enrollments
-  const getUserEnrollments = async (userId: string): Promise<Enrollment[]> => {
+  const getUserEnrollments = async (): Promise<Enrollment[]> => {
+    const userId = currentUser.value?.id
+    if (!userId) return []
+    
     try {
       const token = useCookie('auth_token').value
       const data = await $fetch<Enrollment[]>(`/api/users/${userId}/enrollments`, {
-        baseURL: config.public.apiBase,
+        baseURL: config.public.apiBase as string,
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -21,11 +31,14 @@ export const useUserStats = () => {
   }
 
   // Get current user certificates
-  const getUserCertificates = async (userId: string): Promise<Certificate[]> => {
+  const getUserCertificates = async (): Promise<Certificate[]> => {
+    const userId = currentUser.value?.id
+    if (!userId) return []
+    
     try {
       const token = useCookie('auth_token').value
       const data = await $fetch<Certificate[]>(`/api/users/${userId}/certificates`, {
-        baseURL: config.public.apiBase,
+        baseURL: config.public.apiBase as string,
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -38,10 +51,13 @@ export const useUserStats = () => {
   }
 
   // Get enrollment count for a specific user
-  const getEnrollmentCount = async (userId: string): Promise<number> => {
+  const getEnrollmentCount = async (): Promise<number> => {
+    const userId = currentUser.value?.id
+    if (!userId) return 0
+    
     try {
       const token = useCookie('auth_token').value
-      const enrollments = await getUserEnrollments(userId)
+      const enrollments = await getUserEnrollments()
       return enrollments.length
     } catch (error) {
       console.error('Failed to fetch enrollment count:', error)
@@ -50,10 +66,13 @@ export const useUserStats = () => {
   }
 
   // Get certificate count for a specific user
-  const getCertificateCount = async (userId: string): Promise<number> => {
+  const getCertificateCount = async (): Promise<number> => {
+    const userId = currentUser.value?.id
+    if (!userId) return 0
+    
     try {
       const token = useCookie('auth_token').value
-      const certificates = await getUserCertificates(userId)
+      const certificates = await getUserCertificates()
       return certificates.filter(cert => cert.status === 'ISSUED').length
     } catch (error) {
       console.error('Failed to fetch certificate count:', error)
@@ -62,11 +81,14 @@ export const useUserStats = () => {
   }
 
     // Get total learning hours for a specific user
-  const getUserLearningHours = async (userId: string): Promise<number> => {
+  const getUserLearningHours = async (): Promise<number> => {
+    const userId = currentUser.value?.id
+    if (!userId) return 0
+    
     try {
       const token = useCookie('auth_token').value
       const data = await $fetch<CourseTimeSpent[]>(`/api/learning/student/${userId}/courses/time-spent`, {
-        baseURL: config.public.apiBase,
+        baseURL: config.public.apiBase as string,
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -86,7 +108,7 @@ export const useUserStats = () => {
     try {
       const token = useCookie('auth_token').value
       const data = await $fetch<CourseProgress>(`/api/learning/course/${courseId}`, {
-        baseURL: config.public.apiBase,
+        baseURL: config.public.apiBase as string,
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -99,11 +121,14 @@ export const useUserStats = () => {
   }
 
   // Get average progress across all enrolled courses for a specific user
-  const getAverageCourseProgress = async (userId: string): Promise<number> => {
+  const getAverageCourseProgress = async (): Promise<number> => {
+    const userId = currentUser.value?.id
+    if (!userId) return 0
+    
     try {
       const token = useCookie('auth_token').value
       const data = await $fetch<any[]>('/api/learning/courses/progress', {
-        baseURL: config.public.apiBase,
+        baseURL: config.public.apiBase as string,
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -120,17 +145,20 @@ export const useUserStats = () => {
   }
 
   // Get courses for continue learning (active enrollments with progress > 0) for a specific user
-  const getContinueLearningCourses = async (userId: string): Promise<Array<{
+  const getContinueLearningCourses = async (): Promise<Array<{
     courseId: string
     name: string
     thumbnail: string
     lastAccessed: string
     progress: number
   }>> => {
+    const userId = currentUser.value?.id
+    if (!userId) return []
+    
     try {
       const token = useCookie('auth_token').value
       const data = await $fetch<any[]>('/api/learning/courses/progress', {
-        baseURL: config.public.apiBase,
+        baseURL: config.public.apiBase as string,
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -152,13 +180,16 @@ export const useUserStats = () => {
   }
 
   // Get recent certificates for a specific user
-  const getRecentCertificates = async (userId: string): Promise<Array<{
+  const getRecentCertificates = async (): Promise<Array<{
     courseName: string
     dateIssued: string
   }>> => {
+    const userId = currentUser.value?.id
+    if (!userId) return []
+    
     try {
       const token = useCookie('auth_token').value
-      const certificates = await getUserCertificates(userId)
+      const certificates = await getUserCertificates()
       
       return certificates
         .filter(cert => cert.status === 'ISSUED')
@@ -174,7 +205,25 @@ export const useUserStats = () => {
     }
   }
 
+  // Get current user info
+  const getCurrentUser = async (): Promise<User | null> => {
+    try {
+      const token = useCookie('auth_token').value
+      const data = await $fetch<User>('/api/auth/me', {
+        baseURL: config.public.apiBase as string,
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      return data
+    } catch (error) {
+      console.error('Failed to fetch current user info:', error)
+      return null
+    }
+  }
+
   return {
+    currentUser,
     getUserEnrollments,
     getUserCertificates,
     getUserLearningHours,
@@ -183,6 +232,8 @@ export const useUserStats = () => {
     getContinueLearningCourses,
     getEnrollmentCount,
     getCertificateCount,
-    getRecentCertificates
+    getRecentCertificates,
+    getCurrentUser,
+    setCurrentUser
   }
 }

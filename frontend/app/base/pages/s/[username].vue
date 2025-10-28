@@ -6,7 +6,7 @@
         <div class="flex items-center space-x-4">
           <div class="w-16 h-16 bg-gray-300 rounded-full"></div>
           <div>
-            <h1 class="text-3xl font-bold text-gray-900">{{ userId }}</h1>
+            <h1 class="text-3xl font-bold text-gray-900">{{ displayName }}</h1>
             <p class="text-gray-600">Student Dashboard</p>
           </div>
         </div>
@@ -179,10 +179,17 @@ import MetricCard from '../components/ui/MetricCard.vue'
 import CourseInfoCard from '../components/ui/CourseInfoCard.vue'
 import CertificateCard from '../components/ui/CertificateCard.vue'
 import RecommendedCourseCard from '../components/ui/RecommendedCourseCard.vue'
-import { useUserStats } from '../composables/useUserStats'
+import { useUserStats } from '../../composables/useUserStats'
 
 const route = useRoute()
-const userId = route.params.id as string
+const username = route.params.username as string
+
+const { currentUser } = useUserStats()
+
+const displayName = computed(() => {
+  const user = currentUser.value
+  return user ? `${user.first_name} ${user.last_name}` : username
+})
 
 // Reactive state
 const enrollmentCount = ref(0)
@@ -221,6 +228,8 @@ const loading = reactive({
 // TODO: Replace mock data with actual API calls
 onMounted(async () => {
   const { 
+    getCurrentUser,
+    setCurrentUser,
     getEnrollmentCount, 
     getCertificateCount, 
     getUserLearningHours, 
@@ -229,9 +238,17 @@ onMounted(async () => {
     getRecentCertificates 
   } = useUserStats()
 
+  // Fetch current user and set it
+  try {
+    const user = await getCurrentUser()
+    setCurrentUser(user)
+  } catch (error) {
+    console.error('Failed to fetch current user:', error)
+  }
+
   // Fetch enrollment count
   try {
-    enrollmentCount.value = await getEnrollmentCount(userId)
+    enrollmentCount.value = await getEnrollmentCount()
   } catch (error) {
     console.error('Failed to load enrollment count:', error)
   } finally {
@@ -240,7 +257,7 @@ onMounted(async () => {
 
   // Fetch certificate count
   try {
-    certificateCount.value = await getCertificateCount(userId)
+    certificateCount.value = await getCertificateCount()
   } catch (error) {
     console.error('Failed to load certificate count:', error)
   } finally {
@@ -249,7 +266,7 @@ onMounted(async () => {
 
   // Fetch learning hours
   try {
-    learningHours.value = await getUserLearningHours(userId)
+    learningHours.value = await getUserLearningHours()
   } catch (error) {
     console.error('Failed to load learning hours:', error)
   } finally {
@@ -258,7 +275,7 @@ onMounted(async () => {
 
   // Fetch average progress
   try {
-    averageProgress.value = await getAverageCourseProgress(userId)
+    averageProgress.value = await getAverageCourseProgress()
   } catch (error) {
     console.error('Failed to load average progress:', error)
   } finally {
@@ -267,7 +284,7 @@ onMounted(async () => {
 
   // Fetch continue learning courses
   try {
-    continueLearningCourses.value = await getContinueLearningCourses(userId)
+    continueLearningCourses.value = await getContinueLearningCourses()
   } catch (error) {
     console.error('Failed to load continue learning courses:', error)
   } finally {
@@ -276,7 +293,7 @@ onMounted(async () => {
 
   // Fetch recent certificates
   try {
-    recentCertificates.value = await getRecentCertificates(userId)
+    recentCertificates.value = await getRecentCertificates()
   } catch (error) {
     console.error('Failed to load recent certificates:', error)
   }
@@ -311,6 +328,6 @@ onMounted(async () => {
 
 // Set page title
 useSeoMeta({
-  title: `${userId} - Dashboard`
+  title: `${displayName.value} - Dashboard`
 })
 </script>
