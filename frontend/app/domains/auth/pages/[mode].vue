@@ -1,8 +1,8 @@
 <template>
-  <div class="min-h-screen flex p-4">
+  <div class="min-h-screen flex p-8">
     <!-- Left Side - Image -->
-    <div class="hidden lg:flex lg:w-1/2">
-      <img :src="mode === 'register' ? '/register.png' : '/signin.png'" alt="Sign In" class="w-full h-full object-cover" />
+    <div class="hidden lg:flex lg:w-1/2 ">
+      <img :src="mode === 'register' ? '/register.png' : '/signin.png'" alt="Sign In" class="w-full h-full object-cover rounded-3xl" />
     </div>
 
     <!-- Right Side - Form -->
@@ -149,7 +149,7 @@
 
 <script setup lang="ts">
 definePageMeta({
-  layout: 'default'
+  layout: 'auth'
 });
 
 const route = useRoute()
