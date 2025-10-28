@@ -161,6 +161,8 @@ watch(() => route.params.mode, (newMode) => {
 
 const showPassword = ref(false)
 
+const auth = useAuth()
+
 const loginForm = reactive({
   username: '',
   password: ''
@@ -172,19 +174,22 @@ const registerForm = reactive({
   password: ''
 })
 
-const toggleMode = () => {
-  const newPath = mode.value === 'login' ? '/signup' : '/signin'
-  navigateTo(newPath)
+const handleLogin = async () => {
+  try {
+    await auth.login(loginForm.username, loginForm.password)
+    await navigateTo(`/@${auth.user.value?.username}`)
+  } catch (error) {
+    console.error('Login failed:', error)
+  }
 }
 
-const handleLogin = () => {
-  // Handle login logic
-  console.log('Login:', loginForm)
-}
-
-const handleRegister = () => {
-  // Handle register logic
-  console.log('Register:', registerForm)
+const handleRegister = async () => {
+  try {
+    await auth.register(registerForm.email, registerForm.username, registerForm.password)
+    await navigateTo(`/@${auth.user.value?.username}`)
+  } catch (error) {
+    console.error('Register failed:', error)
+  }
 }
 </script>
 
