@@ -19,6 +19,7 @@ class UserSeeder extends Seeder
             [
                 'id' => '550e8400-e29b-41d4-a716-446655440000',
                 'email' => 'admin@certchain.com',
+                'username' => 'admin',
                 'password' => Hash::make('password123'),
                 'first_name' => 'Admin',
                 'last_name' => 'User',
@@ -35,6 +36,7 @@ class UserSeeder extends Seeder
             [
                 'id' => '550e8400-e29b-41d4-a716-446655440001',
                 'email' => 'john.teacher@certchain.com',
+                'username' => 'johnsmith',
                 'password' => Hash::make('password123'),
                 'first_name' => 'John',
                 'last_name' => 'Smith',
@@ -50,6 +52,7 @@ class UserSeeder extends Seeder
             [
                 'id' => '550e8400-e29b-41d4-a716-446655440002',
                 'email' => 'sarah.johnson@certchain.com',
+                'username' => 'sarahjohnson',
                 'password' => Hash::make('password123'),
                 'first_name' => 'Sarah',
                 'last_name' => 'Johnson',
@@ -66,6 +69,7 @@ class UserSeeder extends Seeder
             [
                 'id' => '550e8400-e29b-41d4-a716-446655440003',
                 'email' => 'alice.student@example.com',
+                'username' => 'alicecooper',
                 'password' => Hash::make('password123'),
                 'first_name' => 'Alice',
                 'last_name' => 'Cooper',
@@ -81,6 +85,7 @@ class UserSeeder extends Seeder
             [
                 'id' => '550e8400-e29b-41d4-a716-446655440004',
                 'email' => 'bob.learner@example.com',
+                'username' => 'bobwilson',
                 'password' => Hash::make('password123'),
                 'first_name' => 'Bob',
                 'last_name' => 'Wilson',
@@ -96,6 +101,7 @@ class UserSeeder extends Seeder
             [
                 'id' => '550e8400-e29b-41d4-a716-446655440005',
                 'email' => 'charlie.dev@example.com',
+                'username' => 'charliebrown',
                 'password' => Hash::make('password123'),
                 'first_name' => 'Charlie',
                 'last_name' => 'Brown',

@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Models\User;
-use Illuminate\Validation\ValidationException;
 
 /**
  * @OA\Info(
@@ -33,6 +32,7 @@ use Illuminate\Validation\ValidationException;
  *     @OA\Property(property="first_name", type="string", example="John"),
  *     @OA\Property(property="last_name", type="string", example="Doe"),
  *     @OA\Property(property="email", type="string", format="email", example="john.doe@example.com"),
+ *     @OA\Property(property="username", type="string", example="johndoe"),
  *     @OA\Property(property="password", type="string", format="password", nullable=true),
  *     @OA\Property(property="avatar", type="string", format="url", nullable=true, example="https://example.com/avatar.jpg"),
  *     @OA\Property(property="bio", type="string", nullable=true, example="Software developer with 5 years experience"),
@@ -220,11 +220,10 @@ class AuthController extends Controller
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"email","password","first_name","last_name"},
+     *             required={"email","username","password"},
      *             @OA\Property(property="email", type="string", format="email", example="user@example.com"),
-     *             @OA\Property(property="password", type="string", format="password", minLength=6, example="password123"),
-     *             @OA\Property(property="first_name", type="string", example="John"),
-     *             @OA\Property(property="last_name", type="string", example="Doe")
+     *             @OA\Property(property="username", type="string", example="johndoe"),
+     *             @OA\Property(property="password", type="string", format="password", minLength=6, example="password123")
      *         )
      *     ),
      *     @OA\Response(
@@ -242,17 +241,17 @@ class AuthController extends Controller
     {
         $request->validate([
             'email' => 'required|email|unique:users,email',
+            'username' => 'required|string|unique:users,username',
             'password' => 'required|min:6',
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
         ]);
 
         $user = User::create([
             'id' => Str::uuid(),
             'email' => $request->email,
+            'username' => $request->username,
             'password' => Hash::make($request->password),
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
+            'first_name' => $request->username,
+            'last_name' => '',
             'auth_provider' => 'EMAIL',
             'role' => 'STUDENT',
         ]);
@@ -271,8 +270,8 @@ class AuthController extends Controller
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"email","password"},
-     *             @OA\Property(property="email", type="string", format="email", example="user@example.com"),
+     *             required={"login","password"},
+     *             @OA\Property(property="login", type="string", example="user@example.com or johndoe"),
      *             @OA\Property(property="password", type="string", format="password", example="password123")
      *         )
      *     ),
@@ -298,11 +297,11 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'login' => 'required',
             'password' => 'required'
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('email', $request->login)->orWhere('username', $request->login)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
