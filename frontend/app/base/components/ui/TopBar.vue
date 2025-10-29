@@ -111,13 +111,13 @@
           <template v-else>
             <Button
               variant="transparent"
-              @click="navigateTo('/signin')"
+              @click="navigateTo('/auth/signin')"
               class="bg-white hidden sm:flex text-text-dark hover:text-accent-star border-white/20 hover:border-accent-star/50 bg-background rounded-3xl cursor-pointer p-4"
             >
               Login
             </Button>
             <Button
-              @click="navigateTo('/signup')"
+              @click="navigateTo('/auth/signup')"
               class="bg-white/30 hover:bg-white/40 text-text-dark rounded-3xl p-4"
             >
               Sign up
@@ -219,14 +219,14 @@
               <Button
                 variant="transparent"
                 size="sm"
-                @click="navigateTo('/signin'); isMobileMenuOpen = false"
+                @click="navigateTo('/auth/signin'); isMobileMenuOpen = false"
                 class="w-full justify-center mb-2 text-text-dark"
               >
                 Login
               </Button>
               <Button
                 size="sm"
-                @click="navigateTo('/signup'); isMobileMenuOpen = false"
+                @click="navigateTo('/auth/signup'); isMobileMenuOpen = false"
                 class="w-full justify-center bg-accent-star hover:bg-accent-star/80 text-text-dark"
               >
                 Sign up
