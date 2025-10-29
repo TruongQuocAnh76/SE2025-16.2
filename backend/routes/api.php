@@ -44,6 +44,7 @@ Route::middleware('auth:sanctum')->prefix('users')->group(function () {
     Route::get('/{id}/reviews', [UserController::class, 'getUserReviews']);
     Route::get('/{id}/certificates', [UserController::class, 'getUserCertificates']);
     Route::get('/{id}/enrollments', [UserController::class, 'getUserEnrollments']);
+    Route::get('/{id}/quiz-attempts-count', [UserController::class, 'getUserQuizAttemptsCount']);
 });
 
 /* ========================

@@ -472,7 +472,7 @@ class LearningController extends Controller
                 'enrollments.progress',
                 'enrollments.enrolled_at',
                 DB::raw('COUNT(DISTINCT lessons.id) as total_lessons'),
-                DB::raw('COUNT(DISTINCT CASE WHEN progress.is_completed = 1 THEN progress.lesson_id END) as completed_lessons'),
+                DB::raw('COUNT(DISTINCT CASE WHEN progress.is_completed = true THEN progress.lesson_id END) as completed_lessons'),
                 DB::raw('COALESCE(SUM(progress.time_spent), 0) as total_time_spent')
             )
             ->groupBy('courses.id', 'courses.title', 'enrollments.status', 'enrollments.progress', 'enrollments.enrolled_at')
@@ -529,7 +529,7 @@ class LearningController extends Controller
                 'enrollments.progress',
                 'enrollments.enrolled_at',
                 DB::raw('COUNT(DISTINCT lessons.id) as total_lessons'),
-                DB::raw('COUNT(DISTINCT CASE WHEN progress.is_completed = 1 THEN progress.lesson_id END) as completed_lessons'),
+                DB::raw('COUNT(DISTINCT CASE WHEN progress.is_completed = true THEN progress.lesson_id END) as completed_lessons'),
                 DB::raw('COALESCE(SUM(progress.time_spent), 0) as total_time_spent')
             )
             ->groupBy('courses.id', 'courses.title', 'enrollments.status', 'enrollments.progress', 'enrollments.enrolled_at')

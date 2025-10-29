@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Review;
 use App\Models\Certificate;
 use App\Models\Enrollment;
+use App\Models\QuizAttempt;
 
 /**
  * @OA\Server(
@@ -308,5 +309,14 @@ class UserController extends Controller
                     ->get();
 
         return response()->json($users);
+    }
+
+    public function getUserQuizAttemptsCount($id)
+    {
+        $user = User::findOrFail($id);
+
+        $count = QuizAttempt::where('student_id', $id)->count();
+
+        return response()->json(['count' => $count]);
     }
 }
