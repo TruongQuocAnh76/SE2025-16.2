@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-neutral-0 border border-neutral-50 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+  <div class="bg-neutral-0 border border-neutral-50 rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow duration-200">
     <div class="flex items-center space-x-4">
       <!-- Thumbnail -->
       <img :src="thumbnail" :alt="name" class="w-16 h-16 object-cover rounded-lg flex-shrink-0" />

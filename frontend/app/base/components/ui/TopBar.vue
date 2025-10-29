@@ -1,5 +1,5 @@
 <template>
-  <header class="bg-transparent absolute top-0 left-0 right-0 z-60">
+  <header class="bg-brand-primary absolute top-0 left-0 right-0 z-60">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center h-16">
         <!-- Left: Logo -->
@@ -70,23 +70,63 @@
 
         <!-- Right: Auth Buttons -->
         <div class="flex items-center space-x-4">
-          <Button
-            variant="transparent"
-            @click="navigateTo('/signin')"
-            class="bg-white hidden sm:flex text-text-dark hover:text-accent-star border-white/20 hover:border-accent-star/50 bg-background rounded-3xl cursor-pointer p-4"
-          >
-            Login
-          </Button>
-          <Button
-            @click="navigateTo('/signup')"
-            class="bg-white/30 hover:bg-white/40 text-text-dark rounded-3xl p-4"
-          >
-            Sign up
-          </Button>
+          <template v-if="isAuthenticated">
+            <!-- User dropdown -->
+            <div class="relative dropdown">
+              <button
+                @click="isDropdownOpen = !isDropdownOpen"
+                class="flex items-center space-x-2 text-white hover:text-accent-star px-3 py-2 rounded-md transition-colors duration-200"
+              >
+                <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-medium">
+                  {{ userInitials }}
+                </div>
+                <svg
+                  class="w-4 h-4 transition-transform duration-200"
+                  :class="{ 'rotate-180': isDropdownOpen }"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div
+                v-if="isDropdownOpen"
+                class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
+              >
+                <div class="py-1">
+                  <div class="px-4 py-2 text-sm text-gray-700 border-b border-gray-100">
+                    {{ user?.username }}
+                  </div>
+                  <button
+                    @click="logout"
+                    class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
+          <template v-else>
+            <Button
+              variant="transparent"
+              @click="navigateTo('/signin')"
+              class="bg-white hidden sm:flex text-text-dark hover:text-accent-star border-white/20 hover:border-accent-star/50 bg-background rounded-3xl cursor-pointer p-4"
+            >
+              Login
+            </Button>
+            <Button
+              @click="navigateTo('/signup')"
+              class="bg-white/30 hover:bg-white/40 text-text-dark rounded-3xl p-4"
+            >
+              Sign up
+            </Button>
+          </template>
         </div>
 
         <!-- Mobile menu button -->
-        <!-- <div class="md:hidden">
+        <div class="md:hidden">
           <button
             @click="isMobileMenuOpen = !isMobileMenuOpen"
             class="text-white hover:text-accent-star p-2"
@@ -113,7 +153,7 @@
               />
             </svg>
           </button>
-        </div> -->
+        </div>
       </div>
 
       <!-- Mobile Navigation Menu -->
@@ -163,21 +203,35 @@
             About us
           </NuxtLink>
           <div class="pt-4 pb-2 border-t border-gray-200">
-            <Button
-              variant="transparent"
-              size="sm"
-              @click="navigateTo('/signin'); isMobileMenuOpen = false"
-              class="w-full justify-center mb-2 text-text-dark"
-            >
-              Login
-            </Button>
-            <Button
-              size="sm"
-              @click="navigateTo('/signup'); isMobileMenuOpen = false"
-              class="w-full justify-center bg-accent-star hover:bg-accent-star/80 text-text-dark"
-            >
-              Sign up
-            </Button>
+            <template v-if="isAuthenticated">
+              <div class="px-3 py-2 text-base font-medium text-text-dark">
+                {{ user?.username }}
+              </div>
+              <Button
+                size="sm"
+                @click="logout; isMobileMenuOpen = false"
+                class="w-full justify-center bg-accent-star hover:bg-accent-star/80 text-text-dark"
+              >
+                Logout
+              </Button>
+            </template>
+            <template v-else>
+              <Button
+                variant="transparent"
+                size="sm"
+                @click="navigateTo('/signin'); isMobileMenuOpen = false"
+                class="w-full justify-center mb-2 text-text-dark"
+              >
+                Login
+              </Button>
+              <Button
+                size="sm"
+                @click="navigateTo('/signup'); isMobileMenuOpen = false"
+                class="w-full justify-center bg-accent-star hover:bg-accent-star/80 text-text-dark"
+              >
+                Sign up
+              </Button>
+            </template>
           </div>
         </div>
       </div>
@@ -187,21 +241,43 @@
 
 <script setup lang="ts">
 import Button from './Button.vue'
+import { useAuth } from '~/domains/auth/composables/useAuth'
 
 const isMobileMenuOpen = ref(false)
 
-// Auth state (TODO: integrate with actual auth)
-const isLoggedIn = ref(false) // Set to true for testing
-const userName = ref('John Doe')
-const userInitials = computed(() => userName.value.split(' ').map(n => n[0]).join('').toUpperCase())
+const { isAuthenticated, user, logout: authLogout, getUser } = useAuth()
 const isDropdownOpen = ref(false)
 
+const userInitials = computed(() => {
+  if (user.value?.username) {
+    return user.value.username.split(' ').map(n => n[0]).join('').toUpperCase()
+  }
+  return ''
+})
+
 function logout() {
-  // TODO: Implement actual logout logic
-  isLoggedIn.value = false
+  authLogout()
   isDropdownOpen.value = false
   navigateTo('/')
 }
+
+// Initialize user data if authenticated
+onMounted(async () => {
+  if (isAuthenticated.value && !user.value) {
+    try {
+      await getUser()
+    } catch (err) {
+      // Handle error if needed
+    }
+  }
+
+  // Close dropdown on outside click
+  document.addEventListener('click', (e) => {
+    if (!(e.target as HTMLElement)?.closest('.dropdown')) {
+      isDropdownOpen.value = false
+    }
+  })
+})
 
 // Close mobile menu when route changes
 watch(() => useRoute().path, () => {

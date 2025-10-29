@@ -18,7 +18,7 @@ export const useUserStats = () => {
     try {
       const token = useCookie('auth_token').value
       const data = await $fetch<Enrollment[]>(`/api/users/${userId}/enrollments`, {
-        baseURL: config.public.apiBase as string,
+        baseURL: config.public.backendUrl as string,
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -38,7 +38,7 @@ export const useUserStats = () => {
     try {
       const token = useCookie('auth_token').value
       const data = await $fetch<Certificate[]>(`/api/users/${userId}/certificates`, {
-        baseURL: config.public.apiBase as string,
+        baseURL: config.public.backendUrl as string,
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -80,6 +80,26 @@ export const useUserStats = () => {
     }
   }
 
+  // Get quiz attempts count for a specific user
+  const getQuizAttemptsCount = async (): Promise<number> => {
+    const userId = currentUser.value?.id
+    if (!userId) return 0
+    
+    try {
+      const token = useCookie('auth_token').value
+      const data = await $fetch<{count: number}>(`/api/users/${userId}/quiz-attempts-count`, {
+        baseURL: config.public.backendUrl as string,
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      return data.count
+    } catch (error) {
+      console.error('Failed to fetch quiz attempts count:', error)
+      return 0
+    }
+  }
+
     // Get total learning hours for a specific user
   const getUserLearningHours = async (): Promise<number> => {
     const userId = currentUser.value?.id
@@ -88,7 +108,7 @@ export const useUserStats = () => {
     try {
       const token = useCookie('auth_token').value
       const data = await $fetch<CourseTimeSpent[]>(`/api/learning/student/${userId}/courses/time-spent`, {
-        baseURL: config.public.apiBase as string,
+        baseURL: config.public.backendUrl as string,
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -103,20 +123,20 @@ export const useUserStats = () => {
     }
   }
 
-  // Get course progress for a specific course
-  const getCourseProgress = async (courseId: string): Promise<number> => {
+  // Get courses progress
+  const getCoursesProgress = async (): Promise<any[]> => {
     try {
       const token = useCookie('auth_token').value
-      const data = await $fetch<CourseProgress>(`/api/learning/course/${courseId}`, {
-        baseURL: config.public.apiBase as string,
+      const data = await $fetch<any[]>('/api/learning/courses/progress', {
+        baseURL: config.public.backendUrl as string,
         headers: {
           'Authorization': `Bearer ${token}`
         }
       })
-      return data.enrollment?.progress || 0
+      return data || []
     } catch (error) {
-      console.error('Failed to fetch course progress:', error)
-      return 0
+      console.error('Failed to fetch courses progress:', error)
+      return []
     }
   }
 
@@ -128,7 +148,7 @@ export const useUserStats = () => {
     try {
       const token = useCookie('auth_token').value
       const data = await $fetch<any[]>('/api/learning/courses/progress', {
-        baseURL: config.public.apiBase as string,
+        baseURL: config.public.backendUrl as string,
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -158,7 +178,7 @@ export const useUserStats = () => {
     try {
       const token = useCookie('auth_token').value
       const data = await $fetch<any[]>('/api/learning/courses/progress', {
-        baseURL: config.public.apiBase as string,
+        baseURL: config.public.backendUrl as string,
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -210,7 +230,7 @@ export const useUserStats = () => {
     try {
       const token = useCookie('auth_token').value
       const data = await $fetch<User>('/api/auth/me', {
-        baseURL: config.public.apiBase as string,
+        baseURL: config.public.backendUrl as string,
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -227,11 +247,12 @@ export const useUserStats = () => {
     getUserEnrollments,
     getUserCertificates,
     getUserLearningHours,
-    getCourseProgress,
+    getCoursesProgress,
     getAverageCourseProgress,
     getContinueLearningCourses,
     getEnrollmentCount,
     getCertificateCount,
+    getQuizAttemptsCount,
     getRecentCertificates,
     getCurrentUser,
     setCurrentUser
