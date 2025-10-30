@@ -177,7 +177,9 @@ const registerForm = reactive({
 const handleLogin = async () => {
   try {
     await auth.login(loginForm.username, loginForm.password)
+    console.log('Login successful, redirecting...')
     await navigateTo(`/s/${auth.user.value?.username}`)
+    console.log('Redirection complete.')
   } catch (error) {
     console.error('Login failed:', error)
   }

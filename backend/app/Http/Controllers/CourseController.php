@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 
@@ -105,7 +106,7 @@ class CourseController extends Controller
         $validator = Validator::make($request->all(), [
             'title'       => 'required|string|max:255',
             'description' => 'required|string',
-            'thumbnail'   => 'nullable|url',
+            // 'thumbnail'   => 'nullable|url', // Allow URL or will be uploaded via pre-signed URL
             'level'       => 'in:BEGINNER,INTERMEDIATE,ADVANCED,EXPERT',
             'price'       => 'nullable|numeric|min:0',
             'duration'    => 'nullable|integer|min:1',
@@ -124,7 +125,22 @@ class CourseController extends Controller
 
         $course = Course::create($data);
 
-        return response()->json(['message' => 'Course created successfully', 'course' => $course]);
+        // Generate pre-signed URL for thumbnail upload if no thumbnail URL provided
+        $thumbnailUploadUrl = null;
+        // if (empty($data['thumbnail'])) {
+            $thumbnailPath = 'courses/thumbnails/' . $course->id . '.jpg';
+            $thumbnailUploadUrl = Storage::disk('s3')->temporaryUrl(
+                $thumbnailPath,
+                now()->addMinutes(30), // URL valid for 30 minutes
+                ['ContentType' => 'image/jpeg']
+            );
+        // }
+
+        return response()->json([
+            'message' => 'Course created successfully',
+            'course' => $course,
+            'thumbnail_upload_url' => $thumbnailUploadUrl
+        ]);
     }
 
     /**
