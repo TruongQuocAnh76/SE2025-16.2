@@ -4,7 +4,7 @@
      <TopBar/>
 
     <!-- Main Content -->
-    <main class="flex-1">
+    <main class="flex-1 pt-16">
       <slot />
     </main>
 
@@ -15,6 +15,6 @@
 
 <script setup lang="ts">
 // Explicitly import components from base layer
-import TopBar from '../../../base/components/ui/TopBar.vue'
-import Footer from '../../../base/components/ui/Footer.vue'
+import TopBar from '../components/ui/TopBar.vue'
+import Footer from '../components/ui/Footer.vue'
 </script>

@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-neutral-0 border border-neutral-50 rounded-lg p-6 shadow-sm">
+  <div class="bg-neutral-0 border border-neutral-50 rounded-lg p-6 shadow-md">
     <div class="flex items-center space-x-4">
       <!-- Certificate Icon -->
       <div class="flex-shrink-0">

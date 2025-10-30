@@ -35,7 +35,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   try {
     const config = useRuntimeConfig()
     const response = await $fetch('/api/auth/me', {
-      baseURL: config.public.apiBase || 'http://localhost:8000',
+      baseURL: config.public.backendUrl || 'http://localhost:8000',
       headers: {
         'Authorization': `Bearer ${authToken.value}`,
         'Accept': 'application/json'

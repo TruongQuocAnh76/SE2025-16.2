@@ -25,10 +25,10 @@ Route::get('/', fn() => response()->json(['message' => 'CertChain API v1 is runn
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/logout', [AuthController::class, 'logout']);
 });
 
 Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
 });
 
@@ -44,6 +44,7 @@ Route::middleware('auth:sanctum')->prefix('users')->group(function () {
     Route::get('/{id}/reviews', [UserController::class, 'getUserReviews']);
     Route::get('/{id}/certificates', [UserController::class, 'getUserCertificates']);
     Route::get('/{id}/enrollments', [UserController::class, 'getUserEnrollments']);
+    Route::get('/{id}/quiz-attempts-count', [UserController::class, 'getUserQuizAttemptsCount']);
 });
 
 /* ========================
