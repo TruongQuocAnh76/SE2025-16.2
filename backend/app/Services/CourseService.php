@@ -30,4 +30,13 @@ class CourseService {
     public function getModulesWithLessons($id) {
         return $this->courseRepository->getModulesWithLessons($id);
     }
+    
+    public function searchCourses($query, $limit = 10) {
+        $courses = $this->courseRepository->searchCourses($query, $limit);
+        return [
+            'data' => $courses,
+            'total' => $courses->count(),
+            'query' => $query
+        ];
+    }
 }

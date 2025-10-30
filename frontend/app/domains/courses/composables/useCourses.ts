@@ -64,6 +64,32 @@ export const useCourses = () => {
     }
   }
 
+  const searchCourses = async (query: string, limit: number = 10): Promise<{ data: Course[]; total: number; query: string } | null> => {
+    try {
+      const token = useCookie('auth_token').value
+      if (!token) {
+        throw new Error('No authentication token found')
+      }
+
+      const queryParams = new URLSearchParams({
+        q: query,
+        limit: limit.toString()
+      })
+
+      const data = await $fetch<{ data: Course[]; total: number; query: string }>(`/api/courses/search?${queryParams}`, {
+        baseURL: config.public.backendUrl as string,
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      return data
+    } catch (error) {
+      console.error('Failed to search courses:', error)
+      throw error
+    }
+  }
+
   const getCourse = async (id: string): Promise<Course | null> => {
     try {
       const token = useCookie('auth_token').value
@@ -175,6 +201,7 @@ export const useCourses = () => {
   return {
     createCourse,
     getCourses,
+    searchCourses,
     getCourse,
     updateCourse,
     deleteCourse,

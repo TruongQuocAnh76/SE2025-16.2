@@ -51,6 +51,7 @@ Route::middleware('auth:sanctum')->prefix('users')->group(function () {
  * COURSE MANAGEMENT
  * ======================== */
 Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
+    Route::get('/search', [CourseController::class, 'search']); // Search courses by name
     Route::get('/', [CourseController::class, 'index']); // List all courses
     Route::post('/', [CourseController::class, 'store']); // Teacher/Admin create
     Route::get('/{id}', [CourseController::class, 'show']); // Get course details

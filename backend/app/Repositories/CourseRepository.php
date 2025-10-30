@@ -1,5 +1,6 @@
 <?php namespace App\Repositories;
 use App\Models\Course;
+use App\Models\Module;
 
 class CourseRepository {
     protected $model;
@@ -29,5 +30,27 @@ class CourseRepository {
     
     public function delete($id) {
         return $this->model->findOrFail($id)->delete();
+    }
+    
+    public function searchCourses($query, $limit = 10) {
+        return $this->model->with('teacher:id,first_name,last_name')
+            ->where('title', 'like', "%{$query}%")
+            ->orWhere('description', 'like', "%{$query}%")
+            ->orderByRaw("CASE 
+                WHEN title LIKE ? THEN 1 
+                WHEN title LIKE ? THEN 2 
+                ELSE 3 
+            END", ["{$query}%", "%{$query}%"])
+            ->limit($limit)
+            ->get();
+    }
+    
+    public function getModulesWithLessons($courseId) {
+        return Module::where('course_id', $courseId)
+            ->with(['lessons' => function ($query) {
+                $query->orderBy('order_index');
+            }])
+            ->orderBy('order_index')
+            ->get();
     }
 }

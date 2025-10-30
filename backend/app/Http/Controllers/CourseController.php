@@ -14,6 +14,7 @@ use App\Models\Lesson;
 use App\Models\Enrollment;
 use App\Models\Review;
 use App\Models\User;
+use App\Services\CourseService;
 
 /**
  * @OA\Server(
@@ -23,6 +24,12 @@ use App\Models\User;
  */
 class CourseController extends Controller
 {
+    protected $courseService;
+    
+    public function __construct(CourseService $courseService)
+    {
+        $this->courseService = $courseService;
+    }
     /**
      * @OA\Get(
      *     path="/courses",
@@ -50,24 +57,12 @@ class CourseController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Course::with('teacher:id,first_name,last_name');
+        $filters = [];
+        if ($request->has('status')) $filters['status'] = $request->status;
+        if ($request->has('level')) $filters['level'] = $request->level;
+        if ($request->has('keyword')) $filters['keyword'] = $request->keyword;
 
-        // Optional filters
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->has('level')) {
-            $query->where('level', $request->level);
-        }
-
-        if ($request->has('keyword')) {
-            $keyword = $request->keyword;
-            $query->where('title', 'like', "%$keyword%");
-        }
-
-        $courses = $query->orderByDesc('created_at')->paginate(12);
-
+        $courses = $this->courseService->getAllCourses($filters);
         return response()->json($courses);
     }
 
@@ -145,6 +140,55 @@ class CourseController extends Controller
 
     /**
      * @OA\Get(
+     *     path="/courses/search",
+     *     summary="Search courses by name",
+     *     tags={"Courses"},
+     *     @OA\Parameter(
+     *         name="q",
+     *         in="query",
+     *         required=true,
+     *         description="Search query for course name",
+     *         @OA\Schema(type="string", example="programming")
+     *     ),
+     *     @OA\Parameter(
+     *         name="limit",
+     *         in="query",
+     *         description="Maximum number of results to return",
+     *         @OA\Schema(type="integer", default=10, maximum=50)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Search results",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Course")),
+     *             @OA\Property(property="total", type="integer"),
+     *             @OA\Property(property="query", type="string")
+     *         )
+     *     )
+     * )
+     */
+    public function search(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'q' => 'required|string|min:1|max:100',
+            'limit' => 'nullable|integer|min:1|max:50'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $query = $request->input('q');
+        $limit = $request->input('limit', 10);
+
+        $result = $this->courseService->searchCourses($query, $limit);
+
+        return response()->json($result);
+    }
+
+    /**
+     * @OA\Get(
      *     path="/courses/{id}",
      *     summary="Get course details",
      *     tags={"Courses"},
@@ -165,12 +209,7 @@ class CourseController extends Controller
      */
     public function show($id)
     {
-        $course = Course::with([
-            'teacher:id,first_name,last_name,email',
-            'modules.lessons:id,title,order_index,module_id,is_free',
-            'reviews.student:id,first_name,last_name'
-        ])->findOrFail($id);
-
+        $course = $this->courseService->getCourseById($id);
         return response()->json($course);
     }
 
@@ -229,7 +268,7 @@ class CourseController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        $course->update($validator->validated());
+        $course = $this->courseService->updateCourse($id, $validator->validated());
 
         return response()->json(['message' => 'Course updated successfully', 'course' => $course]);
     }
@@ -265,7 +304,7 @@ class CourseController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $course->delete();
+        $this->courseService->deleteCourse($id);
 
         return response()->json(['message' => 'Course deleted successfully']);
     }
@@ -441,13 +480,7 @@ class CourseController extends Controller
      */
     public function getModulesWithLessons($id)
     {
-        $modules = Module::where('course_id', $id)
-                    ->with(['lessons' => function ($query) {
-                        $query->orderBy('order_index');
-                    }])
-                    ->orderBy('order_index')
-                    ->get();
-
+        $modules = $this->courseService->getModulesWithLessons($id);
         return response()->json($modules);
     }
 
