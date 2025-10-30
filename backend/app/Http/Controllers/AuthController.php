@@ -20,10 +20,10 @@ use App\Models\User;
  * )
  * @OA\SecurityScheme(
  *     securityScheme="sanctum",
- *     type="apiKey",
- *     name="Authorization",
- *     in="header",
- *     description="Bearer token for Sanctum authentication"
+ *     type="http",
+ *     scheme="bearer",
+ *     bearerFormat="Token",
+ *     description="Enter your Sanctum token (without 'Bearer ' prefix)"
  * )
  * @OA\Schema(
  *     schema="User",
@@ -220,10 +220,12 @@ class AuthController extends Controller
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"email","username","password"},
-     *             @OA\Property(property="email", type="string", format="email", example="user@example.com"),
-     *             @OA\Property(property="username", type="string", example="johndoe"),
-     *             @OA\Property(property="password", type="string", format="password", minLength=6, example="password123")
+     *             required={"username","email","password","first_name","last_name"},
+     *             @OA\Property(property="username", type="string", description="Username", example="johndoe"),
+     *             @OA\Property(property="email", type="string", format="email", description="Email address", example="user@example.com"),
+     *             @OA\Property(property="password", type="string", format="password", minLength=6, description="Password (min 6 characters)", example="password123"),
+     *             @OA\Property(property="first_name", type="string", description="First name", example="John"),
+     *             @OA\Property(property="last_name", type="string", description="Last name", example="Doe")
      *         )
      *     ),
      *     @OA\Response(
@@ -240,18 +242,20 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|unique:users,email',
             'username' => 'required|string|unique:users,username',
+            'email' => 'required|email|unique:users,email',
             'password' => 'required|min:6',
+            'first_name' => 'required|string',
+            'last_name' => 'required|string',
         ]);
 
         $user = User::create([
             'id' => Str::uuid(),
-            'email' => $request->email,
             'username' => $request->username,
+            'email' => $request->email,
             'password' => Hash::make($request->password),
-            'first_name' => $request->username,
-            'last_name' => '',
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
             'auth_provider' => 'EMAIL',
             'role' => 'STUDENT',
         ]);
@@ -271,8 +275,8 @@ class AuthController extends Controller
      *         required=true,
      *         @OA\JsonContent(
      *             required={"login","password"},
-     *             @OA\Property(property="login", type="string", example="user@example.com or johndoe"),
-     *             @OA\Property(property="password", type="string", format="password", example="password123")
+     *             @OA\Property(property="login", type="string", description="Email or username", example="user@example.com"),
+     *             @OA\Property(property="password", type="string", format="password", description="Password (min 6 characters)", example="password123")
      *         )
      *     ),
      *     @OA\Response(

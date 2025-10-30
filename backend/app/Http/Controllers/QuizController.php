@@ -485,32 +485,6 @@ class QuizController extends Controller
      *     @OA\Response(
      *         response=200,
      *         description="Quiz submitted successfully",
-    /**
-     * @OA\Post(
-     *     path="/quizzes/attempt/{attemptId}/submit",
-     *     summary="Submit quiz attempt",
-     *     description="Submit answers for a quiz attempt",
-     *     operationId="submitQuizAttempt",
-     *     tags={"Quizzes"},
-     *     security={{"sanctum": {}}},
-     *     @OA\Parameter(
-     *         name="attemptId",
-     *         in="path",
-     *         required=true,
-     *         description="Attempt ID",
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"answers"},
-     *             @OA\Property(property="answers", type="array", @OA\Items(type="string"), description="Array of answers corresponding to questions"),
-     *             @OA\Property(property="time_spent", type="integer", nullable=true, description="Time spent in seconds")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Quiz submitted successfully",
      *         @OA\JsonContent(
      *             type="object",
      *             @OA\Property(property="score", type="number", format="decimal"),
