@@ -43,14 +43,14 @@ const courses = ref([
     description: 'Share your expertise and inspire the next generation of learners. Create courses and help students achieve their goals.',
     buttonText: 'Join as Teacher',
     link: '/teacher/register', 
-    image: '/images/teacher.jpg'
+    image: '/images/membership/teacher.jpg'
   },
   {
     title: 'Become a Student',
     description: 'Start your learning journey today. Access hundreds of courses and earn blockchain-verified certificates.',
     buttonText: 'Join as Student',
     link: 'auth/signup',
-    image: '/images/student.jpg'
+    image: '/images/membership/student.jpg'
   }
 ])
 </script>

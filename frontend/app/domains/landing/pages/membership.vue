@@ -45,11 +45,11 @@
 
 <script setup>
 import { ref } from 'vue'
-import PricingCard from '../components/ui/PricingCard.vue'
-import BlockchainSection from '../components/ui/BlockchainSection.vue'
-import FAQSection from '../components/ui/FAQSection.vue'
-import TestimonialsCarousel from '../components/ui/TestimonialsCarousel.vue'
-import CourseCards from '../components/ui/CourseCards.vue'
+import PricingCard from '../components/membership/ui/PricingCard.vue'
+import BlockchainSection from '../components/membership/ui/BlockchainSection.vue'
+import FAQSection from '../components/membership/ui/FAQSection.vue'
+import TestimonialsCarousel from '../components/membership/ui/TestimonialsCarousel.vue'
+import CourseCards from '../components/membership/ui/CourseCards.vue'
 
 useHead({
   title: 'Membership Plans - Certchain',

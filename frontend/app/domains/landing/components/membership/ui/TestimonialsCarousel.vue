@@ -60,37 +60,37 @@ const testimonials = ref([
   {
     name: 'Mai Hoang Anh',
     role: 'Student',
-    avatar: '/images/student1.jpg',
+    avatar: '/images/membership/student1.jpg',
     text: 'This platform has transformed my learning experience. The courses are well-structured and the blockchain certificates add real value to my credentials.'
   },
   {
     name: 'Tran Thai Dai Duong',
     role: 'Student',
-    avatar: '/images/student5.jpg',
+    avatar: '/images/membership/student5.jpg',
     text: 'Amazing quality of content! The instructors are knowledgeable and the interactive lessons make learning enjoyable and effective.'
   },
   {
     name: 'Truong Quoc Anh',
     role: 'Student',
-    avatar: '/images/student3.jpg',
+    avatar: '/images/membership/student3.jpg',
     text: 'I\'ve tried many learning platforms, but this one stands out. The premium membership is worth every penny with its comprehensive course library.'
   },
   {
     name: 'Bui Tho An',
     role: 'Student',
-    avatar: '/images/student4.jpg',
+    avatar: '/images/membership/student4.jpg',
     text: 'The certificate verification through blockchain is brilliant! It gives me confidence when showcasing my achievements to potential employers.'
   },
   {
     name: 'Nguyen Canh Hoang',
     role: 'Student',
-    avatar: '/images/student2.jpg',
+    avatar: '/images/membership/student2.jpg',
     text: 'Excellent value for money. The premium plan gives access to so many quality courses and the support team is always responsive.'
   },
   {
     name: 'Dinh Truong An',
     role: 'Student',
-    avatar: '/images/student6.jpg',
+    avatar: '/images/membership/student6.jpg',
     text: 'The user interface is intuitive and the learning path is clear. I\'ve gained practical skills that I can apply immediately in my career.'
   }
 ])
