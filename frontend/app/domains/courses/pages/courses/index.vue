@@ -4,7 +4,7 @@
     <CourseSearchBar @search="handleSearch" />
 
     <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-4 py-12">
+    <div class="max-w-7xl mx-auto px-4 py-12 mb-16">
       <!-- Page Header -->
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-text-dark mb-2">
@@ -94,7 +94,7 @@
     </div>
 
     <!-- Recommended for You Section -->
-    <section class="bg-accent-blue bg-opacity-20 py-12">
+    <section class="bg-accent-blue bg-opacity-20 py-12 mt-16">
       <div class="max-w-7xl mx-auto px-4">
         <div class="flex justify-between items-center mb-8">
           <h2 class="text-2xl font-bold text-dark">Recommended for You</h2>
@@ -116,6 +116,31 @@
         </div>
       </div>
     </section>
+
+    <!-- Become an Instructor Section -->
+    <section v-if="isAdminOrTeacher" class="bg-accent-blue bg-opacity-20 py-16 px-8 mt-16 mx-12 rounded-3xl mb-16">
+      <div class="max-w-7xl mx-auto px-4">
+        <div class="flex items-center justify-between">
+          <!-- Text and Button -->
+          <div class="max-w-lg">
+            <h2 class="text-3xl font-bold text-dark mb-4">Share your knowledge with the world</h2>
+            <p class="text-dark text-lg mb-8">
+              Create and publish your own courses on Certchain. Upload lessons, videos and quizzes - your students will earn verified blockchain certificates upon completion.
+            </p>
+            <NuxtLink
+              to="/courses/add"
+              class="inline-block px-8 py-3 bg-brand-primary text-white font-semibold rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              Add a Course Now
+            </NuxtLink>
+          </div>
+          <!-- Image -->
+          <div class="ml-8">
+            <img src="/add_course.png" alt="Add Course" class="max-w-md h-auto" />
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -133,6 +158,10 @@ const hasNextPage = ref(false)
 
 // TODO: ADD ACTUAL RECOMMENDATION LOGIC
 const recommendedCourses = computed(() => courses.value.slice(0, 4))
+
+// User role check
+const { user } = useAuth()
+const isAdminOrTeacher = computed(() => true) // TODO: implement proper role check
 
 // Filters
 const filters = ref({
