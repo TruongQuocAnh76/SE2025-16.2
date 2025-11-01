@@ -209,8 +209,30 @@ class CourseController extends Controller
      */
     public function show($id)
     {
-        $course = $this->courseService->getCourseById($id);
-        return response()->json($course);
+        // $course = $this->courseService->getCourseById($id); // Tạm thời bỏ qua service
+
+        // Dùng .with() để tải kèm (eager load) data
+        $course = Course::with([
+                            'reviews.student', // Lấy review VÀ student của review
+                            'modules.lessons'  // Lấy module VÀ lesson của module
+                        ])
+                        ->findOrFail($id);
+
+        $ratingCounts = $course->reviews()
+                           ->selectRaw('rating, count(*) as count')
+                           ->groupBy('rating')
+                           ->pluck('count', 'rating')
+                           ->all();
+        // Mặc định cho 1-5 sao nếu không có review
+        $fullRatingCounts = [];
+        for ($i = 1; $i <= 5; $i++) {
+            $fullRatingCounts[$i] = $ratingCounts[$i] ?? 0;
+        }
+
+        return response()->json([
+            'course' => $course,
+            'rating_counts' => $fullRatingCounts // Gửi dữ liệu số lượng review
+        ]);
     }
 
     /**
@@ -431,10 +453,14 @@ class CourseController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
+        // 1. Tìm khóa học (Cần thiết cho bước tính toán)
+        $course = Course::findOrFail($id);
+
+        // 2. Lưu đánh giá (Code của bạn đã đúng)
         $review = Review::updateOrCreate(
             [
                 'student_id' => Auth::id(),
-                'course_id' => $id,
+                'course_id' => $id, // $id hoặc $course->id đều được
             ],
             [
                 'rating' => $request->rating,
@@ -442,7 +468,35 @@ class CourseController extends Controller
             ]
         );
 
-        return response()->json(['message' => 'Review submitted', 'review' => $review]);
+        // === PHẦN QUAN TRỌNG BỊ THIẾU ===
+        // 3. TÍNH TOÁN LẠI ĐIỂM TRUNG BÌNH
+        // Lấy tất cả đánh giá của khóa học này (bao gồm cả cái vừa thêm)
+        $allReviews = $course->reviews();
+
+        // Cập nhật 2 trường mới trong bảng 'courses'
+        $course->average_rating = $allReviews->avg('rating');
+        $course->review_count = $allReviews->count();
+        $course->save();
+        // === KẾT THÚC PHẦN BỊ THIẾU ===
+        $ratingCounts = $course->reviews()
+                                ->selectRaw('rating, count(*) as count')
+                                ->groupBy('rating')
+                                ->pluck('count', 'rating')
+                                ->all();
+            $fullRatingCounts = [];
+            for ($i = 1; $i <= 5; $i++) {
+                $fullRatingCounts[$i] = $ratingCounts[$i] ?? 0;
+            }
+        // 4. Trả về review (Nên load cả 'student' để frontend hiển thị)
+        return response()->json([
+                'message' => 'Review submitted', 
+                'review' => $review->load('student'), // Gửi review
+                'course_stats' => [ // Gửi stats mới
+                    'average_rating' => $course->average_rating,
+                    'review_count' => $course->review_count,
+                    'rating_counts' => $fullRatingCounts
+                ]
+            ]);
     }
 
     /**

@@ -1,31 +1,66 @@
-import type { Course, CreateCourseData } from '../types/course'
+// Dán code này để thay thế toàn bộ file composables/useCourses.ts
 
+import type { Course, CreateCourseData, Review } from '../types/course'
+
+// Định nghĩa kiểu dữ liệu cho review payload
+export interface CreateReviewData {
+  rating: number
+  comment?: string
+}
+
+// Định nghĩa kiểu dữ liệu cho response từ API
 export interface CreateCourseResponse {
   message: string
   course: Course
   thumbnail_upload_url?: string
+  
+}
+
+export interface CourseDetailsResponse {
+  course: Course;
+  rating_counts: { [key: number]: number };
+}
+
+export interface AddReviewResponse {
+  message: string;
+  review: Review; // Review mới (đã kèm student)
+  course_stats: { // Stats mới
+    average_rating: number;
+    review_count: number;
+    rating_counts: { [key: number]: number };
+  };
 }
 
 export const useCourses = () => {
   const config = useRuntimeConfig()
+  const token = useCookie('auth_token') // Lấy cookie ref một lần
+
+  /**
+   * Helper function để lấy headers (tránh lặp code)
+   */
+  const getAuthHeaders = () => {
+    if (!token.value) {
+      throw new Error('No authentication token found')
+    }
+    return {
+      'Authorization': `Bearer ${token.value}`,
+      'Accept': 'application/json',
+    }
+  }
+
+  // === CÁC HÀM CỦA BẠN (Đã chuẩn hóa) ===
 
   const createCourse = async (courseData: CreateCourseData): Promise<{ course: Course; thumbnailUploadUrl?: string } | null> => {
     try {
-      const token = useCookie('auth_token').value
-      if (!token) {
-        throw new Error('No authentication token found')
-      }
-
       const data = await $fetch<CreateCourseResponse>('/api/courses', {
         baseURL: config.public.backendUrl as string,
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          ...getAuthHeaders(), // <-- Dùng helper
           'Content-Type': 'application/json'
         },
         body: courseData
       })
-
       return {
         course: data.course,
         thumbnailUploadUrl: data.thumbnail_upload_url
@@ -38,11 +73,6 @@ export const useCourses = () => {
 
   const getCourses = async (params?: { status?: string; level?: string }): Promise<Course[]> => {
     try {
-      const token = useCookie('auth_token').value
-      if (!token) {
-        throw new Error('No authentication token found')
-      }
-
       const queryParams = new URLSearchParams()
       if (params?.status) queryParams.append('status', params.status)
       if (params?.level) queryParams.append('level', params.level)
@@ -50,14 +80,15 @@ export const useCourses = () => {
       const queryString = queryParams.toString()
       const url = `/api/courses${queryString ? `?${queryString}` : ''}`
 
-      const data = await $fetch<Course[]>(url, {
+      // Route này là public, không cần token (dựa trên api.php đã sửa)
+      const data = await $fetch<Course[] | { data: Course[] }>(url, {
         baseURL: config.public.backendUrl as string,
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Accept': 'application/json' }
       })
 
-      return data || []
+      // Xử lý cả hai trường hợp: API trả về mảng, hoặc { data: mảng }
+      return Array.isArray(data) ? data : (data as any).data || []
+
     } catch (error) {
       console.error('Failed to fetch courses:', error)
       return []
@@ -66,21 +97,15 @@ export const useCourses = () => {
 
   const searchCourses = async (query: string, limit: number = 10): Promise<{ data: Course[]; total: number; query: string } | null> => {
     try {
-      const token = useCookie('auth_token').value
-      if (!token) {
-        throw new Error('No authentication token found')
-      }
-
       const queryParams = new URLSearchParams({
         q: query,
         limit: limit.toString()
       })
 
+      // Route này cũng là public
       const data = await $fetch<{ data: Course[]; total: number; query: string }>(`/api/courses/search?${queryParams}`, {
         baseURL: config.public.backendUrl as string,
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Accept': 'application/json' }
       })
 
       return data
@@ -90,44 +115,43 @@ export const useCourses = () => {
     }
   }
 
-  const getCourse = async (id: string): Promise<Course | null> => {
-    try {
-      const token = useCookie('auth_token').value
-      if (!token) {
-        throw new Error('No authentication token found')
-      }
+  // === ĐÃ SỬA LỖI LẶP LẠI (Gộp getCourse và getCourseById) ===
+  const getCourseById = async (id: string): Promise<Course | null> => {
+      try {
+        const config = useRuntimeConfig() 
 
-      const data = await $fetch<Course>(`/api/courses/${id}`, {
-        baseURL: config.public.backendUrl as string,
-        headers: {
-          'Authorization': `Bearer ${token}`
+        // Route này là PUBLIC
+        // Dùng $fetch và mong đợi kiểu 'CourseDetailsResponse'
+        const response = await $fetch<CourseDetailsResponse>(`/api/courses/${id}`, {
+          baseURL: config.public.backendUrl as string,
+          headers: { 'Accept': 'application/json' }
+        })
+    
+        // Gộp 'rating_counts' vào đối tượng 'course'
+        if (response.course && response.rating_counts) {
+          response.course.rating_counts = response.rating_counts;
         }
-      })
-
-      return data
-    } catch (error) {
-      console.error('Failed to fetch course:', error)
-      return null
+        
+        // Trả về chỉ đối tượng 'course' đã được gộp
+        return response.course;
+    
+      } catch (error) {
+        console.error(`Lỗi khi lấy khóa học ${id}:`, error)
+        return null
+      }
     }
-  }
 
   const updateCourse = async (id: string, courseData: Partial<CreateCourseData>): Promise<Course | null> => {
     try {
-      const token = useCookie('auth_token').value
-      if (!token) {
-        throw new Error('No authentication token found')
-      }
-
       const data = await $fetch<{ message: string; course: Course }>(`/api/courses/${id}`, {
         baseURL: config.public.backendUrl as string,
-        method: 'PUT',
+        method: 'PUT', // PUT hoặc POST (nếu dùng form-data)
         headers: {
-          'Authorization': `Bearer ${token}`,
+          ...getAuthHeaders(),
           'Content-Type': 'application/json'
         },
         body: courseData
       })
-
       return data.course
     } catch (error) {
       console.error('Failed to update course:', error)
@@ -137,19 +161,11 @@ export const useCourses = () => {
 
   const deleteCourse = async (id: string): Promise<boolean> => {
     try {
-      const token = useCookie('auth_token').value
-      if (!token) {
-        throw new Error('No authentication token found')
-      }
-
       await $fetch(`/api/courses/${id}`, {
         baseURL: config.public.backendUrl as string,
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: getAuthHeaders()
       })
-
       return true
     } catch (error) {
       console.error('Failed to delete course:', error)
@@ -157,55 +173,64 @@ export const useCourses = () => {
     }
   }
 
-  const updateCourseThumbnail = async (courseId: string, thumbnailUrl: string): Promise<boolean> => {
+  // (Các hàm upload thumbnail của bạn)
+  const uploadCourseThumbnail = async (uploadUrl: string, file: File): Promise<boolean> => {
+    // ... (code của bạn đã ổn)
     try {
-      const token = useCookie('auth_token').value
-      if (!token) {
-        throw new Error('No authentication token found')
+         const response = await fetch(uploadUrl, {
+           method: 'PUT',
+           body: file,
+           headers: { 'Content-Type': file.type }
+         })
+         return response.ok
+       } catch (error) {
+         console.error('Failed to upload thumbnail:', error)
+         return false
+       }
+  }
+
+
+  // === HÀM MỚI CHO TÍNH NĂNG REVIEW ===
+  const addReview = async (courseId: string, reviewData: CreateReviewData): Promise<AddReviewResponse> => {
+      
+      const authToken = token.value // (Giả sử bạn dùng 'token' từ 'useAuth' hoặc 'useCookie')
+      if (!authToken) {
+        throw new Error('Chưa đăng nhập!')
       }
 
-      await $fetch<{ message: string }>(`/api/courses/${courseId}`, {
-        baseURL: config.public.backendUrl as string,
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: { thumbnail: thumbnailUrl }
-      })
+      try {
+        // Gọi $fetch và mong đợi kiểu AddReviewResponse
+        const response = await $fetch<AddReviewResponse>(`/api/courses/${courseId}/review`, {
+          baseURL: config.public.backendUrl as string, // Dùng config
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: reviewData
+        })
+        
+        return response // Trả về toàn bộ đối tượng response
 
-      return true
-    } catch (error) {
-      console.error('Failed to update course thumbnail:', error)
-      return false
+      } catch (error) {
+        console.error('Lỗi khi gửi đánh giá:', error)
+        throw error
+      }
     }
-  }
 
-  const uploadCourseThumbnail = async (uploadUrl: string, file: File): Promise<boolean> => {
-    try {
-      const response = await fetch(uploadUrl, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type
-        }
-      })
+    
 
-      return response.ok
-    } catch (error) {
-      console.error('Failed to upload thumbnail:', error)
-      return false
-    }
-  }
-
+  // === RETURN BLOCK ĐÃ DỌN DẸP ===
   return {
     createCourse,
     getCourses,
     searchCourses,
-    getCourse,
+    getCourseById, // <-- Đã gộp
     updateCourse,
     deleteCourse,
-    updateCourseThumbnail,
-    uploadCourseThumbnail
+    // updateCourseThumbnail, // Bạn không return hàm này?
+    uploadCourseThumbnail,
+    addReview, // <-- Đã thêm
   }
 }

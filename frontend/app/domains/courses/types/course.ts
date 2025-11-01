@@ -6,6 +6,7 @@ export interface Course {
   thumbnail?: string
   level: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT'
   price?: number
+  originalPrice?: number
   duration?: number
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
   teacher_id: string
@@ -17,6 +18,9 @@ export interface Course {
   enrollments?: Enrollment[]
   reviews?: Review[]
   quizzes?: Quiz[]
+  rating_counts?: { [key: number]: number };
+  average_rating?: number
+  review_count?: number
 }
 
 export interface Module {

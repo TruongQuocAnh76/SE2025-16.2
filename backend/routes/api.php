@@ -50,11 +50,15 @@ Route::middleware('auth:sanctum')->prefix('users')->group(function () {
 /* ========================
  * COURSE MANAGEMENT
  * ======================== */
-Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
-    Route::get('/search', [CourseController::class, 'search']); // Search courses by name
+Route::prefix('courses')->group(function () {
     Route::get('/', [CourseController::class, 'index']); // List all courses
-    Route::post('/', [CourseController::class, 'store']); // Teacher/Admin create
+    Route::get('/search', [CourseController::class, 'search']); // Search courses by name
     Route::get('/{id}', [CourseController::class, 'show']); // Get course details
+});
+// --- NHÓM RIÊNG TƯ (PRIVATE) ---
+// Phải đăng nhập (auth:sanctum) để thực hiện các hành động này
+Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
+    Route::post('/', [CourseController::class, 'store']); // Teacher/Admin create
     Route::get('/{id}/modules', [CourseController::class, 'getModulesWithLessons']);
     Route::get('/{id}/students', [CourseController::class, 'getEnrolledStudents']); // Teacher only
     Route::put('/{id}', [CourseController::class, 'update']); // Teacher/Admin update
