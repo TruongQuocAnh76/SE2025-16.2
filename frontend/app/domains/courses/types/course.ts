@@ -1,3 +1,8 @@
+export interface Tag {
+  id: string;
+  name: string;
+}
+
 export interface Course {
   id: string
   title: string
@@ -118,4 +123,12 @@ export interface CreateCourseData {
   price?: number
   duration?: number
   passing_score: number
+
+  long_description?: string
+  curriculum?: string
+  category?: string
+  language?: string
+  discount?: number
+
+  tags?: string[];
 }

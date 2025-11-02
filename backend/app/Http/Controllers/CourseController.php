@@ -106,6 +106,9 @@ class CourseController extends Controller
             'price'       => 'nullable|numeric|min:0',
             'duration'    => 'nullable|integer|min:1',
             'passing_score' => 'integer|min:0|max:100',
+
+            'tags'          => 'nullable|array', // Phải là một mảng
+            'tags.*'        => 'string|exists:tags,id' // Mỗi phần tử phải tồn tại trong bảng 'tags'
         ]);
 
         if ($validator->fails()) {
@@ -113,6 +116,10 @@ class CourseController extends Controller
         }
 
         $data = $validator->validated();
+
+        $tagIds = $data['tags'] ?? [];
+        unset($data['tags']);
+
         $data['id'] = Str::uuid();
         $data['slug'] = Str::slug($data['title']).'-'.Str::random(5);
         $data['teacher_id'] = Auth::id();
@@ -120,21 +127,26 @@ class CourseController extends Controller
 
         $course = Course::create($data);
 
+        if (!empty($tagIds)) {
+            $course->tags()->attach($tagIds);
+        }
+
         // Generate pre-signed URL for thumbnail upload if no thumbnail URL provided
         $thumbnailUploadUrl = null;
         // if (empty($data['thumbnail'])) {
-            $thumbnailPath = 'courses/thumbnails/' . $course->id . '.jpg';
-            $thumbnailUploadUrl = Storage::disk('s3')->temporaryUrl(
-                $thumbnailPath,
-                now()->addMinutes(30), // URL valid for 30 minutes
-                ['ContentType' => 'image/jpeg']
-            );
+            // $thumbnailPath = 'courses/thumbnails/' . $course->id . '.jpg';
+            // $thumbnailUploadUrl = Storage::disk('s3')->temporaryUrl(
+            //     $thumbnailPath,
+            //     now()->addMinutes(30), // URL valid for 30 minutes
+            //     ['ContentType' => 'image/jpeg']
+            // );
         // }
 
         return response()->json([
             'message' => 'Course created successfully',
             'course' => $course,
-            'thumbnail_upload_url' => $thumbnailUploadUrl
+            'thumbnail_upload_url' => $thumbnailUploadUrl,
+            'course' => $course->load('tags'),
         ]);
     }
 
@@ -209,7 +221,7 @@ class CourseController extends Controller
      */
     public function show($id)
     {
-        // $course = $this->courseService->getCourseById($id); // Tạm thời bỏ qua service
+        $course = $this->courseService->getCourseById($id);
 
         // Dùng .with() để tải kèm (eager load) data
         $course = Course::with([

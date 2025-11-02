@@ -1,8 +1,5 @@
-// Dán code này để thay thế toàn bộ file composables/useCourses.ts
-
 import type { Course, CreateCourseData, Review } from '../types/course'
 
-// Định nghĩa kiểu dữ liệu cho review payload
 export interface CreateReviewData {
   rating: number
   comment?: string
@@ -23,21 +20,23 @@ export interface CourseDetailsResponse {
 
 export interface AddReviewResponse {
   message: string;
-  review: Review; // Review mới (đã kèm student)
-  course_stats: { // Stats mới
+  review: Review;
+  course_stats: {
     average_rating: number;
     review_count: number;
     rating_counts: { [key: number]: number };
   };
 }
 
+export interface Tag {
+  id: string;
+  name: string;
+}
+
 export const useCourses = () => {
   const config = useRuntimeConfig()
-  const token = useCookie('auth_token') // Lấy cookie ref một lần
+  const token = useCookie('auth_token')
 
-  /**
-   * Helper function để lấy headers (tránh lặp code)
-   */
   const getAuthHeaders = () => {
     if (!token.value) {
       throw new Error('No authentication token found')
@@ -48,7 +47,6 @@ export const useCourses = () => {
     }
   }
 
-  // === CÁC HÀM CỦA BẠN (Đã chuẩn hóa) ===
 
   const createCourse = async (courseData: CreateCourseData): Promise<{ course: Course; thumbnailUploadUrl?: string } | null> => {
     try {
@@ -56,7 +54,7 @@ export const useCourses = () => {
         baseURL: config.public.backendUrl as string,
         method: 'POST',
         headers: {
-          ...getAuthHeaders(), // <-- Dùng helper
+          ...getAuthHeaders(), 
           'Content-Type': 'application/json'
         },
         body: courseData
@@ -80,13 +78,11 @@ export const useCourses = () => {
       const queryString = queryParams.toString()
       const url = `/api/courses${queryString ? `?${queryString}` : ''}`
 
-      // Route này là public, không cần token (dựa trên api.php đã sửa)
       const data = await $fetch<Course[] | { data: Course[] }>(url, {
         baseURL: config.public.backendUrl as string,
         headers: { 'Accept': 'application/json' }
       })
 
-      // Xử lý cả hai trường hợp: API trả về mảng, hoặc { data: mảng }
       return Array.isArray(data) ? data : (data as any).data || []
 
     } catch (error) {
@@ -115,13 +111,10 @@ export const useCourses = () => {
     }
   }
 
-  // === ĐÃ SỬA LỖI LẶP LẠI (Gộp getCourse và getCourseById) ===
   const getCourseById = async (id: string): Promise<Course | null> => {
       try {
         const config = useRuntimeConfig() 
 
-        // Route này là PUBLIC
-        // Dùng $fetch và mong đợi kiểu 'CourseDetailsResponse'
         const response = await $fetch<CourseDetailsResponse>(`/api/courses/${id}`, {
           baseURL: config.public.backendUrl as string,
           headers: { 'Accept': 'application/json' }
@@ -145,7 +138,7 @@ export const useCourses = () => {
     try {
       const data = await $fetch<{ message: string; course: Course }>(`/api/courses/${id}`, {
         baseURL: config.public.backendUrl as string,
-        method: 'PUT', // PUT hoặc POST (nếu dùng form-data)
+        method: 'PUT',
         headers: {
           ...getAuthHeaders(),
           'Content-Type': 'application/json'
@@ -175,7 +168,6 @@ export const useCourses = () => {
 
   // (Các hàm upload thumbnail của bạn)
   const uploadCourseThumbnail = async (uploadUrl: string, file: File): Promise<boolean> => {
-    // ... (code của bạn đã ổn)
     try {
          const response = await fetch(uploadUrl, {
            method: 'PUT',
@@ -189,11 +181,32 @@ export const useCourses = () => {
        }
   }
 
+  const updateCourseThumbnail = async (courseId: string, thumbnailUrl: string): Promise<boolean> => {
+  try {
+    // API này gọi 'update' (PUT) của CourseController
+    // và chỉ gửi { "thumbnail": "..." }
+    await $fetch(`/api/courses/${courseId}`, {
+      baseURL: config.public.backendUrl as string,
+      method: 'PUT',
+      headers: {
+        ...getAuthHeaders(), // Dùng helper để lấy token
+        'Content-Type': 'application/json'
+      },
+      body: { thumbnail: thumbnailUrl } // Chỉ gửi thumbnail
+    })
+
+    return true
+  } catch (error) {
+    console.error('Failed to update course thumbnail:', error)
+    return false
+  }
+}
+
 
   // === HÀM MỚI CHO TÍNH NĂNG REVIEW ===
   const addReview = async (courseId: string, reviewData: CreateReviewData): Promise<AddReviewResponse> => {
       
-      const authToken = token.value // (Giả sử bạn dùng 'token' từ 'useAuth' hoặc 'useCookie')
+      const authToken = token.value 
       if (!authToken) {
         throw new Error('Chưa đăng nhập!')
       }
@@ -201,7 +214,7 @@ export const useCourses = () => {
       try {
         // Gọi $fetch và mong đợi kiểu AddReviewResponse
         const response = await $fetch<AddReviewResponse>(`/api/courses/${courseId}/review`, {
-          baseURL: config.public.backendUrl as string, // Dùng config
+          baseURL: config.public.backendUrl as string, 
           method: 'POST',
           headers: {
             'Accept': 'application/json',
@@ -211,7 +224,7 @@ export const useCourses = () => {
           body: reviewData
         })
         
-        return response // Trả về toàn bộ đối tượng response
+        return response 
 
       } catch (error) {
         console.error('Lỗi khi gửi đánh giá:', error)
@@ -219,18 +232,31 @@ export const useCourses = () => {
       }
     }
 
-    
+    const getTags = async (): Promise<Tag[]> => {
+    try {
+      // Route này public, không cần token
+      const data = await $fetch<Tag[]>(`/api/tags`, {
+        baseURL: config.public.backendUrl as string,
+        headers: { 'Accept': 'application/json' }
+      })
+      return data || []
+    } catch (error) {
+      console.error('Failed to fetch tags:', error)
+      return []
+    }
+  }
 
-  // === RETURN BLOCK ĐÃ DỌN DẸP ===
+    
   return {
     createCourse,
     getCourses,
     searchCourses,
-    getCourseById, // <-- Đã gộp
+    getCourseById,
     updateCourse,
     deleteCourse,
-    // updateCourseThumbnail, // Bạn không return hàm này?
     uploadCourseThumbnail,
-    addReview, // <-- Đã thêm
+    updateCourseThumbnail,
+    addReview,
+    getTags,
   }
 }

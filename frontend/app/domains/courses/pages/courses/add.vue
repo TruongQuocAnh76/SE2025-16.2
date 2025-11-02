@@ -1,234 +1,264 @@
 <template>
   <div class="min-h-screen bg-background">
-    <div class="max-w-4xl mx-auto px-4 py-8">
-      <!-- Header -->
+    <div class="max-w-7xl mx-auto px-4 py-12">
       <div class="mb-8">
-        <h1 class="text-h1 font-bold text-text-dark mb-2">Create New Course</h1>
-        <p class="text-body text-text-muted">Fill in the details below to create your course</p>
+        <h1 class="text-3xl font-bold text-text-dark mb-2">Add Course</h1>
       </div>
 
-      <!-- Form -->
-      <form @submit.prevent="handleSubmit" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div class="space-y-6">
-          <!-- Title -->
-          <div>
-            <label for="title" class="block text-body font-medium text-text-dark mb-2">
-              Course Title <span class="text-red-500">*</span>
-            </label>
-            <input
-              id="title"
-              v-model="form.title"
-              type="text"
-              required
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors"
-              placeholder="Enter course title"
-              :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': errors.title }"
-            />
-            <p v-if="errors.title" class="mt-1 text-sm text-red-600">{{ errors.title }}</p>
-          </div>
-
-          <!-- Description -->
-          <div>
-            <label for="description" class="block text-body font-medium text-text-dark mb-2">
-              Description <span class="text-red-500">*</span>
-            </label>
-            <textarea
-              id="description"
-              v-model="form.description"
-              required
-              rows="4"
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors resize-vertical"
-              placeholder="Describe what students will learn in this course"
-              :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': errors.description }"
-            ></textarea>
-            <p v-if="errors.description" class="mt-1 text-sm text-red-600">{{ errors.description }}</p>
-          </div>
-
-          <!-- Thumbnail -->
-          <div>
-            <label class="block text-body font-medium text-text-dark mb-2">
-              Course Thumbnail
-            </label>
+      <form @submit.prevent="handleSubmit">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          <div class="lg:col-span-2 space-y-6">
             
-            <!-- Thumbnail Type Selection -->
-            <!-- <div class="mb-3">
-              <div class="flex space-x-4">
-                <label class="flex items-center">
-                  <input
-                    v-model="thumbnailType"
-                    type="radio"
-                    value="url"
-                    class="text-brand-primary focus:ring-brand-primary"
-                  />
-                  <span class="ml-2 text-sm text-text-dark">Use URL</span>
-                </label>
-                <label class="flex items-center">
-                  <input
-                    v-model="thumbnailType"
-                    type="radio"
-                    value="upload"
-                    class="text-brand-primary focus:ring-brand-primary"
-                  />
-                  <span class="ml-2 text-sm text-text-dark">Upload Image</span>
-                </label>
-              </div>
-            </div> -->
-
-            <!-- URL Input -->
-            <!-- <div v-if="thumbnailType === 'url'">
-              <input
-                id="thumbnail"
-                v-model="form.thumbnail"
-                type="url"
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors"
-                placeholder="https://example.com/thumbnail.jpg"
-              />
-              <p class="mt-1 text-sm text-text-muted">Provide a URL for the course thumbnail image</p>
-            </div> -->
-
-            <!-- File Upload -->
             <div>
-              <input
-                ref="thumbnailFileInput"
-                type="file"
-                accept="image/*"
-                @change="handleThumbnailFileSelect"
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100"
-              />
-              <p class="mt-1 text-sm text-text-muted">
-                Upload a thumbnail image (JPG, PNG, etc.)
-                <span v-if="selectedThumbnailFile" class="text-brand-primary font-medium">
-                  Selected: {{ selectedThumbnailFile.name }}
-                </span>
-              </p>
-            </div>
-          </div>
-
-          <!-- Level and Price Row -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Level -->
-            <div>
-              <label for="level" class="block text-body font-medium text-text-dark mb-2">
-                Difficulty Level <span class="text-red-500">*</span>
+              <label for="title" class="block text-sm font-medium text-text-dark mb-2">
+                Name of Course <span class="text-red-500">*</span>
               </label>
-              <select
-                id="level"
-                v-model="form.level"
+              <input
+                id="title"
+                v-model="form.title"
+                type="text"
                 required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors bg-white"
-                :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': errors.level }"
-              >
-                <option value="" disabled>Select level</option>
-                <option value="BEGINNER">Beginner</option>
-                <option value="INTERMEDIATE">Intermediate</option>
-                <option value="ADVANCED">Advanced</option>
-                <option value="EXPERT">Expert</option>
-              </select>
-              <p v-if="errors.level" class="mt-1 text-sm text-red-600">{{ errors.level }}</p>
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                placeholder="Enter name course"
+                :class="{ 'border-red-500': errors.title }"
+              />
+              <p v-if="errors.title" class="mt-1 text-sm text-red-600">{{ errors.title }}</p>
             </div>
 
-            <!-- Price -->
             <div>
-              <label for="price" class="block text-body font-medium text-text-dark mb-2">
-                Price (USD)
+              <label for="description" class="block text-sm font-medium text-text-dark mb-2">
+                Short Description <span class="text-red-500">*</span>
               </label>
               <input
-                id="price"
-                v-model.number="form.price"
-                type="number"
-                min="0"
-                step="0.01"
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors"
-                placeholder="0.00"
+                id="description"
+                v-model="form.description"
+                type="text"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                placeholder="Enter the short description"
+                :class="{ 'border-red-500': errors.description }"
               />
-              <p class="mt-1 text-sm text-text-muted">Leave empty for free course</p>
+              <p v-if="errors.description" class="mt-1 text-sm text-red-600">{{ errors.description }}</p>
             </div>
-          </div>
-
-          <!-- Duration and Passing Score Row -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Duration -->
+            
             <div>
-              <label for="duration" class="block text-body font-medium text-text-dark mb-2">
-                Duration (hours)
+              <label for="long_description" class="block text-sm font-medium text-text-dark mb-2">
+                Description
+              </label>
+              <textarea
+                id="long_description"
+                v-model="form.long_description"
+                rows="4"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                placeholder="Enter the description"
+              ></textarea>
+            </div>
+
+            <div>
+              <label for="curriculum" class="block text-sm font-medium text-text-dark mb-2">
+                Curriculum
+              </label>
+              <input
+                id="curriculum"
+                v-model="form.curriculum"
+                type="text"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                placeholder="E.g. B = 8 hours"
+              />
+            </div>
+
+            <div>
+              <label for="duration" class="block text-sm font-medium text-text-dark mb-2">
+                Duration (In hours)
               </label>
               <input
                 id="duration"
                 v-model.number="form.duration"
                 type="number"
                 min="1"
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors"
-                placeholder="10"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                placeholder="E.g. 8 = 8 hours"
               />
-              <p class="mt-1 text-sm text-text-muted">Estimated course duration in hours</p>
             </div>
 
-            <!-- Passing Score -->
-            <div>
-              <label for="passing_score" class="block text-body font-medium text-text-dark mb-2">
-                Passing Score (%) <span class="text-red-500">*</span>
+            <div class="grid grid-cols-2 gap-6">
+              <div>
+                <label for="category" class="block text-sm font-medium text-text-dark mb-2">
+                  Category
+                </label>
+                <select
+                  id="category"
+                  v-model="form.category"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-white"
+                >
+                  <option value="">Select an Category</option>
+                  </select>
+              </div>
+              <div>
+                <label for="language" class="block text-sm font-medium text-text-dark mb-2">
+                  Language
+                </label>
+                <select
+                  id="language"
+                  v-model="form.language"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-white"
+                >
+                  <option value="">Select Language</option>
+                  </select>
+              </div>
+            </div> <div>
+              <label for="tags" class="block text-sm font-medium text-text-dark mb-2">
+                Tags (Hold Ctrl/Cmd to select multiple)
               </label>
-              <input
-                id="passing_score"
-                v-model.number="form.passing_score"
-                type="number"
-                min="0"
-                max="100"
-                required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors"
-                placeholder="70"
-                :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': errors.passing_score }"
-              />
-              <p v-if="errors.passing_score" class="mt-1 text-sm text-red-600">{{ errors.passing_score }}</p>
-              <p class="mt-1 text-sm text-text-muted">Minimum score required to pass the course</p>
+              <select
+                id="tags"
+                v-model="form.tags"
+                multiple 
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-white"
+                size="5" 
+              >
+                <option v-for="tag in allTags" :key="tag.id" :value="tag.id">
+                  {{ tag.name }}
+                </option>
+              </select>
             </div>
-          </div>
-        </div>
 
-        <!-- Submit Button -->
-        <div class="mt-8 flex justify-end space-x-4">
-          <NuxtLink
-            to="/courses"
-            class="px-6 py-3 border border-gray-300 text-text-dark rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </NuxtLink>
+            <div>
+              <label class="block text-sm font-medium text-text-dark mb-2">
+                Level <span class="text-red-500">*</span>
+              </label>
+              <div class="flex space-x-3">
+                <button
+                  type="button"
+                  v-for="level in LEVELS" 
+                  :key="level"
+                  @click="form.level = level"
+                  :class="[
+                    'px-6 py-2 rounded-lg font-medium transition-colors',
+                    form.level === level
+                      ? 'bg-teal-500 text-white shadow-lg'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  ]"
+                >
+                  {{ level.charAt(0) + level.slice(1).toLowerCase() }}
+                </button>
+              </div>
+              <p v-if="errors.level" class="mt-1 text-sm text-red-600">{{ errors.level }}</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6">
+              <div>
+                <label for="price" class="block text-sm font-medium text-text-dark mb-2">
+                  Price
+                </label>
+                <input
+                  id="price"
+                  v-model.number="form.price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                  placeholder="Enter the Price"
+                />
+              </div>
+              <div>
+                <label for="discount" class="block text-sm font-medium text-text-dark mb-2">
+                  Discount
+                </label>
+                <input
+                  id="discount"
+                  v-model.number="form.discount"
+                  type="number"
+                  min="0"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                  placeholder="Enter the Discount"
+                />
+              </div>
+            </div>
+            
+          </div> <div class="lg:col-span-1">
+            <label class="block text-sm font-medium text-text-dark mb-2">
+              Upload Course Image
+            </label>
+            
+            <div 
+              @dragover.prevent="onDragOver"
+              @dragleave.prevent="onDragLeave"
+              @drop.prevent="onDrop"
+              :class="['relative w-full h-80 border-2 border-dashed rounded-lg flex flex-col justify-center items-center text-center p-6 transition-colors',
+                isDragging ? 'border-brand-primary bg-blue-50' : 'border-gray-300'
+              ]"
+            >
+              <img v-if="thumbnailPreview" :src="thumbnailPreview" class="absolute inset-0 w-full h-full object-cover rounded-lg" />
+              
+              <div :class="['relative z-10', { 'bg-white/70 p-4 rounded-lg': thumbnailPreview }]">
+                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <p class="mt-2 text-sm text-gray-600">
+                  Browse and chose the image you want to upload from your computer
+                </p>
+                
+                <button
+                  type="button"
+                  @click="triggerFileInput"
+                  class="mt-4 px-4 py-2 bg-green-500 text-white rounded-lg font-semibold text-lg"
+                >
+                  +
+                </button>
+                
+                <input
+                  ref="thumbnailFileInput"
+                  type="file"
+                  accept="image/*"
+                  @change="handleThumbnailFileSelect"
+                  class="hidden"
+                />
+              </div>
+            </div>
+            
+            <p v-if="selectedThumbnailFile" class="mt-2 text-sm text-brand-primary font-medium">
+              Selected: {{ selectedThumbnailFile.name }}
+            </p>
+          </div> </div> <div class="mt-12">
           <button
             type="submit"
             :disabled="isSubmitting"
-            class="px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            class="w-full py-4 bg-teal-500 text-white rounded-lg font-semibold text-lg hover:bg-teal-600 transition-colors disabled:opacity-50"
           >
             <span v-if="isSubmitting">Creating Course...</span>
-            <span v-else>Create Course</span>
+            <span v-else>Add Course</span>
           </button>
         </div>
-      </form>
-
-      <!-- Success Message -->
-      <div v-if="successMessage" class="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-        <div class="flex">
-          <div class="flex-shrink-0">
-            <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-            </svg>
-          </div>
-          <div class="ml-3">
-            <p class="text-sm font-medium text-green-800">{{ successMessage }}</p>
-          </div>
+        
+        <div v-if="errors.general" class="mt-4 text-center text-red-600">
+          {{ errors.general }}
         </div>
-      </div>
+        <div v-if="successMessage" class="mt-4 text-center text-green-600">
+          {{ successMessage }}
+        </div>
+
+      </form>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { CreateCourseData } from '../../types/course'
+import { ref, computed, onMounted } from 'vue'
+import type { CreateCourseData, Tag } from '../../types/course'
 
-const { createCourse, uploadCourseThumbnail, updateCourseThumbnail } = useCourses()
+// === LỖI ĐÃ SỬA: Định nghĩa hằng số LEVELS ===
+const LEVELS = ['BEGINNER' , 'INTERMEDIATE' , 'ADVANCED' , 'EXPERT'] as const
+
+const { createCourse, uploadCourseThumbnail, updateCourseThumbnail, getTags } = useCourses()
+const router = useRouter()
+
+// State cho Dropzone
+const isDragging = ref(false)
+const thumbnailPreview = ref<string | null>(null)
 
 // Thumbnail handling
-// const thumbnailType = ref<'url' | 'upload'>('url')
 const thumbnailType = ref<'url' | 'upload'>('upload')
 const selectedThumbnailFile = ref<File | null>(null)
 const thumbnailFileInput = ref<HTMLInputElement | null>(null)
@@ -237,11 +267,23 @@ const thumbnailFileInput = ref<HTMLInputElement | null>(null)
 const form = ref<CreateCourseData>({
   title: '',
   description: '',
-  // thumbnail: '',
-  level: '' as any,
+  long_description: '', 
+  curriculum: '',
+  category: '',
+  language: '',
+  discount: undefined,
+  level: '' as any, // '' để không có nút nào được chọn
   price: undefined,
   duration: undefined,
-  passing_score: 70
+  passing_score: 70,
+  tags: [] // Khởi tạo mảng rỗng
+})
+
+const allTags = ref<Tag[]>([])
+
+// Fetch all tags on mount
+onMounted(async () => {
+  allTags.value = await getTags()
 })
 
 // Form state
@@ -254,40 +296,48 @@ const handleThumbnailFileSelect = (event: Event) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
   if (file) {
-    selectedThumbnailFile.value = file
+    setFile(file)
   }
+}
+
+const triggerFileInput = () => {
+  thumbnailFileInput.value?.click()
+}
+
+const onDragOver = (event: DragEvent) => { isDragging.value = true }
+const onDragLeave = (event: DragEvent) => { isDragging.value = false }
+const onDrop = (event: DragEvent) => {
+  isDragging.value = false
+  const file = event.dataTransfer?.files[0]
+  if (file && file.type.startsWith('image/')) {
+    setFile(file)
+  }
+}
+
+const setFile = (file: File) => {
+  selectedThumbnailFile.value = file
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    thumbnailPreview.value = e.target?.result as string
+  }
+  reader.readAsDataURL(file)
 }
 
 // Form validation
 const validateForm = (): boolean => {
   errors.value = {}
-
   if (!form.value.title.trim()) {
     errors.value.title = 'Course title is required'
   }
-
   if (!form.value.description.trim()) {
     errors.value.description = 'Course description is required'
   }
-
   if (!form.value.level) {
     errors.value.level = 'Please select a difficulty level'
   }
-
-  // Validate thumbnail
-  // if (thumbnailType.value === 'url' && form.value.thumbnail && !form.value.thumbnail.match(/^https?:\/\/.+/)) {
-  //   errors.value.thumbnail = 'Please provide a valid URL starting with http:// or https://'
-  // } else if (thumbnailType.value === 'upload' && !selectedThumbnailFile.value) {
-  //   errors.value.thumbnail = 'Please select an image file to upload'
-  // }
-  // if (!selectedThumbnailFile.value) {
-  //   errors.value.thumbnail = 'Please select an image file to upload'
-  // }
-
   if (form.value.passing_score < 0 || form.value.passing_score > 100) {
     errors.value.passing_score = 'Passing score must be between 0 and 100'
   }
-
   return Object.keys(errors.value).length === 0
 }
 
@@ -303,25 +353,17 @@ const handleSubmit = async () => {
 
   try {
     const courseData = { ...form.value }
-    // Remove empty strings for optional fields
-    if (!courseData.thumbnail) delete courseData.thumbnail
-    if (courseData.price === undefined || courseData.price === null) delete courseData.price
-    if (courseData.duration === undefined || courseData.duration === null) delete courseData.duration
+    if (courseData.price === undefined) delete courseData.price
+    if (courseData.duration === undefined) delete courseData.duration
 
     const result = await createCourse(courseData)
 
     if (result) {
-      // Handle thumbnail upload if a file was selected
-      // if (thumbnailType.value === 'upload' && selectedThumbnailFile.value && result.thumbnailUploadUrl) {
       if (selectedThumbnailFile.value && result.thumbnailUploadUrl) {
         const uploadSuccess = await uploadCourseThumbnail(result.thumbnailUploadUrl, selectedThumbnailFile.value)
         if (uploadSuccess) {
-          // Construct the final thumbnail URL for storage
-          // The URL should be the public S3 URL, not the pre-signed upload URL
           const thumbnailPath = `courses/thumbnails/${result.course.id}.jpg`
           const finalThumbnailUrl = `https://certchain-dev.s3.amazonaws.com/${thumbnailPath}`
-          
-          // Update the course with the final thumbnail URL
           await updateCourseThumbnail(result.course.id, finalThumbnailUrl)
         } else {
           console.warn('Thumbnail upload failed, but course was created successfully')
@@ -334,28 +376,32 @@ const handleSubmit = async () => {
       form.value = {
         title: '',
         description: '',
-        // thumbnail: '',
+        long_description: '', 
+        curriculum: '',
+        category: '',
+        language: '',
+        discount: undefined,
         level: '' as any,
         price: undefined,
         duration: undefined,
-        passing_score: 70
+        passing_score: 70,
+        tags: [] // <-- LỖI ĐÃ SỬA: Reset 'tags' thành mảng rỗng
       }
-      // thumbnailType.value = 'url'
       thumbnailType.value = 'upload'
       selectedThumbnailFile.value = null
+      thumbnailPreview.value = null // <-- Thêm dòng này để xóa ảnh preview
       if (thumbnailFileInput.value) {
         thumbnailFileInput.value.value = ''
       }
 
       // Redirect to courses list after a short delay
       setTimeout(() => {
-        navigateTo('/courses')
+        router.push('/courses') // <-- Dùng 'router' thay vì 'navigateTo' (vì bạn đã import 'useRouter')
       }, 2000)
     }
   } catch (error: any) {
     console.error('Failed to create course:', error)
     if (error.response?.data?.errors) {
-      // Handle validation errors from backend
       errors.value = error.response.data.errors
     } else {
       errors.value.general = error.message || 'Failed to create course. Please try again.'

@@ -145,3 +145,10 @@ Route::middleware('auth:sanctum')->prefix('system')->group(function () {
     Route::delete('/jobs/{id}', [SystemController::class, 'deleteJob']); // Delete job (Admin)
     Route::post('/jobs/{id}/retry', [SystemController::class, 'retryJob']); // Retry job (Admin)
 });
+
+/* ========================
+ * TAGS (Public)
+ * ======================== */
+Route::prefix('tags')->group(function () {
+    Route::get('/', [\App\Http\Controllers\TagController::class, 'index']); // Lấy tất cả tags
+});
