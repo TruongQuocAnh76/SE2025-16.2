@@ -10,7 +10,9 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      backendUrl: process.env.BACKEND_URL || 'http://localhost:8000'
+      backendUrl: process.env.BACKEND_URL || 'http://localhost:8000',
+      awsEndpoint: process.env.AWS_ENDPOINT || 'http://localhost:4566',
+      awsBucket: process.env.AWS_BUCKET || 'certchain-dev'
     }
   },
 

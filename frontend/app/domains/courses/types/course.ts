@@ -132,3 +132,29 @@ export interface CreateCourseData {
 
   tags?: string[];
 }
+
+export interface CreateReviewData {
+  rating: number
+  comment?: string
+}
+
+export interface CreateCourseResponse {
+  message: string
+  course: Course
+  thumbnail_upload_url?: string
+}
+
+export interface CourseDetailsResponse {
+  course: Course;
+  rating_counts: { [key: number]: number };
+}
+
+export interface AddReviewResponse {
+  message: string;
+  review: Review;
+  course_stats: {
+    average_rating: number;
+    review_count: number;
+    rating_counts: { [key: number]: number };
+  };
+}

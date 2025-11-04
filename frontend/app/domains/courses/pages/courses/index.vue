@@ -283,9 +283,8 @@ import type { Course } from '../../types/course'
 import { ref } from 'vue'
 
 const { getCourses, searchCourses } = useCourses()
+const config = useRuntimeConfig()
 
-
-const BACKEND_URL = 'http://localhost:8000'
 // State
 const courses = ref<Course[]>([])
 const loading = ref(false)
@@ -365,7 +364,7 @@ const fetchCourses = async () => {
 
 // Load more courses (for pagination)
 const loadMore = async () => {
-  // Implementation for pagination would go here
+  // TODO: Implement pagination logic
   console.log('Load more courses...')
 }
 
@@ -373,13 +372,7 @@ const loadMore = async () => {
 const mapCourseForCard = (course: Course) => {
   let thumbnailUrl = 'placeholder-course.jpg'
   if (course.thumbnail) {
-    if (course.thumbnail.startsWith('http://') || course.thumbnail.startsWith('https://')) {
-      thumbnailUrl = course.thumbnail
-    } else {
-      // Nếu không, hãy thêm URL của backend.
-      // (Lưu ý: Laravel thường dùng /storage/ cho file public)
-      thumbnailUrl = `${BACKEND_URL}/storage/${course.thumbnail}`
-    }
+    thumbnailUrl = `${course.thumbnail}`
   }
   return {
     thumbnail: thumbnailUrl,

@@ -247,8 +247,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import type { CreateCourseData, Tag } from '../../types/course'
+const config = useRuntimeConfig()
 
-// === LỖI ĐÃ SỬA: Định nghĩa hằng số LEVELS ===
 const LEVELS = ['BEGINNER' , 'INTERMEDIATE' , 'ADVANCED' , 'EXPERT'] as const
 
 const { createCourse, uploadCourseThumbnail, updateCourseThumbnail, getTags } = useCourses()
@@ -272,11 +272,11 @@ const form = ref<CreateCourseData>({
   category: '',
   language: '',
   discount: undefined,
-  level: '' as any, // '' để không có nút nào được chọn
+  level: '' as any,
   price: undefined,
   duration: undefined,
   passing_score: 70,
-  tags: [] // Khởi tạo mảng rỗng
+  tags: [] 
 })
 
 const allTags = ref<Tag[]>([])
@@ -361,13 +361,13 @@ const handleSubmit = async () => {
     if (result) {
       if (selectedThumbnailFile.value && result.thumbnailUploadUrl) {
         const uploadSuccess = await uploadCourseThumbnail(result.thumbnailUploadUrl, selectedThumbnailFile.value)
-        if (uploadSuccess) {
-          const thumbnailPath = `courses/thumbnails/${result.course.id}.jpg`
-          const finalThumbnailUrl = `https://certchain-dev.s3.amazonaws.com/${thumbnailPath}`
-          await updateCourseThumbnail(result.course.id, finalThumbnailUrl)
-        } else {
-          console.warn('Thumbnail upload failed, but course was created successfully')
-        }
+        // if (uploadSuccess) {
+        //   const thumbnailPath = `courses/thumbnails/${result.course.id}.jpg`
+        //   const finalThumbnailUrl = `${config.public.awsEndpoint}/${config.public.awsBucket}/${thumbnailPath}`
+        // await updateCourseThumbnail(result.course.id, finalThumbnailUrl)
+        // } else {
+        //   console.warn('Thumbnail upload failed, but course was created successfully')
+        // }
       }
 
       successMessage.value = 'Course created successfully! Redirecting...'
@@ -385,18 +385,18 @@ const handleSubmit = async () => {
         price: undefined,
         duration: undefined,
         passing_score: 70,
-        tags: [] // <-- LỖI ĐÃ SỬA: Reset 'tags' thành mảng rỗng
+        tags: []
       }
       thumbnailType.value = 'upload'
       selectedThumbnailFile.value = null
-      thumbnailPreview.value = null // <-- Thêm dòng này để xóa ảnh preview
+      thumbnailPreview.value = null 
       if (thumbnailFileInput.value) {
         thumbnailFileInput.value.value = ''
       }
 
       // Redirect to courses list after a short delay
       setTimeout(() => {
-        router.push('/courses') // <-- Dùng 'router' thay vì 'navigateTo' (vì bạn đã import 'useRouter')
+        router.push('/courses')
       }, 2000)
     }
   } catch (error: any) {

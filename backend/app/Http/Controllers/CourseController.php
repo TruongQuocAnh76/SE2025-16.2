@@ -101,14 +101,14 @@ class CourseController extends Controller
         $validator = Validator::make($request->all(), [
             'title'       => 'required|string|max:255',
             'description' => 'required|string',
-            // 'thumbnail'   => 'nullable|url', // Allow URL or will be uploaded via pre-signed URL
+            'thumbnail'   => 'nullable|url', // Allow URL or will be uploaded via pre-signed URL
             'level'       => 'in:BEGINNER,INTERMEDIATE,ADVANCED,EXPERT',
             'price'       => 'nullable|numeric|min:0',
             'duration'    => 'nullable|integer|min:1',
             'passing_score' => 'integer|min:0|max:100',
 
-            'tags'          => 'nullable|array', // Phải là một mảng
-            'tags.*'        => 'string|exists:tags,id' // Mỗi phần tử phải tồn tại trong bảng 'tags'
+            'tags'          => 'nullable|array',
+            'tags.*'        => 'string|exists:tags,id'
         ]);
 
         if ($validator->fails()) {
@@ -125,28 +125,31 @@ class CourseController extends Controller
         $data['teacher_id'] = Auth::id();
         $data['status'] = 'DRAFT';
 
+        // Generate thumbnail URL if not provided
+        $thumbnailUploadUrl = null;
+        if (empty($data['thumbnail'])) {
+            $thumbnailPath = 'courses/thumbnails/' . $data['id'] . '.jpg';
+            $awsEndpoint = env('AWS_ENDPOINT');
+            $awsBucket = env('AWS_BUCKET');
+            $data['thumbnail'] = $awsEndpoint . '/' . $awsBucket . '/' . $thumbnailPath;
+            $thumbnailUploadUrl = Storage::disk('s3')->temporaryUrl(
+                $thumbnailPath,
+                now()->addMinutes(30), // URL valid for 30 minutes
+                ['ContentType' => 'image/jpeg']
+            );
+        }
+
         $course = Course::create($data);
 
         if (!empty($tagIds)) {
             $course->tags()->attach($tagIds);
         }
 
-        // Generate pre-signed URL for thumbnail upload if no thumbnail URL provided
-        $thumbnailUploadUrl = null;
-        // if (empty($data['thumbnail'])) {
-            // $thumbnailPath = 'courses/thumbnails/' . $course->id . '.jpg';
-            // $thumbnailUploadUrl = Storage::disk('s3')->temporaryUrl(
-            //     $thumbnailPath,
-            //     now()->addMinutes(30), // URL valid for 30 minutes
-            //     ['ContentType' => 'image/jpeg']
-            // );
-        // }
-
         return response()->json([
             'message' => 'Course created successfully',
             'course' => $course,
-            'thumbnail_upload_url' => $thumbnailUploadUrl,
             'course' => $course->load('tags'),
+            'thumbnail_upload_url' => $thumbnailUploadUrl
         ]);
     }
 
@@ -222,13 +225,6 @@ class CourseController extends Controller
     public function show($id)
     {
         $course = $this->courseService->getCourseById($id);
-
-        // Dùng .with() để tải kèm (eager load) data
-        $course = Course::with([
-                            'reviews.student', // Lấy review VÀ student của review
-                            'modules.lessons'  // Lấy module VÀ lesson của module
-                        ])
-                        ->findOrFail($id);
 
         $ratingCounts = $course->reviews()
                            ->selectRaw('rating, count(*) as count')
@@ -389,23 +385,13 @@ class CourseController extends Controller
     {
         $course = Course::findOrFail($id);
 
-        $exists = Enrollment::where('student_id', Auth::id())
-                            ->where('course_id', $course->id)
-                            ->exists();
+        $result = $this->courseService->enroll($course->id, Auth::id());
 
-        if ($exists) {
+        if ($result['exists']) {
             return response()->json(['message' => 'Already enrolled'], 409);
         }
 
-        $enrollment = Enrollment::create([
-            'id' => Str::uuid(),
-            'student_id' => Auth::id(),
-            'course_id' => $course->id,
-            'status' => 'ACTIVE',
-            'progress' => 0,
-        ]);
-
-        return response()->json(['message' => 'Enrollment successful', 'enrollment' => $enrollment]);
+        return response()->json(['message' => 'Enrollment successful', 'enrollment' => $result['enrollment']]);
     }
 
     /**
@@ -465,31 +451,10 @@ class CourseController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        // 1. Tìm khóa học (Cần thiết cho bước tính toán)
         $course = Course::findOrFail($id);
 
-        // 2. Lưu đánh giá (Code của bạn đã đúng)
-        $review = Review::updateOrCreate(
-            [
-                'student_id' => Auth::id(),
-                'course_id' => $id, // $id hoặc $course->id đều được
-            ],
-            [
-                'rating' => $request->rating,
-                'comment' => $request->comment,
-            ]
-        );
+        $review = $this->courseService->addReview(Auth::id(), $id, $request->rating, $request->comment);
 
-        // === PHẦN QUAN TRỌNG BỊ THIẾU ===
-        // 3. TÍNH TOÁN LẠI ĐIỂM TRUNG BÌNH
-        // Lấy tất cả đánh giá của khóa học này (bao gồm cả cái vừa thêm)
-        $allReviews = $course->reviews();
-
-        // Cập nhật 2 trường mới trong bảng 'courses'
-        $course->average_rating = $allReviews->avg('rating');
-        $course->review_count = $allReviews->count();
-        $course->save();
-        // === KẾT THÚC PHẦN BỊ THIẾU ===
         $ratingCounts = $course->reviews()
                                 ->selectRaw('rating, count(*) as count')
                                 ->groupBy('rating')
@@ -499,11 +464,10 @@ class CourseController extends Controller
             for ($i = 1; $i <= 5; $i++) {
                 $fullRatingCounts[$i] = $ratingCounts[$i] ?? 0;
             }
-        // 4. Trả về review (Nên load cả 'student' để frontend hiển thị)
         return response()->json([
                 'message' => 'Review submitted', 
-                'review' => $review->load('student'), // Gửi review
-                'course_stats' => [ // Gửi stats mới
+                'review' => $review->load('student'), 
+                'course_stats' => [
                     'average_rating' => $course->average_rating,
                     'review_count' => $course->review_count,
                     'rating_counts' => $fullRatingCounts
@@ -598,9 +562,7 @@ class CourseController extends Controller
      */
     public function getEnrolledStudents($id)
     {
-        $students = Enrollment::where('course_id', $id)
-                    ->with(['student:id,first_name,last_name,email'])
-                    ->get();
+        $students = $this->courseService->getEnrolledStudents($id);
 
         return response()->json($students);
     }
