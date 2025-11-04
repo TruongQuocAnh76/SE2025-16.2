@@ -44,7 +44,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
     // If validation successful, store user data
     const userData = useCookie('user_data')
-    userData.value = response
+    userData.value = JSON.stringify(response)
 
   } catch (error: any) {
     console.error('Token validation failed:', error)
