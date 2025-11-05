@@ -2,47 +2,45 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
+    use HasUuids;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
+        'id', 'first_name', 'last_name', 'email', 'username', 'password',
+        'auth_provider', 'role', 'bio', 'avatar', 'is_active'
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $hidden = ['password', 'remember_token'];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+    // Relationships
+    public function coursesTaught() {
+        return $this->hasMany(Course::class, 'teacher_id');
+    }
+
+    public function enrollments() {
+        return $this->hasMany(Enrollment::class, 'student_id');
+    }
+
+    public function reviews() {
+        return $this->hasMany(Review::class, 'student_id');
+    }
+
+    public function certificates() {
+        return $this->hasMany(Certificate::class, 'student_id');
+    }
+
+    public function hasRole($role) {
+        return $this->role === $role;
     }
 }

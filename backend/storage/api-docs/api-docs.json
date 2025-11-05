@@ -1,0 +1,4237 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Learning Platform API",
+        "description": "API for Learning Platform",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000/api",
+            "description": "Local development server"
+        },
+        {
+            "url": "http://localhost:8000/api",
+            "description": "Local development server"
+        },
+        {
+            "url": "http://localhost:8000/api",
+            "description": "Local development server"
+        },
+        {
+            "url": "http://localhost:8000/api",
+            "description": "Local development server"
+        },
+        {
+            "url": "http://localhost:8000/api",
+            "description": "Local development server"
+        },
+        {
+            "url": "http://localhost:8000/api",
+            "description": "Local development server"
+        },
+        {
+            "url": "http://localhost:8000/api",
+            "description": "Local development server"
+        }
+    ],
+    "paths": {
+        "/auth/register": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Register a new user",
+                "operationId": "ed42f392010c301892e640067141676e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "username",
+                                    "email",
+                                    "password",
+                                    "first_name",
+                                    "last_name"
+                                ],
+                                "properties": {
+                                    "username": {
+                                        "description": "Username",
+                                        "type": "string",
+                                        "example": "johndoe"
+                                    },
+                                    "email": {
+                                        "description": "Email address",
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "user@example.com"
+                                    },
+                                    "password": {
+                                        "description": "Password (min 6 characters)",
+                                        "type": "string",
+                                        "format": "password",
+                                        "minLength": 6,
+                                        "example": "password123"
+                                    },
+                                    "first_name": {
+                                        "description": "First name",
+                                        "type": "string",
+                                        "example": "John"
+                                    },
+                                    "last_name": {
+                                        "description": "Last name",
+                                        "type": "string",
+                                        "example": "Doe"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "User registered successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/User"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Login user",
+                "operationId": "8cb7742ae98d0990acb2907c4e00bf24",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "login",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "login": {
+                                        "description": "Email or username",
+                                        "type": "string",
+                                        "example": "user@example.com"
+                                    },
+                                    "password": {
+                                        "description": "Password (min 6 characters)",
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/User"
+                                        },
+                                        "token": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Invalid email or password."
+                                        },
+                                        "error": {
+                                            "type": "string",
+                                            "example": "authentication_failed"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Logout user",
+                "operationId": "0d29c740dc06d77602af8095bf4654cc",
+                "responses": {
+                    "200": {
+                        "description": "Logged out successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/auth/me": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Get current user info",
+                "operationId": "a9c495788506b114956e3f509e5d90a2",
+                "responses": {
+                    "200": {
+                        "description": "Current user information",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/certificates/mine": {
+            "get": {
+                "tags": [
+                    "Certificates"
+                ],
+                "summary": "Get current user's certificates",
+                "description": "Retrieve all certificates issued to the authenticated user",
+                "operationId": "getMyCertificates",
+                "responses": {
+                    "200": {
+                        "description": "List of user's certificates",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Certificate"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/certificates/issue/{courseId}": {
+            "post": {
+                "tags": [
+                    "Certificates"
+                ],
+                "summary": "Issue certificate for course completion",
+                "description": "Issue a certificate after student completes a course and passes the final quiz",
+                "operationId": "issueCertificate",
+                "parameters": [
+                    {
+                        "name": "courseId",
+                        "in": "path",
+                        "description": "Course ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Certificate issued successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "certificate": {
+                                            "$ref": "#/components/schemas/Certificate"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - student hasn't passed final quiz or certificate already exists",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Course not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/certificates/{certificateId}": {
+            "get": {
+                "tags": [
+                    "Certificates"
+                ],
+                "summary": "Get certificate details",
+                "description": "Retrieve detailed information about a specific certificate",
+                "operationId": "getCertificate",
+                "parameters": [
+                    {
+                        "name": "certificateId",
+                        "in": "path",
+                        "description": "Certificate ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Certificate details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Certificate"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - user doesn't own this certificate",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Certificate not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/certificates/{certificateId}/revoke": {
+            "post": {
+                "tags": [
+                    "Certificates"
+                ],
+                "summary": "Revoke certificate",
+                "description": "Revoke a certificate (only course teacher or admin can perform this action)",
+                "operationId": "revokeCertificate",
+                "parameters": [
+                    {
+                        "name": "certificateId",
+                        "in": "path",
+                        "description": "Certificate ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "reason": {
+                                        "description": "Reason for revocation",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Certificate revoked successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - user is not the course teacher",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Certificate not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/certificates/verify/{certificateNumber}": {
+            "get": {
+                "tags": [
+                    "Certificates"
+                ],
+                "summary": "Verify certificate validity",
+                "description": "Verify the authenticity of a certificate using its certificate number",
+                "operationId": "verifyCertificate",
+                "parameters": [
+                    {
+                        "name": "certificateNumber",
+                        "in": "path",
+                        "description": "Certificate number (e.g., CERT-2025-ABCDEF)",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Certificate verification result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "valid": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "certificate": {
+                                            "oneOf": [
+                                                {
+                                                    "$ref": "#/components/schemas/Certificate"
+                                                }
+                                            ],
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/certificates/{certificateId}/attach-blockchain": {
+            "post": {
+                "tags": [
+                    "Certificates"
+                ],
+                "summary": "Attach blockchain transaction data",
+                "description": "Link a certificate with its blockchain transaction data after on-chain recording",
+                "operationId": "attachBlockchainData",
+                "parameters": [
+                    {
+                        "name": "certificateId",
+                        "in": "path",
+                        "description": "Certificate ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "transaction_hash",
+                                    "network",
+                                    "certificate_hash"
+                                ],
+                                "properties": {
+                                    "transaction_hash": {
+                                        "description": "Blockchain transaction hash",
+                                        "type": "string"
+                                    },
+                                    "network": {
+                                        "type": "string",
+                                        "enum": [
+                                            "ETHEREUM",
+                                            "POLYGON",
+                                            "HYPERLEDGER"
+                                        ]
+                                    },
+                                    "certificate_hash": {
+                                        "description": "Hash of certificate data stored on blockchain",
+                                        "type": "string"
+                                    },
+                                    "metadata": {
+                                        "description": "Additional blockchain metadata",
+                                        "type": "object",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Blockchain data attached successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "transaction": {
+                                            "$ref": "#/components/schemas/BlockchainTransaction"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error or duplicate transaction hash",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Certificate not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/courses": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Get all courses",
+                "operationId": "37c5c37794e46a7b0debd611ab297e9e",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "level",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "beginner",
+                                "intermediate",
+                                "advanced"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of courses",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Course"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Create a new course",
+                "operationId": "0faffeb3b3c57da1ca08bfe7386c04c5",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "description"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Introduction to Programming"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Learn the basics of programming"
+                                    },
+                                    "thumbnail": {
+                                        "type": "string",
+                                        "format": "url",
+                                        "example": "https://example.com/thumbnail.jpg"
+                                    },
+                                    "level": {
+                                        "type": "string",
+                                        "enum": [
+                                            "BEGINNER",
+                                            "INTERMEDIATE",
+                                            "ADVANCED",
+                                            "EXPERT"
+                                        ],
+                                        "example": "BEGINNER"
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 99.99
+                                    },
+                                    "duration": {
+                                        "type": "integer",
+                                        "example": 30
+                                    },
+                                    "passing_score": {
+                                        "type": "integer",
+                                        "example": 70
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Course created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Course"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/courses/{id}": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Get course details",
+                "operationId": "620a543eae6a3776276ecc0249aa1322",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Course details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Course"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Course not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Update course",
+                "operationId": "37475a84f2c77f68772009862747119e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Updated Course Title"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Updated description"
+                                    },
+                                    "thumbnail": {
+                                        "type": "string",
+                                        "format": "url"
+                                    },
+                                    "level": {
+                                        "type": "string",
+                                        "enum": [
+                                            "BEGINNER",
+                                            "INTERMEDIATE",
+                                            "ADVANCED",
+                                            "EXPERT"
+                                        ]
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "duration": {
+                                        "type": "integer"
+                                    },
+                                    "passing_score": {
+                                        "type": "integer"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "DRAFT",
+                                            "PUBLISHED",
+                                            "ARCHIVED"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Course updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Course"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Course not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Delete course",
+                "operationId": "b8fb19e176d001328edd2499cc0f2c90",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Course deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Course not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/courses/{id}/enroll": {
+            "post": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Enroll in a course",
+                "description": "Enroll the authenticated student in a course",
+                "operationId": "enrollInCourse",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Course ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Enrollment successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "enrollment": {
+                                            "$ref": "#/components/schemas/Enrollment"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Course not found"
+                    },
+                    "409": {
+                        "description": "Already enrolled",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Already enrolled"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/courses/{id}/review": {
+            "post": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Add or update course review",
+                "description": "Add a review for a course or update existing review",
+                "operationId": "addCourseReview",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Course ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "rating"
+                                ],
+                                "properties": {
+                                    "rating": {
+                                        "type": "integer",
+                                        "maximum": 5,
+                                        "minimum": 1,
+                                        "example": 5
+                                    },
+                                    "comment": {
+                                        "type": "string",
+                                        "example": "Great course!",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Review submitted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "review": {
+                                            "$ref": "#/components/schemas/Review"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Course not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/courses/{id}/modules": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Get course modules with lessons",
+                "description": "Retrieve all modules and their lessons for a specific course",
+                "operationId": "getCourseModules",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Course ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of modules with lessons",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Module"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Course not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/courses/{id}/students": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Get enrolled students",
+                "description": "Get list of students enrolled in a course (teacher only)",
+                "operationId": "getEnrolledStudents",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Course ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of enrolled students",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "student": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string",
+                                                        "format": "uuid"
+                                                    },
+                                                    "first_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "last_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "email": {
+                                                        "type": "string",
+                                                        "format": "email"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden - not the course teacher"
+                    },
+                    "404": {
+                        "description": "Course not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/grading/attempts/{attemptId}/auto-grade": {
+            "post": {
+                "tags": [
+                    "Grading"
+                ],
+                "summary": "Auto-grade quiz attempt",
+                "operationId": "58cfe543501dd853650762e90a3a3236",
+                "parameters": [
+                    {
+                        "name": "attemptId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Attempt auto-graded successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/grading/answers/{answerId}/manual-grade": {
+            "post": {
+                "tags": [
+                    "Grading"
+                ],
+                "summary": "Manually grade an answer",
+                "operationId": "68abe5ad5ba2cd62877a82a0f6a96843",
+                "parameters": [
+                    {
+                        "name": "answerId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "points_awarded"
+                                ],
+                                "properties": {
+                                    "points_awarded": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                    },
+                                    "is_correct": {
+                                        "type": "boolean",
+                                        "nullable": true
+                                    },
+                                    "feedback": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Answer graded successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/grading/attempts/{attemptId}/pending": {
+            "get": {
+                "tags": [
+                    "Grading"
+                ],
+                "summary": "Get pending answers for manual grading",
+                "operationId": "5363acaf5f26231e20200d735091e532",
+                "parameters": [
+                    {
+                        "name": "attemptId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pending answers for grading"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/grading/attempts/{attemptId}/review": {
+            "get": {
+                "tags": [
+                    "Grading"
+                ],
+                "summary": "Get attempt results for review",
+                "operationId": "0b26b565904fbd626e70105898fcb086",
+                "parameters": [
+                    {
+                        "name": "attemptId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Attempt review data"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/courses/{courseId}/progress": {
+            "get": {
+                "tags": [
+                    "Learning"
+                ],
+                "summary": "Get course progress for student",
+                "operationId": "56b38831c4f05be4e83d348a6cf401fe",
+                "parameters": [
+                    {
+                        "name": "courseId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Course progress with lessons",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not enrolled in course"
+                    },
+                    "404": {
+                        "description": "Course not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/learning/lesson/{lessonId}/complete": {
+            "post": {
+                "tags": [
+                    "Learning"
+                ],
+                "summary": "Mark lesson as completed",
+                "description": "Mark a lesson as completed for the authenticated student",
+                "operationId": "markLessonCompleted",
+                "parameters": [
+                    {
+                        "name": "lessonId",
+                        "in": "path",
+                        "description": "Lesson ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lesson marked as completed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "progress": {
+                                            "$ref": "#/components/schemas/Progress"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Not enrolled in course",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Lesson not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/learning/lesson/{lessonId}/time": {
+            "post": {
+                "tags": [
+                    "Learning"
+                ],
+                "summary": "Update time spent on lesson",
+                "description": "Update the time spent studying a lesson",
+                "operationId": "updateTimeSpent",
+                "parameters": [
+                    {
+                        "name": "lessonId",
+                        "in": "path",
+                        "description": "Lesson ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "time_spent"
+                                ],
+                                "properties": {
+                                    "time_spent": {
+                                        "description": "Time spent in seconds",
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "example": 300
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Time updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "progress": {
+                                            "$ref": "#/components/schemas/Progress"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Not enrolled in course",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Lesson not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/learning/course/{courseId}/complete": {
+            "post": {
+                "tags": [
+                    "Learning"
+                ],
+                "summary": "Complete course",
+                "description": "Mark the entire course as completed (requires all lessons to be completed)",
+                "operationId": "completeCourse",
+                "parameters": [
+                    {
+                        "name": "courseId",
+                        "in": "path",
+                        "description": "Course ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Course completed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Not all lessons completed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Course not found or not enrolled"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/learning/student/{studentId}/courses/time-spent": {
+            "get": {
+                "tags": [
+                    "Learning"
+                ],
+                "summary": "Get total time spent on each enrolled course for a student",
+                "operationId": "52577dbe3e5a8bc9d14e8ee65b99c321",
+                "parameters": [
+                    {
+                        "name": "studentId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Time spent on each enrolled course",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "course_id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "course_title": {
+                                                "type": "string"
+                                            },
+                                            "total_time_spent": {
+                                                "description": "Total time spent in seconds",
+                                                "type": "integer"
+                                            },
+                                            "enrollment_status": {
+                                                "type": "string"
+                                            },
+                                            "enrolled_at": {
+                                                "type": "string",
+                                                "format": "date-time"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Student not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/learning/student/{studentId}/courses/progress": {
+            "get": {
+                "tags": [
+                    "Learning"
+                ],
+                "summary": "Get progress for all enrolled courses",
+                "operationId": "403f215a02c01b9f3ab229f11dc962e2",
+                "parameters": [
+                    {
+                        "name": "studentId",
+                        "in": "path",
+                        "description": "Student ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Courses progress data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "course_id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "course_title": {
+                                                "type": "string"
+                                            },
+                                            "enrollment_status": {
+                                                "type": "string"
+                                            },
+                                            "enrolled_at": {
+                                                "type": "string",
+                                                "format": "date-time"
+                                            },
+                                            "progress": {
+                                                "description": "Progress percentage",
+                                                "type": "integer"
+                                            },
+                                            "total_lessons": {
+                                                "type": "integer"
+                                            },
+                                            "completed_lessons": {
+                                                "type": "integer"
+                                            },
+                                            "total_time_spent": {
+                                                "description": "Time spent in seconds",
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Student not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/learning/courses/progress": {
+            "get": {
+                "tags": [
+                    "Learning"
+                ],
+                "summary": "Get progress for all enrolled courses (current user)",
+                "operationId": "df9f058d423984f5ea2c376fd91a5cea",
+                "responses": {
+                    "200": {
+                        "description": "Courses progress data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "course_id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "course_title": {
+                                                "type": "string"
+                                            },
+                                            "enrollment_status": {
+                                                "type": "string"
+                                            },
+                                            "enrolled_at": {
+                                                "type": "string",
+                                                "format": "date-time"
+                                            },
+                                            "progress": {
+                                                "description": "Progress percentage",
+                                                "type": "integer"
+                                            },
+                                            "total_lessons": {
+                                                "type": "integer"
+                                            },
+                                            "completed_lessons": {
+                                                "type": "integer"
+                                            },
+                                            "total_time_spent": {
+                                                "description": "Time spent in seconds",
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/quizzes/{quizId}/questions": {
+            "get": {
+                "tags": [
+                    "Questions"
+                ],
+                "summary": "Get questions for a quiz",
+                "operationId": "8a042cb88af67edc55989f50b8f628eb",
+                "parameters": [
+                    {
+                        "name": "quizId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of questions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Question"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Questions"
+                ],
+                "summary": "Create a new question",
+                "operationId": "5c9f901cd140f565401fd30590b30dbe",
+                "parameters": [
+                    {
+                        "name": "quizId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "question_text",
+                                    "question_type",
+                                    "points",
+                                    "correct_answer"
+                                ],
+                                "properties": {
+                                    "question_text": {
+                                        "type": "string",
+                                        "example": "What is Vue.js?"
+                                    },
+                                    "question_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "MULTIPLE_CHOICE",
+                                            "TRUE_FALSE",
+                                            "SHORT_ANSWER",
+                                            "ESSAY"
+                                        ]
+                                    },
+                                    "points": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "order_index": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "options": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "correct_answer": {
+                                        "type": "string"
+                                    },
+                                    "explanation": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Question created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/questions/{questionId}": {
+            "get": {
+                "tags": [
+                    "Questions"
+                ],
+                "summary": "Get question details",
+                "operationId": "edfc0c72ca1e9f11e6c94e16cd6d5daa",
+                "parameters": [
+                    {
+                        "name": "questionId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Question details"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Questions"
+                ],
+                "summary": "Update question",
+                "operationId": "e2aa92271e8d907e73fcbedc0577bce5",
+                "parameters": [
+                    {
+                        "name": "questionId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "question_text": {
+                                        "type": "string"
+                                    },
+                                    "question_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "MULTIPLE_CHOICE",
+                                            "TRUE_FALSE",
+                                            "SHORT_ANSWER",
+                                            "ESSAY"
+                                        ]
+                                    },
+                                    "points": {
+                                        "type": "integer"
+                                    },
+                                    "order_index": {
+                                        "type": "integer"
+                                    },
+                                    "options": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "correct_answer": {
+                                        "type": "string"
+                                    },
+                                    "explanation": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Question updated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Questions"
+                ],
+                "summary": "Delete question",
+                "operationId": "7bad0f55b1e4fba994977337462e153f",
+                "parameters": [
+                    {
+                        "name": "questionId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Question deleted successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/courses/{courseId}/quizzes": {
+            "get": {
+                "tags": [
+                    "Quizzes"
+                ],
+                "summary": "Get quizzes for a course",
+                "operationId": "6ee2e1ac2ed5f9e247f4a825ec57ba89",
+                "parameters": [
+                    {
+                        "name": "courseId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of quizzes",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Quiz"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Course not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/quizzes/course/{courseId}": {
+            "post": {
+                "tags": [
+                    "Quizzes"
+                ],
+                "summary": "Create a new quiz",
+                "description": "Create a quiz for a specific course (teacher only)",
+                "operationId": "createQuiz",
+                "parameters": [
+                    {
+                        "name": "courseId",
+                        "in": "path",
+                        "description": "Course ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "order_index"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Basic Programming Quiz"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Test your programming knowledge",
+                                        "nullable": true
+                                    },
+                                    "quiz_type": {
+                                        "type": "string",
+                                        "default": "PRACTICE",
+                                        "enum": [
+                                            "PRACTICE",
+                                            "GRADED",
+                                            "FINAL"
+                                        ]
+                                    },
+                                    "passing_score": {
+                                        "type": "integer",
+                                        "default": 70,
+                                        "example": 70
+                                    },
+                                    "time_limit": {
+                                        "type": "integer",
+                                        "example": 30,
+                                        "nullable": true
+                                    },
+                                    "max_attempts": {
+                                        "type": "integer",
+                                        "example": 3,
+                                        "nullable": true
+                                    },
+                                    "order_index": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Quiz created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Quiz"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden - not course teacher"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/quizzes/{quizId}": {
+            "get": {
+                "tags": [
+                    "Quizzes"
+                ],
+                "summary": "Get quiz details",
+                "description": "Get detailed information about a specific quiz including questions",
+                "operationId": "getQuiz",
+                "parameters": [
+                    {
+                        "name": "quizId",
+                        "in": "path",
+                        "description": "Quiz ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Quiz details with questions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Quiz"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Quiz not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Quizzes"
+                ],
+                "summary": "Update quiz",
+                "description": "Update an existing quiz (teacher only)",
+                "operationId": "updateQuiz",
+                "parameters": [
+                    {
+                        "name": "quizId",
+                        "in": "path",
+                        "description": "Quiz ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Updated Quiz Title"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "quiz_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "PRACTICE",
+                                            "GRADED",
+                                            "FINAL"
+                                        ]
+                                    },
+                                    "passing_score": {
+                                        "type": "integer",
+                                        "example": 75
+                                    },
+                                    "time_limit": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "max_attempts": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "order_index": {
+                                        "type": "integer"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Quiz updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Quiz"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden - not quiz owner"
+                    },
+                    "404": {
+                        "description": "Quiz not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Quizzes"
+                ],
+                "summary": "Delete quiz",
+                "description": "Delete a quiz (teacher only)",
+                "operationId": "deleteQuiz",
+                "parameters": [
+                    {
+                        "name": "quizId",
+                        "in": "path",
+                        "description": "Quiz ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Quiz deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden - not quiz owner"
+                    },
+                    "404": {
+                        "description": "Quiz not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/quizzes/{quizId}/start": {
+            "post": {
+                "tags": [
+                    "Quizzes"
+                ],
+                "summary": "Start quiz attempt",
+                "description": "Start a new attempt for a quiz",
+                "operationId": "startQuizAttempt",
+                "parameters": [
+                    {
+                        "name": "quizId",
+                        "in": "path",
+                        "description": "Quiz ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Quiz attempt started",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "attempt": {
+                                            "$ref": "#/components/schemas/QuizAttempt"
+                                        },
+                                        "questions": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Question"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Maximum attempts reached or not enrolled"
+                    },
+                    "404": {
+                        "description": "Quiz not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/quizzes/attempt/{attemptId}/submit": {
+            "post": {
+                "tags": [
+                    "Quizzes"
+                ],
+                "summary": "Submit quiz attempt",
+                "description": "Submit answers for a quiz attempt",
+                "operationId": "submitQuizAttempt",
+                "parameters": [
+                    {
+                        "name": "attemptId",
+                        "in": "path",
+                        "description": "Attempt ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "answers"
+                                ],
+                                "properties": {
+                                    "answers": {
+                                        "description": "Array of answers corresponding to questions",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "time_spent": {
+                                        "description": "Time spent in seconds",
+                                        "type": "integer",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Quiz submitted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "score": {
+                                            "type": "number",
+                                            "format": "decimal"
+                                        },
+                                        "passed": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Not the attempt owner"
+                    },
+                    "404": {
+                        "description": "Attempt not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/quizzes/{quizId}/attempts": {
+            "get": {
+                "tags": [
+                    "Quizzes"
+                ],
+                "summary": "Get quiz attempt history",
+                "description": "Get all attempts made by the current user for a specific quiz",
+                "operationId": "getQuizAttemptsHistory",
+                "parameters": [
+                    {
+                        "name": "quizId",
+                        "in": "path",
+                        "description": "Quiz ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of quiz attempts",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/QuizAttempt"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Quiz not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/system/log": {
+            "post": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Log system action",
+                "description": "Create a system log entry",
+                "operationId": "logAction",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "level",
+                                    "message"
+                                ],
+                                "properties": {
+                                    "level": {
+                                        "type": "string",
+                                        "enum": [
+                                            "INFO",
+                                            "WARNING",
+                                            "ERROR",
+                                            "CRITICAL"
+                                        ],
+                                        "example": "INFO"
+                                    },
+                                    "message": {
+                                        "type": "string",
+                                        "example": "User logged in"
+                                    },
+                                    "context": {
+                                        "type": "object",
+                                        "example": {
+                                            "user_id": "123",
+                                            "action": "login"
+                                        },
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Log created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SystemLog"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/system/logs": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Get system logs",
+                "description": "Retrieve system logs (admin only)",
+                "operationId": "getLogs",
+                "parameters": [
+                    {
+                        "name": "level",
+                        "in": "query",
+                        "description": "Filter by log level",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "INFO",
+                                "WARNING",
+                                "ERROR",
+                                "CRITICAL"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of system logs",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/SystemLog"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden - admin access required"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/system/logs/{id}": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Get specific log entry",
+                "description": "Retrieve a specific system log entry (admin only)",
+                "operationId": "getLog",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Log ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Log entry details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SystemLog"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden - admin access required"
+                    },
+                    "404": {
+                        "description": "Log not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/system/logs/clear": {
+            "delete": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Clear old logs",
+                "description": "Delete system logs older than specified days (admin only)",
+                "operationId": "clearOldLogs",
+                "parameters": [
+                    {
+                        "name": "days",
+                        "in": "query",
+                        "description": "Number of days to keep logs (default: 30)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 30,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Logs cleared successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Deleted 150 old logs"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden - admin access required"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/system/cache": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Get cache status",
+                "description": "Check the current cache driver and status",
+                "operationId": "getCacheStatus",
+                "responses": {
+                    "200": {
+                        "description": "Cache status information",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "redis"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/system/jobs": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Get queued jobs",
+                "description": "Get list of queued jobs (admin only)",
+                "operationId": "getJobs",
+                "responses": {
+                    "200": {
+                        "description": "List of queued jobs",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden - admin access required"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/system/jobs/{id}": {
+            "delete": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Delete queued job",
+                "description": "Delete a specific queued job (admin only)",
+                "operationId": "deleteJob",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Job ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Job deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden - admin access required"
+                    },
+                    "404": {
+                        "description": "Job not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/system/jobs/{id}/retry": {
+            "post": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Retry failed job",
+                "description": "Retry a failed queued job (admin only)",
+                "operationId": "retryJob",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Job ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Job retry initiated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden - admin access required"
+                    },
+                    "404": {
+                        "description": "Job not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/users": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get all users",
+                "operationId": "7e2f5799553ec93c9c43e2a58490d447",
+                "responses": {
+                    "200": {
+                        "description": "List of users",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/User"
+                                            }
+                                        },
+                                        "current_page": {
+                                            "type": "integer"
+                                        },
+                                        "last_page": {
+                                            "type": "integer"
+                                        },
+                                        "per_page": {
+                                            "type": "integer"
+                                        },
+                                        "total": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/users/{id}": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get user by ID",
+                "operationId": "910a0c7cf580e1c605648d82a4e57f46",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Update user",
+                "operationId": "ddfe232db1870b82493bf8bd25596d37",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "first_name": {
+                                        "type": "string",
+                                        "example": "John"
+                                    },
+                                    "last_name": {
+                                        "type": "string",
+                                        "example": "Doe"
+                                    },
+                                    "bio": {
+                                        "type": "string",
+                                        "example": "Bio description"
+                                    },
+                                    "avatar": {
+                                        "type": "string",
+                                        "format": "url",
+                                        "example": "https://example.com/avatar.jpg"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "newpassword"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "User updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/User"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Delete user",
+                "operationId": "43dd20becb1f47444e484cbb18ce345c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/users/{id}/reviews": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get user reviews",
+                "operationId": "13897806b073f908fa1493c420bb49fd",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of user reviews",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/users/{id}/certificates": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get user certificates",
+                "operationId": "a65c5639324c83f4a510a99cab8693f4",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of user certificates",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/users/{id}/enrollments": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get user enrollments",
+                "operationId": "56470dcb03a1fddba46d2680d348f65e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of user enrollments",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "student_id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "course_id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "status": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "ACTIVE",
+                                                    "COMPLETED",
+                                                    "DROPPED"
+                                                ]
+                                            },
+                                            "progress": {
+                                                "type": "number",
+                                                "format": "decimal"
+                                            },
+                                            "completed_at": {
+                                                "type": "string",
+                                                "format": "date-time",
+                                                "nullable": true
+                                            },
+                                            "enrolled_at": {
+                                                "type": "string",
+                                                "format": "date-time"
+                                            },
+                                            "course": {
+                                                "$ref": "#/components/schemas/Course"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/users/filter": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Filter users by role",
+                "operationId": "1bc5eb8de7fa0d8e0bb675c85139bf81",
+                "parameters": [
+                    {
+                        "name": "role",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "student",
+                            "enum": [
+                                "student",
+                                "instructor",
+                                "admin"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Filtered list of users",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/User"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "User": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                    },
+                    "first_name": {
+                        "type": "string",
+                        "example": "John"
+                    },
+                    "last_name": {
+                        "type": "string",
+                        "example": "Doe"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "john.doe@example.com"
+                    },
+                    "username": {
+                        "type": "string",
+                        "example": "johndoe"
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password",
+                        "nullable": true
+                    },
+                    "avatar": {
+                        "type": "string",
+                        "format": "url",
+                        "example": "https://example.com/avatar.jpg",
+                        "nullable": true
+                    },
+                    "bio": {
+                        "type": "string",
+                        "example": "Software developer with 5 years experience",
+                        "nullable": true
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "STUDENT",
+                            "TEACHER",
+                            "ADMIN"
+                        ],
+                        "example": "STUDENT"
+                    },
+                    "auth_provider": {
+                        "type": "string",
+                        "enum": [
+                            "EMAIL",
+                            "GOOGLE",
+                            "FACEBOOK",
+                            "GITHUB"
+                        ],
+                        "example": "EMAIL"
+                    },
+                    "is_email_verified": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Course": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "Introduction to Programming"
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Learn the basics of programming"
+                    },
+                    "slug": {
+                        "type": "string",
+                        "example": "introduction-to-programming"
+                    },
+                    "thumbnail": {
+                        "type": "string",
+                        "format": "url",
+                        "example": "https://example.com/thumbnail.jpg",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "DRAFT",
+                            "PENDING",
+                            "PUBLISHED",
+                            "ARCHIVED"
+                        ],
+                        "example": "PUBLISHED"
+                    },
+                    "level": {
+                        "type": "string",
+                        "enum": [
+                            "BEGINNER",
+                            "INTERMEDIATE",
+                            "ADVANCED",
+                            "EXPERT"
+                        ],
+                        "example": "BEGINNER"
+                    },
+                    "price": {
+                        "type": "number",
+                        "format": "decimal",
+                        "example": 99.99,
+                        "nullable": true
+                    },
+                    "duration": {
+                        "type": "integer",
+                        "example": 30,
+                        "nullable": true
+                    },
+                    "passing_score": {
+                        "type": "integer",
+                        "example": 70
+                    },
+                    "teacher_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "550e8400-e29b-41d4-a716-446655440001"
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "teacher": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/User"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "Certificate": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                    },
+                    "certificate_number": {
+                        "type": "string",
+                        "example": "CERT-2025-ABCDEF"
+                    },
+                    "student_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "550e8400-e29b-41d4-a716-446655440001"
+                    },
+                    "course_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "550e8400-e29b-41d4-a716-446655440002"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "PENDING",
+                            "ISSUED",
+                            "FAILED",
+                            "REVOKED"
+                        ],
+                        "example": "ISSUED"
+                    },
+                    "final_score": {
+                        "type": "number",
+                        "format": "decimal",
+                        "example": 85.5
+                    },
+                    "pdf_url": {
+                        "type": "string",
+                        "example": "https://example.com/certificates/CERT-2025-ABCDEF.pdf",
+                        "nullable": true
+                    },
+                    "pdf_hash": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "issued_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "revoked_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "revocation_reason": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "course": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/Course"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "student": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/User"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "blockchain_transaction": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/BlockchainTransaction"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "BlockchainTransaction": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "transaction_hash": {
+                        "type": "string",
+                        "example": "0x1234567890abcdef"
+                    },
+                    "network": {
+                        "type": "string",
+                        "enum": [
+                            "ETHEREUM",
+                            "POLYGON",
+                            "HYPERLEDGER"
+                        ]
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "PENDING",
+                            "CONFIRMED",
+                            "FAILED"
+                        ]
+                    },
+                    "certificate_hash": {
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "block_number": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "gas_used": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "certificate_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "confirmed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "Module": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "order_index": {
+                        "type": "integer"
+                    },
+                    "course_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "lessons": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Lesson"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "Lesson": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "Introduction to Variables"
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Learn about variables in programming",
+                        "nullable": true
+                    },
+                    "content_type": {
+                        "type": "string",
+                        "enum": [
+                            "VIDEO",
+                            "PDF",
+                            "DOCUMENT",
+                            "LINK",
+                            "TEXT"
+                        ]
+                    },
+                    "content_url": {
+                        "type": "string",
+                        "format": "url",
+                        "nullable": true
+                    },
+                    "text_content": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "duration": {
+                        "type": "integer",
+                        "example": 600,
+                        "nullable": true
+                    },
+                    "order_index": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "is_free": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "module_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "is_completed": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "time_spent": {
+                        "type": "integer",
+                        "example": 300
+                    }
+                },
+                "type": "object"
+            },
+            "Enrollment": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "student_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "course_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "ACTIVE",
+                            "COMPLETED",
+                            "EXPIRED",
+                            "CANCELLED"
+                        ]
+                    },
+                    "progress": {
+                        "type": "integer"
+                    },
+                    "enrolled_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "completed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "Review": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "rating": {
+                        "type": "integer",
+                        "maximum": 5,
+                        "minimum": 1
+                    },
+                    "comment": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "student_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "course_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Quiz": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "Basic Programming Quiz"
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Test your programming knowledge",
+                        "nullable": true
+                    },
+                    "quiz_type": {
+                        "type": "string",
+                        "enum": [
+                            "PRACTICE",
+                            "GRADED",
+                            "FINAL"
+                        ],
+                        "example": "GRADED"
+                    },
+                    "time_limit": {
+                        "type": "integer",
+                        "example": 30,
+                        "nullable": true
+                    },
+                    "passing_score": {
+                        "type": "integer",
+                        "example": 70
+                    },
+                    "max_attempts": {
+                        "type": "integer",
+                        "example": 3,
+                        "nullable": true
+                    },
+                    "order_index": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "course_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "questions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Question"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "Question": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "question_text": {
+                        "type": "string"
+                    },
+                    "question_type": {
+                        "type": "string",
+                        "enum": [
+                            "MULTIPLE_CHOICE",
+                            "TRUE_FALSE",
+                            "SHORT_ANSWER",
+                            "ESSAY"
+                        ]
+                    },
+                    "points": {
+                        "type": "integer",
+                        "default": 1
+                    },
+                    "order_index": {
+                        "type": "integer"
+                    },
+                    "options": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "nullable": true
+                    },
+                    "correct_answer": {
+                        "type": "string"
+                    },
+                    "explanation": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "QuizAttempt": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "student_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "quiz_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "score": {
+                        "type": "number",
+                        "format": "decimal",
+                        "nullable": true
+                    },
+                    "is_passed": {
+                        "type": "boolean"
+                    },
+                    "attempt_number": {
+                        "type": "integer"
+                    },
+                    "time_spent": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "started_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "submitted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "Progress": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "student_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "lesson_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "is_completed": {
+                        "type": "boolean"
+                    },
+                    "time_spent": {
+                        "type": "integer"
+                    },
+                    "last_accessed_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "completed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "SystemLog": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "level": {
+                        "type": "string",
+                        "enum": [
+                            "INFO",
+                            "WARNING",
+                            "ERROR",
+                            "CRITICAL"
+                        ]
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "context": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "user_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "ip_address": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "user_agent": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "sanctum": {
+                "type": "http",
+                "description": "Enter your Sanctum token (without 'Bearer ' prefix)",
+                "bearerFormat": "Token",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Grading",
+            "description": "Grading and assessment endpoints"
+        },
+        {
+            "name": "Questions",
+            "description": "Question management endpoints"
+        },
+        {
+            "name": "Authentication",
+            "description": "Authentication"
+        },
+        {
+            "name": "Certificates",
+            "description": "Certificates"
+        },
+        {
+            "name": "Courses",
+            "description": "Courses"
+        },
+        {
+            "name": "Learning",
+            "description": "Learning"
+        },
+        {
+            "name": "Quizzes",
+            "description": "Quizzes"
+        },
+        {
+            "name": "System",
+            "description": "System"
+        },
+        {
+            "name": "Users",
+            "description": "Users"
+        }
+    ]
+}

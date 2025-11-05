@@ -16,17 +16,6 @@ services:
     volumes:
       - ./backend:/var/www
       - ./backend/.env.production:/var/www/.env
-    environment:
-      - APP_ENV=production
-      - DB_CONNECTION=pgsql
-      - DB_HOST=ep-red-silence-adwf2gyh-pooler.c-2.us-east-1.aws.neon.tech
-      - DB_PORT=5432
-      - DB_DATABASE=neondb
-      - DB_USERNAME=neondb_owner
-      - DB_PASSWORD=npg_fZmgpv5eGr9J
-      - DB_SSLMODE=require
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
     networks:
       - app_network
     depends_on:
