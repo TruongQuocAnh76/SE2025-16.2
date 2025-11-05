@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('password')->nullable(); // Nullable for OAuth users
             $table->string('first_name');
             $table->string('last_name');
-            $table->string('avatar')->nullable(); // URL to profile picture
+            $table->string('avatar', 500)->nullable(); // URL to profile picture (increased to 500 for OAuth providers)
             $table->text('bio')->nullable();
             $table->enum('role', ['STUDENT', 'TEACHER', 'ADMIN'])->default('STUDENT');
             $table->enum('auth_provider', ['EMAIL', 'GOOGLE', 'FACEBOOK', 'GITHUB'])->default('EMAIL');

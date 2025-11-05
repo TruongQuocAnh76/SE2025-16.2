@@ -46,5 +46,5 @@ RUN chown -R www-data:www-data /var/www \
 # Expose port
 EXPOSE 8000
 
-# Start Laravel with artisan serve (Pail đã bị xóa khỏi composer.json)
+# Start Laravel with artisan serve 
 CMD php artisan serve --host=0.0.0.0 --port=8000 2>&1

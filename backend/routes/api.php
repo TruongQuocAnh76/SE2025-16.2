@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\LearningController;
@@ -26,6 +27,12 @@ Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    
+    // OAuth Routes
+    Route::get('/google', [SocialAuthController::class, 'redirectToGoogle']);
+    Route::get('/google/callback', [SocialAuthController::class, 'handleGoogleCallback']);
+    Route::get('/facebook', [SocialAuthController::class, 'redirectToFacebook']);
+    Route::get('/facebook/callback', [SocialAuthController::class, 'handleFacebookCallback']);
 });
 
 Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
