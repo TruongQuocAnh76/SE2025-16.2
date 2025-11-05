@@ -1,4 +1,4 @@
-import type { Course, CreateCourseData, Review, CreateReviewData, CreateCourseResponse, CourseDetailsResponse, AddReviewResponse, Tag } from '../types/course'
+import type { Course, CreateCourseData, Review, CreateReviewData, CreateCourseResponse, CourseDetailsResponse, AddReviewResponse, Tag, CreateCourseWithModulesData } from '../types/course'
 
 export const useCourses = () => {
   const config = useRuntimeConfig()
@@ -15,7 +15,7 @@ export const useCourses = () => {
   }
 
 
-  const createCourse = async (courseData: CreateCourseData): Promise<{ course: Course; thumbnailUploadUrl?: string } | null> => {
+  const createCourse = async (courseData: CreateCourseData | CreateCourseWithModulesData): Promise<CreateCourseResponse | null> => {
     try {
       const data = await $fetch<CreateCourseResponse>('/api/courses', {
         baseURL: config.public.backendUrl as string,
@@ -26,10 +26,7 @@ export const useCourses = () => {
         },
         body: courseData
       })
-      return {
-        course: data.course,
-        thumbnailUploadUrl: data.thumbnail_upload_url
-      }
+      return data
     } catch (error) {
       console.error('Failed to create course:', error)
       throw error
@@ -210,6 +207,20 @@ export const useCourses = () => {
     }
   }
 
+  const uploadLessonVideo = async (lessonId: string, uploadUrl: string, videoFile: File): Promise<boolean> => {
+    try {
+      const response = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: videoFile,
+        headers: { 'Content-Type': videoFile.type }
+      })
+      return response.ok
+    } catch (error) {
+      console.error('Failed to upload lesson video:', error)
+      return false
+    }
+  }
+
 
   return {
     createCourse,
@@ -222,5 +233,6 @@ export const useCourses = () => {
     updateCourseThumbnail,
     addReview,
     getTags,
+    uploadLessonVideo,
   }
 }

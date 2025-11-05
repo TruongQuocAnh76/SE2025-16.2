@@ -133,6 +133,66 @@ export interface CreateCourseData {
   tags?: string[];
 }
 
+export interface Question {
+  id?: string
+  question_text: string
+  question_type: 'MULTIPLE_CHOICE' | 'CHECKBOX' | 'SHORT_ANSWER'
+  points: number
+  order_index: number
+  options?: string[]
+  correct_answer: string
+  explanation?: string
+  quiz_id?: string
+}
+
+export interface CreateModuleData {
+  id?: string
+  title: string
+  description?: string
+  order_index: number
+  lessons: CreateLessonData[]
+  quizzes: CreateQuizData[]
+}
+
+export interface CreateLessonData {
+  id?: string
+  title: string
+  content_type: 'VIDEO'
+  content_url?: string
+  video_file?: File
+  duration?: number
+  order_index: number
+  is_free: boolean
+}
+
+export interface CreateQuizData {
+  id?: string
+  title: string
+  description?: string
+  quiz_type: 'PRACTICE' | 'GRADED' | 'FINAL'
+  time_limit?: number
+  passing_score: number
+  max_attempts?: number
+  order_index: number
+  is_active: boolean
+  questions: CreateQuestionData[]
+}
+
+export interface CreateQuestionData {
+  id?: string
+  question_text: string
+  question_type: 'MULTIPLE_CHOICE' | 'CHECKBOX' | 'SHORT_ANSWER'
+  points: number
+  order_index: number
+  options?: string[]
+  correct_answer: string
+  explanation?: string
+}
+
+export interface CreateCourseWithModulesData extends CreateCourseData {
+  modules: CreateModuleData[]
+}
+
 export interface CreateReviewData {
   rating: number
   comment?: string
@@ -142,6 +202,13 @@ export interface CreateCourseResponse {
   message: string
   course: Course
   thumbnail_upload_url?: string
+  video_upload_urls?: {
+    [key: string]: {
+      upload_url: string
+      lesson_id: string
+      video_path: string
+    }
+  }
 }
 
 export interface CourseDetailsResponse {
