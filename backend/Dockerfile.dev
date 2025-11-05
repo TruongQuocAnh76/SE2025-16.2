@@ -50,7 +50,7 @@ RUN chown -R www-data:www-data /var/www \
     && chmod -R 755 /var/www/bootstrap/cache
 
 # Expose port
-EXPOSE 8000
+EXPOSE 9000
 
-# Start Laravel with artisan serve 
-CMD php artisan serve --host=0.0.0.0 --port=8000 2>&1
+# Start PHP-FPM
+CMD ["php-fpm"]
