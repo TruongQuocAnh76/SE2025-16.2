@@ -6,6 +6,7 @@ use App\Repositories\LessonRepository;
 use App\Repositories\QuizRepository;
 use App\Repositories\QuestionRepository;
 use App\Models\Review;
+use App\Services\HlsVideoService;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 
@@ -16,6 +17,7 @@ class CourseService {
     protected $lessonRepository;
     protected $quizRepository;
     protected $questionRepository;
+    protected $hlsVideoService;
 
     public function __construct(
         CourseRepository $courseRepository,
@@ -23,7 +25,8 @@ class CourseService {
         ModuleRepository $moduleRepository,
         LessonRepository $lessonRepository,
         QuizRepository $quizRepository,
-        QuestionRepository $questionRepository
+        QuestionRepository $questionRepository,
+        HlsVideoService $hlsVideoService
     ) {
         $this->courseRepository = $courseRepository;
         $this->enrollmentRepository = $enrollmentRepository;
@@ -31,6 +34,7 @@ class CourseService {
         $this->lessonRepository = $lessonRepository;
         $this->quizRepository = $quizRepository;
         $this->questionRepository = $questionRepository;
+        $this->hlsVideoService = $hlsVideoService;
     }
     public function getAllCourses($filters = [], $perPage = 12) {
         return $this->courseRepository->getAll($filters, $perPage);
@@ -101,26 +105,28 @@ class CourseService {
                         $lessonData['id'] = Str::uuid();
                         $lessonData['module_id'] = $module->id;
                         
-                        // Generate video upload URL and final storage path
+                        // Generate HLS video storage paths and upload URL for original video
                         if (empty($lessonData['content_url'])) {
-                            $videoPath = 'courses/videos/' . $course->id . '/modules/' . $module->id . '/lessons/' . $lessonData['id'] . '.mp4';
+                            $originalVideoPath = 'courses/original-videos/' . $course->id . '/modules/' . $module->id . '/lessons/' . $lessonData['id'] . '.mp4';
+                            $hlsBasePath = 'courses/hls/' . $course->id . '/modules/' . $module->id . '/lessons/' . $lessonData['id'];
                             $awsEndpoint = env('AWS_ENDPOINT');
                             $awsBucket = env('AWS_BUCKET');
                             
-                            // Set the final video URL
-                            $lessonData['content_url'] = $awsEndpoint . '/' . $awsBucket . '/' . $videoPath;
+                            // Set the final HLS master playlist URL
+                            $lessonData['content_url'] = $awsEndpoint . '/' . $awsBucket . '/' . $hlsBasePath . '/master.m3u8';
                             
-                            // Generate upload URL for the frontend
+                            // Generate upload URL for original video file
                             $videoUploadUrl = Storage::disk('s3')->temporaryUrl(
-                                $videoPath,
-                                now()->addMinutes(60), // 1 hour to upload video
+                                $originalVideoPath,
+                                now()->addMinutes(120), // 2 hours to upload video
                                 ['ContentType' => 'video/mp4']
                             );
                             
                             $videoUploadUrls["module_{$moduleIndex}_lesson_{$lessonIndex}"] = [
                                 'upload_url' => $videoUploadUrl,
                                 'lesson_id' => $lessonData['id'],
-                                'video_path' => $videoPath
+                                'original_video_path' => $originalVideoPath,
+                                'hls_base_path' => $hlsBasePath
                             ];
                         }
                         
@@ -216,23 +222,92 @@ class CourseService {
     public function uploadLessonVideo($videoPath, $videoFile) {
         try {
             // Validate the file
-            if (!$videoFile || $videoFile->getClientOriginalExtension() !== 'mp4') {
-                throw new \Exception('Only MP4 files are allowed');
+            if (!$videoFile || !in_array($videoFile->getClientOriginalExtension(), ['mp4', 'mov', 'avi', 'mkv'])) {
+                throw new \Exception('Only video files (MP4, MOV, AVI, MKV) are allowed');
             }
-            // Upload to S3 (LocalStack)
+
+            // Store the original video temporarily in local storage for processing
+            $tempVideoPath = 'temp/videos/' . uniqid() . '.' . $videoFile->getClientOriginalExtension();
+            Storage::disk('local')->put($tempVideoPath, file_get_contents($videoFile));
+            
+            // Upload original video to S3
             $uploaded = Storage::disk('s3')->put($videoPath, file_get_contents($videoFile));
             
             if (!$uploaded) {
-                throw new \Exception('Failed to upload video file');
+                throw new \Exception('Failed to upload original video file');
             }
 
-            return true;
+            return [
+                'success' => true,
+                'original_uploaded' => true,
+                'temp_path' => $tempVideoPath,
+                'message' => 'Original video uploaded successfully. HLS processing will begin shortly.'
+            ];
+
         } catch (\Exception $e) {
+            throw $e;
+        }
+    }
+
+    /**
+     * Process uploaded video into HLS format
+     *
+     * @param string $tempVideoPath Path to temporary video file in local storage
+     * @param string $hlsBasePath Base path for HLS output in S3
+     * @param string $lessonId Lesson ID for updating the content URL
+     * @return array Processing result
+     */
+    public function processVideoToHls($tempVideoPath, $hlsBasePath, $lessonId) {
+        try {
+            // Get the full local path
+            $localVideoPath = Storage::disk('local')->path($tempVideoPath);
+            
+            // Process video to HLS
+            $result = $this->hlsVideoService->processVideoToHls($localVideoPath, $hlsBasePath);
+            
+            if ($result['success']) {
+                // Update lesson with HLS master playlist URL
+                $this->updateLessonVideo($lessonId, $result['master_playlist']);
+                
+                // Clean up temporary file
+                Storage::disk('local')->delete($tempVideoPath);
+                
+                return [
+                    'success' => true,
+                    'master_playlist' => $result['master_playlist'],
+                    'qualities_generated' => $result['qualities_generated'],
+                    'message' => 'Video processed successfully into HLS format'
+                ];
+            } else {
+                // Clean up temporary file even on failure
+                Storage::disk('local')->delete($tempVideoPath);
+                
+                throw new \Exception('HLS processing failed: ' . $result['error']);
+            }
+
+        } catch (\Exception $e) {
+            // Clean up temporary file on error
+            if (Storage::disk('local')->exists($tempVideoPath)) {
+                Storage::disk('local')->delete($tempVideoPath);
+            }
             throw $e;
         }
     }
 
     public function updateLessonVideo($lessonId, $videoUrl) {
         return $this->lessonRepository->update($lessonId, ['content_url' => $videoUrl]);
+    }
+
+    /**
+     * Dispatch HLS processing job for a lesson video
+     *
+     * @param string $tempVideoPath Temporary video file path
+     * @param string $hlsBasePath HLS output base path
+     * @param string $lessonId Lesson ID
+     * @param string|null $originalVideoPath Optional original video path in S3
+     * @return void
+     */
+    public function dispatchHlsProcessing($tempVideoPath, $hlsBasePath, $lessonId, $originalVideoPath = null) {
+        \App\Jobs\ProcessVideoToHlsJob::dispatch($tempVideoPath, $hlsBasePath, $lessonId, $originalVideoPath);
     }
 }

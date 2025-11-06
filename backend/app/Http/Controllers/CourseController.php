@@ -597,14 +597,15 @@ class CourseController extends Controller
     }
 
     /**
-     * Upload video for a lesson
+     * Upload video for a lesson with HLS processing
      */
     public function uploadLessonVideo(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'lesson_id' => 'required|string|exists:lessons,id',
             'video_path' => 'required|string',
-            'video_file' => 'required|file|mimes:mp4'
+            'hls_base_path' => 'required|string',
+            'video_file' => 'required|file|mimes:mp4,mov,avi,mkv'
         ]);
 
         if ($validator->fails()) {
@@ -613,28 +614,84 @@ class CourseController extends Controller
 
         try {
             $lessonId = $request->lesson_id;
-            $videoPath = $request->video_path;
+            $originalVideoPath = $request->video_path;
+            $hlsBasePath = $request->hls_base_path;
             $videoFile = $request->file('video_file');
 
-            // Upload the video
-            $this->courseService->uploadLessonVideo($videoPath, $videoFile);
+            // Upload the original video and get temp path for processing
+            $uploadResult = $this->courseService->uploadLessonVideo($originalVideoPath, $videoFile);
 
-            // Generate the final video URL
-            $awsEndpoint = env('AWS_ENDPOINT');
-            $awsBucket = env('AWS_BUCKET');
-            $videoUrl = $awsEndpoint . '/' . $awsBucket . '/' . $videoPath;
+            if ($uploadResult['success']) {
+                // Dispatch HLS processing job
+                $this->courseService->dispatchHlsProcessing(
+                    $uploadResult['temp_path'], 
+                    $hlsBasePath, 
+                    $lessonId, 
+                    $originalVideoPath
+                );
 
-            // Update lesson with the video URL
-            $this->courseService->updateLessonVideo($lessonId, $videoUrl);
+                // Generate the expected HLS master playlist URL
+                $awsEndpoint = env('AWS_ENDPOINT');
+                $awsBucket = env('AWS_BUCKET');
+                $hlsUrl = $awsEndpoint . '/' . $awsBucket . '/' . $hlsBasePath . '/master.m3u8';
 
-            return response()->json([
-                'message' => 'Video uploaded successfully',
-                'video_url' => $videoUrl
-            ]);
+                return response()->json([
+                    'message' => 'Video uploaded successfully. HLS processing started in background.',
+                    'original_video_uploaded' => true,
+                    'hls_processing_started' => true,
+                    'expected_hls_url' => $hlsUrl,
+                    'processing_status' => 'in_progress'
+                ]);
+            } else {
+                throw new \Exception('Failed to upload original video');
+            }
 
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Failed to upload video',
+                'error' => $e->getMessage(),
+                'hls_processing_started' => false
+            ], 500);
+        }
+    }
+
+    /**
+     * Check HLS processing status for a lesson
+     */
+    public function checkHlsProcessingStatus(Request $request, $lessonId)
+    {
+        try {
+            // Get lesson to check if HLS URL is available
+            $lesson = Lesson::findOrFail($lessonId);
+            
+            if (!$lesson->content_url) {
+                return response()->json([
+                    'status' => 'pending',
+                    'message' => 'Video processing is still in progress'
+                ]);
+            }
+
+            // Check if the HLS master playlist exists
+            $hlsPath = str_replace(env('AWS_ENDPOINT') . '/' . env('AWS_BUCKET') . '/', '', $lesson->content_url);
+            $exists = \Illuminate\Support\Facades\Storage::disk('s3')->exists($hlsPath);
+
+            if ($exists) {
+                return response()->json([
+                    'status' => 'completed',
+                    'message' => 'Video processing completed successfully',
+                    'hls_url' => $lesson->content_url
+                ]);
+            } else {
+                return response()->json([
+                    'status' => 'processing',
+                    'message' => 'Video is being processed into adaptive streaming format'
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to check processing status',
                 'error' => $e->getMessage()
             ], 500);
         }

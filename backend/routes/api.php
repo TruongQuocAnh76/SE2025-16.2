@@ -77,7 +77,8 @@ Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
 // Phải đăng nhập (auth:sanctum) để thực hiện các hành động này
 Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
     Route::post('/', [CourseController::class, 'store']); // Teacher/Admin create (now supports modules)
-    Route::post('/upload-lesson-video', [CourseController::class, 'uploadLessonVideo']); // Upload lesson video
+    Route::post('/upload-lesson-video', [CourseController::class, 'uploadLessonVideo']); // Upload lesson video with HLS processing
+    Route::get('/lesson/{lessonId}/hls-status', [CourseController::class, 'checkHlsProcessingStatus']); // Check HLS processing status
     Route::get('/{id}/modules', [CourseController::class, 'getModulesWithLessons']);
     Route::get('/{id}/students', [CourseController::class, 'getEnrolledStudents']); // Teacher only
     Route::put('/{id}', [CourseController::class, 'update']); // Teacher/Admin update
