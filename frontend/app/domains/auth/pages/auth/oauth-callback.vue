@@ -15,11 +15,14 @@ const error = ref('')
 
 onMounted(async () => {
   try {
-    const { access_token, user } = route.query
+    const { token, access_token, user } = route.query
     
-    if (access_token) {
+    // Backend trả về 'token', không phải 'access_token'
+    const authToken = token || access_token
+    
+    if (authToken) {
       // Store token in localStorage
-      localStorage.setItem('auth_token', access_token)
+      localStorage.setItem('auth_token', authToken)
       
       // Parse and store user data
       if (user) {
@@ -32,14 +35,14 @@ onMounted(async () => {
     } else {
       error.value = 'Authentication failed. No token received.'
       setTimeout(() => {
-        router.push('/login')
+        router.push('/auth/login')
       }, 2000)
     }
   } catch (e) {
     error.value = 'Authentication failed. Please try again.'
     console.error('OAuth callback error:', e)
     setTimeout(() => {
-      router.push('/login')
+      router.push('/auth/login')
     }, 2000)
   }
 })

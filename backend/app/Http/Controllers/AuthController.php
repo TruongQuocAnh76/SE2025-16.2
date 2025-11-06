@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Models\User;
+use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Facades\Log;
 
 /**
  * @OA\Info(
@@ -369,5 +371,149 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         return response()->json($request->user());
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/auth/google",
+     *     summary="Redirect to Google OAuth",
+     *     tags={"Authentication"},
+     *     @OA\Response(
+     *         response=302,
+     *         description="Redirect to Google OAuth"
+     *     )
+     * )
+     */
+    public function redirectToGoogle()
+    {
+        return Socialite::driver('google')->redirect();
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/auth/google/callback",
+     *     summary="Handle Google OAuth callback",
+     *     tags={"Authentication"},
+     *     @OA\Response(
+     *         response=302,
+     *         description="Redirect to frontend with token"
+     *     )
+     * )
+     */
+    public function handleGoogleCallback()
+    {
+        try {
+            $socialiteUser = Socialite::driver('google')->user();
+            
+            $user = User::firstOrCreate(
+                ['email' => $socialiteUser->email],
+                [
+                    'id' => Str::uuid(),
+                    'google_id' => $socialiteUser->id,
+                    'first_name' => $socialiteUser->user['given_name'] ?? $socialiteUser->name,
+                    'last_name' => $socialiteUser->user['family_name'] ?? '',
+                    'username' => $socialiteUser->email,
+                    'avatar' => $socialiteUser->avatar,
+                    'auth_provider' => 'GOOGLE',
+                    'is_email_verified' => true,
+                    'role' => 'STUDENT',
+                ]
+            );
+
+            // Update google_id if user exists but doesn't have it
+            if (!$user->google_id) {
+                $user->google_id = $socialiteUser->id;
+                $user->avatar = $socialiteUser->avatar;
+                $user->save();
+            }
+
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/oauth-callback?token=' . $token . '&user=' . urlencode(json_encode([
+                'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'username' => $user->username,
+                'avatar' => $user->avatar,
+                'role' => $user->role,
+                'auth_provider' => $user->auth_provider,
+            ])));
+        } catch (\Exception $e) {
+            Log::error('Google OAuth error: ' . $e->getMessage());
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/login?error=' . urlencode('Google authentication failed'));
+        }
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/auth/facebook",
+     *     summary="Redirect to Facebook OAuth",
+     *     tags={"Authentication"},
+     *     @OA\Response(
+     *         response=302,
+     *         description="Redirect to Facebook OAuth"
+     *     )
+     * )
+     */
+    public function redirectToFacebook()
+    {
+        return Socialite::driver('facebook')->redirect();
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/auth/facebook/callback",
+     *     summary="Handle Facebook OAuth callback",
+     *     tags={"Authentication"},
+     *     @OA\Response(
+     *         response=302,
+     *         description="Redirect to frontend with token"
+     *     )
+     * )
+     */
+    public function handleFacebookCallback()
+    {
+        try {
+            $socialiteUser = Socialite::driver('facebook')->user();
+            
+            $user = User::firstOrCreate(
+                ['email' => $socialiteUser->email],
+                [
+                    'id' => Str::uuid(),
+                    'facebook_id' => $socialiteUser->id,
+                    'first_name' => explode(' ', $socialiteUser->name)[0] ?? $socialiteUser->name,
+                    'last_name' => explode(' ', $socialiteUser->name, 2)[1] ?? '',
+                    'username' => $socialiteUser->email,
+                    'avatar' => $socialiteUser->avatar,
+                    'auth_provider' => 'FACEBOOK',
+                    'is_email_verified' => true,
+                    'role' => 'STUDENT',
+                ]
+            );
+
+            // Update facebook_id if user exists but doesn't have it
+            if (!$user->facebook_id) {
+                $user->facebook_id = $socialiteUser->id;
+                $user->avatar = $socialiteUser->avatar;
+                $user->save();
+            }
+
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/oauth-callback?token=' . $token . '&user=' . urlencode(json_encode([
+                'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'username' => $user->username,
+                'avatar' => $user->avatar,
+                'role' => $user->role,
+                'auth_provider' => $user->auth_provider,
+            ])));
+        } catch (\Exception $e) {
+            Log::error('Facebook OAuth error: ' . $e->getMessage());
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/login?error=' . urlencode('Facebook authentication failed'));
+        }
     }
 }

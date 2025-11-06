@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\LearningController;
@@ -27,12 +26,14 @@ Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/logout', [AuthController::class, 'logout']);
-    
-    // OAuth Routes
-    Route::get('/google', [SocialAuthController::class, 'redirectToGoogle']);
-    Route::get('/google/callback', [SocialAuthController::class, 'handleGoogleCallback']);
-    Route::get('/facebook', [SocialAuthController::class, 'redirectToFacebook']);
-    Route::get('/facebook/callback', [SocialAuthController::class, 'handleFacebookCallback']);
+});
+
+// OAuth Routes - Need session middleware for Socialite
+Route::middleware(['web'])->prefix('auth')->group(function () {
+    Route::get('/google', [AuthController::class, 'redirectToGoogle']);
+    Route::get('/google/callback', [AuthController::class, 'handleGoogleCallback']);
+    Route::get('/facebook', [AuthController::class, 'redirectToFacebook']);
+    Route::get('/facebook/callback', [AuthController::class, 'handleFacebookCallback']);
 });
 
 Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
@@ -57,10 +58,15 @@ Route::middleware('auth:sanctum')->prefix('users')->group(function () {
 /* ========================
  * COURSE MANAGEMENT
  * ======================== */
-Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
+Route::prefix('courses')->group(function () {
     Route::get('/', [CourseController::class, 'index']); // List all courses
-    Route::post('/', [CourseController::class, 'store']); // Teacher/Admin create
+    Route::get('/search', [CourseController::class, 'search']); // Search courses by name
     Route::get('/{id}', [CourseController::class, 'show']); // Get course details
+});
+// --- NHÓM RIÊNG TƯ (PRIVATE) ---
+// Phải đăng nhập (auth:sanctum) để thực hiện các hành động này
+Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
+    Route::post('/', [CourseController::class, 'store']); // Teacher/Admin create
     Route::get('/{id}/modules', [CourseController::class, 'getModulesWithLessons']);
     Route::get('/{id}/students', [CourseController::class, 'getEnrolledStudents']); // Teacher only
     Route::put('/{id}', [CourseController::class, 'update']); // Teacher/Admin update
@@ -146,4 +152,11 @@ Route::middleware('auth:sanctum')->prefix('system')->group(function () {
     Route::get('/jobs', [SystemController::class, 'getJobs']); // Get jobs (Admin)
     Route::delete('/jobs/{id}', [SystemController::class, 'deleteJob']); // Delete job (Admin)
     Route::post('/jobs/{id}/retry', [SystemController::class, 'retryJob']); // Retry job (Admin)
+});
+
+/* ========================
+ * TAGS (Public)
+ * ======================== */
+Route::prefix('tags')->group(function () {
+    Route::get('/', [\App\Http\Controllers\TagController::class, 'index']); // Lấy tất cả tags
 });

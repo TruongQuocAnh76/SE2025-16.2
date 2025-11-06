@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 
@@ -13,6 +14,7 @@ use App\Models\Lesson;
 use App\Models\Enrollment;
 use App\Models\Review;
 use App\Models\User;
+use App\Services\CourseService;
 
 /**
  * @OA\Server(
@@ -22,6 +24,12 @@ use App\Models\User;
  */
 class CourseController extends Controller
 {
+    protected $courseService;
+    
+    public function __construct(CourseService $courseService)
+    {
+        $this->courseService = $courseService;
+    }
     /**
      * @OA\Get(
      *     path="/courses",
@@ -49,24 +57,12 @@ class CourseController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Course::with('teacher:id,first_name,last_name');
+        $filters = [];
+        if ($request->has('status')) $filters['status'] = $request->status;
+        if ($request->has('level')) $filters['level'] = $request->level;
+        if ($request->has('keyword')) $filters['keyword'] = $request->keyword;
 
-        // Optional filters
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->has('level')) {
-            $query->where('level', $request->level);
-        }
-
-        if ($request->has('keyword')) {
-            $keyword = $request->keyword;
-            $query->where('title', 'like', "%$keyword%");
-        }
-
-        $courses = $query->orderByDesc('created_at')->paginate(12);
-
+        $courses = $this->courseService->getAllCourses($filters);
         return response()->json($courses);
     }
 
@@ -105,11 +101,14 @@ class CourseController extends Controller
         $validator = Validator::make($request->all(), [
             'title'       => 'required|string|max:255',
             'description' => 'required|string',
-            'thumbnail'   => 'nullable|url',
+            'thumbnail'   => 'nullable|url', // Allow URL or will be uploaded via pre-signed URL
             'level'       => 'in:BEGINNER,INTERMEDIATE,ADVANCED,EXPERT',
             'price'       => 'nullable|numeric|min:0',
             'duration'    => 'nullable|integer|min:1',
             'passing_score' => 'integer|min:0|max:100',
+
+            'tags'          => 'nullable|array',
+            'tags.*'        => 'string|exists:tags,id'
         ]);
 
         if ($validator->fails()) {
@@ -117,14 +116,90 @@ class CourseController extends Controller
         }
 
         $data = $validator->validated();
+
+        $tagIds = $data['tags'] ?? [];
+        unset($data['tags']);
+
         $data['id'] = Str::uuid();
         $data['slug'] = Str::slug($data['title']).'-'.Str::random(5);
         $data['teacher_id'] = Auth::id();
         $data['status'] = 'DRAFT';
 
+        // Generate thumbnail URL if not provided
+        $thumbnailUploadUrl = null;
+        if (empty($data['thumbnail'])) {
+            $thumbnailPath = 'courses/thumbnails/' . $data['id'] . '.jpg';
+            $awsEndpoint = env('AWS_ENDPOINT');
+            $awsBucket = env('AWS_BUCKET');
+            $data['thumbnail'] = $awsEndpoint . '/' . $awsBucket . '/' . $thumbnailPath;
+            $thumbnailUploadUrl = Storage::disk('s3')->temporaryUrl(
+                $thumbnailPath,
+                now()->addMinutes(30), // URL valid for 30 minutes
+                ['ContentType' => 'image/jpeg']
+            );
+        }
+
         $course = Course::create($data);
 
-        return response()->json(['message' => 'Course created successfully', 'course' => $course]);
+        if (!empty($tagIds)) {
+            $course->tags()->attach($tagIds);
+        }
+
+        return response()->json([
+            'message' => 'Course created successfully',
+            'course' => $course,
+            'course' => $course->load('tags'),
+            'thumbnail_upload_url' => $thumbnailUploadUrl
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/courses/search",
+     *     summary="Search courses by name",
+     *     tags={"Courses"},
+     *     @OA\Parameter(
+     *         name="q",
+     *         in="query",
+     *         required=true,
+     *         description="Search query for course name",
+     *         @OA\Schema(type="string", example="programming")
+     *     ),
+     *     @OA\Parameter(
+     *         name="limit",
+     *         in="query",
+     *         description="Maximum number of results to return",
+     *         @OA\Schema(type="integer", default=10, maximum=50)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Search results",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Course")),
+     *             @OA\Property(property="total", type="integer"),
+     *             @OA\Property(property="query", type="string")
+     *         )
+     *     )
+     * )
+     */
+    public function search(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'q' => 'required|string|min:1|max:100',
+            'limit' => 'nullable|integer|min:1|max:50'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $query = $request->input('q');
+        $limit = $request->input('limit', 10);
+
+        $result = $this->courseService->searchCourses($query, $limit);
+
+        return response()->json($result);
     }
 
     /**
@@ -149,13 +224,23 @@ class CourseController extends Controller
      */
     public function show($id)
     {
-        $course = Course::with([
-            'teacher:id,first_name,last_name,email',
-            'modules.lessons:id,title,order_index,module_id,is_free',
-            'reviews.student:id,first_name,last_name'
-        ])->findOrFail($id);
+        $course = $this->courseService->getCourseById($id);
 
-        return response()->json($course);
+        $ratingCounts = $course->reviews()
+                           ->selectRaw('rating, count(*) as count')
+                           ->groupBy('rating')
+                           ->pluck('count', 'rating')
+                           ->all();
+        // Mặc định cho 1-5 sao nếu không có review
+        $fullRatingCounts = [];
+        for ($i = 1; $i <= 5; $i++) {
+            $fullRatingCounts[$i] = $ratingCounts[$i] ?? 0;
+        }
+
+        return response()->json([
+            'course' => $course,
+            'rating_counts' => $fullRatingCounts // Gửi dữ liệu số lượng review
+        ]);
     }
 
     /**
@@ -213,7 +298,7 @@ class CourseController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        $course->update($validator->validated());
+        $course = $this->courseService->updateCourse($id, $validator->validated());
 
         return response()->json(['message' => 'Course updated successfully', 'course' => $course]);
     }
@@ -249,7 +334,7 @@ class CourseController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $course->delete();
+        $this->courseService->deleteCourse($id);
 
         return response()->json(['message' => 'Course deleted successfully']);
     }
@@ -300,23 +385,13 @@ class CourseController extends Controller
     {
         $course = Course::findOrFail($id);
 
-        $exists = Enrollment::where('student_id', Auth::id())
-                            ->where('course_id', $course->id)
-                            ->exists();
+        $result = $this->courseService->enroll($course->id, Auth::id());
 
-        if ($exists) {
+        if ($result['exists']) {
             return response()->json(['message' => 'Already enrolled'], 409);
         }
 
-        $enrollment = Enrollment::create([
-            'id' => Str::uuid(),
-            'student_id' => Auth::id(),
-            'course_id' => $course->id,
-            'status' => 'ACTIVE',
-            'progress' => 0,
-        ]);
-
-        return response()->json(['message' => 'Enrollment successful', 'enrollment' => $enrollment]);
+        return response()->json(['message' => 'Enrollment successful', 'enrollment' => $result['enrollment']]);
     }
 
     /**
@@ -376,18 +451,28 @@ class CourseController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        $review = Review::updateOrCreate(
-            [
-                'student_id' => Auth::id(),
-                'course_id' => $id,
-            ],
-            [
-                'rating' => $request->rating,
-                'comment' => $request->comment,
-            ]
-        );
+        $course = Course::findOrFail($id);
 
-        return response()->json(['message' => 'Review submitted', 'review' => $review]);
+        $review = $this->courseService->addReview(Auth::id(), $id, $request->rating, $request->comment);
+
+        $ratingCounts = $course->reviews()
+                                ->selectRaw('rating, count(*) as count')
+                                ->groupBy('rating')
+                                ->pluck('count', 'rating')
+                                ->all();
+            $fullRatingCounts = [];
+            for ($i = 1; $i <= 5; $i++) {
+                $fullRatingCounts[$i] = $ratingCounts[$i] ?? 0;
+            }
+        return response()->json([
+                'message' => 'Review submitted', 
+                'review' => $review->load('student'), 
+                'course_stats' => [
+                    'average_rating' => $course->average_rating,
+                    'review_count' => $course->review_count,
+                    'rating_counts' => $fullRatingCounts
+                ]
+            ]);
     }
 
     /**
@@ -425,13 +510,7 @@ class CourseController extends Controller
      */
     public function getModulesWithLessons($id)
     {
-        $modules = Module::where('course_id', $id)
-                    ->with(['lessons' => function ($query) {
-                        $query->orderBy('order_index');
-                    }])
-                    ->orderBy('order_index')
-                    ->get();
-
+        $modules = $this->courseService->getModulesWithLessons($id);
         return response()->json($modules);
     }
 
@@ -483,9 +562,7 @@ class CourseController extends Controller
      */
     public function getEnrolledStudents($id)
     {
-        $students = Enrollment::where('course_id', $id)
-                    ->with(['student:id,first_name,last_name,email'])
-                    ->get();
+        $students = $this->courseService->getEnrolledStudents($id);
 
         return response()->json($students);
     }

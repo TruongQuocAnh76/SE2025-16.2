@@ -13,6 +13,11 @@ class LogApiRequests
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // Only log API requests
+        if (!$this->isApiRequest($request)) {
+            return $next($request);
+        }
+
         $startTime = microtime(true);
 
         // Generate request ID
@@ -31,7 +36,7 @@ class LogApiRequests
             // Log error with full details
             Log::channel('api_json')->error('API ERROR', [
                 'method' => $request->method(),
-                'endpoint' => '/' . $request->path(),
+                'endpoint' => $request->path(),
                 'user' => auth()->id() ?? 'guest',
                 'ip' => $request->ip(),
                 'request_id' => $requestId,
@@ -48,38 +53,34 @@ class LogApiRequests
             throw $e;
         }
 
-        // Calculate duration and sizes
-        $durationMs = round((microtime(true) - $startTime) * 1000, 2);
-        $responseContent = $this->getResponseContent($response);
+        try {
+            // Calculate duration and sizes
+            $durationMs = round((microtime(true) - $startTime) * 1000, 2);
+            $responseContent = $this->getResponseContent($response);
+            $status = $this->getResponseStatus($response);
 
-        // Determine log level based on status code
-        $status = $response->status();
-        $logLevel = match(true) {
-            $status >= 500 => 'error',
-            $status >= 400 => 'warning',
-            default => 'info'
-        };
+            // Determine log level based on status code
+            $logLevel = match(true) {
+                $status >= 500 => 'error',
+                $status >= 400 => 'warning',
+                default => 'info'
+            };
 
-        // Prepare log context
-        $logContext = [
-            'method' => $request->method(),
-            'endpoint' => '/' . $request->path(),
-            'user' => auth()->id() ?? 'guest',
-            'ip' => $request->ip(),
-            'request_id' => $requestId,
-            'duration_ms' => $durationMs,
-            'status' => $status,
-            'payload_size' => $this->calculateSize($requestData),
-            'response_size' => $this->calculateSize($responseContent),
-        ];
+            // Prepare log context
+            $logContext = [
+                'method' => $request->method(),
+                'endpoint' => $request->path(),
+                'user' => auth()->id() ?? 'guest',
+                'ip' => $request->ip(),
+                'request_id' => $requestId,
+                'duration_ms' => $durationMs,
+                'status' => $status,
+                'payload_size' => $this->calculateSize($requestData),
+                'response_size' => $this->calculateSize($responseContent),
+            ];
 
-        // Add error details for non-2xx responses
-        if ($status >= 400) {
-            // Debug: always add response content to see what we get
-            $logContext['response_content_type'] = gettype($responseContent);
-            
-            if (is_array($responseContent)) {
-                // Extract error message and details
+            // Add error details for non-2xx responses
+            if ($status >= 400 && is_array($responseContent)) {
                 if (isset($responseContent['message'])) {
                     $logContext['error_message'] = $responseContent['message'];
                 }
@@ -89,31 +90,29 @@ class LogApiRequests
                 if (isset($responseContent['error'])) {
                     $logContext['error'] = $responseContent['error'];
                 }
-                // Include full response for reference
-                $logContext['response_body'] = $responseContent;
-            } elseif (is_string($responseContent)) {
-                $logContext['error_message'] = $responseContent;
-                // Try to decode if it's JSON string
-                $decoded = json_decode($responseContent, true);
-                if ($decoded !== null) {
-                    $logContext['response_body'] = $decoded;
-                    if (isset($decoded['message'])) {
-                        $logContext['error_message'] = $decoded['message'];
-                    }
-                    if (isset($decoded['errors'])) {
-                        $logContext['validation_errors'] = $decoded['errors'];
-                    }
-                }
             }
-        }
 
-        // Log API call with appropriate level
-        Log::channel('api_json')->{$logLevel}('API CALL', $logContext);
+            // Log API call with appropriate level
+            Log::channel('api_json')->{$logLevel}('API CALL', $logContext);
+        } catch (Throwable $e) {
+            // If logging fails, log a minimal error to prevent crashing
+            Log::channel('api_json')->error('API LOGGING ERROR', [
+                'method' => $request->method(),
+                'endpoint' => $request->path(),
+                'error' => $e->getMessage(),
+                'request_id' => $requestId,
+            ]);
+        }
 
         // Add request ID to response
         $response->headers->set('X-Request-Id', $requestId);
 
         return $response;
+    }
+
+    private function isApiRequest(Request $request): bool
+    {
+        return str_starts_with($request->path(), 'api/');
     }
 
     private function filterSensitiveData(array $data): array
@@ -125,14 +124,69 @@ class LogApiRequests
         })->toArray();
     }
 
+    private function getResponseStatus($response): int
+    {
+        if (method_exists($response, 'getStatusCode')) {
+            return $response->getStatusCode();
+        }
+        if (method_exists($response, 'status')) {
+            return $response->status();
+        }
+        if (is_object($response) && property_exists($response, 'status')) {
+            return $response->status;
+        }
+        return 200; // Default fallback
+    }
+
     private function getResponseContent($response): string|array
     {
-        if (method_exists($response, 'content')) {
-            $content = $response->content();
-            $decoded = json_decode($content, true);
-            return $decoded !== null ? $decoded : $content;
+        try {
+            // Handle different response types safely
+            if (!is_object($response)) {
+                return 'Non-object response: ' . gettype($response);
+            }
+
+            // Try to get content from JSON responses
+            if (method_exists($response, 'getData')) {
+                $data = $response->getData();
+                if (is_array($data) || is_object($data)) {
+                    return (array) $data;
+                }
+            }
+
+            if (method_exists($response, 'content')) {
+                $content = $response->content();
+                if (is_string($content)) {
+                    $decoded = json_decode($content, true);
+                    return $decoded !== null ? $decoded : $content;
+                }
+                return $content;
+            }
+            
+            if (method_exists($response, 'getContent')) {
+                $content = $response->getContent();
+                if (is_string($content)) {
+                    $decoded = json_decode($content, true);
+                    return $decoded !== null ? $decoded : $content;
+                }
+                return $content;
+            }
+
+            // Handle PSR-7 responses
+            if (method_exists($response, 'getBody')) {
+                $body = $response->getBody();
+                if (is_string($body)) {
+                    $decoded = json_decode($body, true);
+                    return $decoded !== null ? $decoded : $body;
+                }
+                return $body;
+            }
+
+            // For responses that don't have content methods
+            return 'Response content not accessible';
+        } catch (Throwable $e) {
+            return 'Error getting response content: ' . $e->getMessage();
         }
-        return 'Response content not available';
     }
 
     private function calculateSize($data): string

@@ -77,9 +77,15 @@
                 @click="isDropdownOpen = !isDropdownOpen"
                 class="flex items-center space-x-2 text-white hover:text-accent-star px-3 py-2 rounded-md transition-colors duration-200"
               >
-                <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-medium">
-                  {{ userInitials }}
+                <div class="w-8 h-8 rounded-full overflow-hidden bg-white/20 flex items-center justify-center">
+                  <img
+                    src="/placeholder-avatar.png"
+                    :alt="user?.username"
+                    class="w-full h-full object-cover"
+                  />
                 </div>
+                <!-- wtf -->
+                <span class="text-sm font-medium">{{ user?.username || 'User' }}</span>
                 <svg
                   class="w-4 h-4 transition-transform duration-200"
                   :class="{ 'rotate-180': isDropdownOpen }"
@@ -242,6 +248,7 @@
 <script setup lang="ts">
 import Button from './Button.vue'
 import { useAuth } from '~/domains/auth/composables/useAuth'
+import type { User } from '~/domains/auth/types/auth'
 
 const isMobileMenuOpen = ref(false)
 
@@ -263,11 +270,32 @@ function logout() {
 
 // Initialize user data if authenticated
 onMounted(async () => {
+  // Load user data from cookie if available
+  const userCookie = useCookie('user_data')
+  if (userCookie.value && !user.value) {
+    try {
+      user.value = JSON.parse(userCookie.value)
+    } catch (err) {
+      console.error('Failed to parse user cookie:', err)
+    }
+  }
+
+  // If still no user data but authenticated, try API call
   if (isAuthenticated.value && !user.value) {
     try {
-      await getUser()
+      const config = useRuntimeConfig()
+      const response = await $fetch('/api/auth/me', {
+        baseURL: config.public.backendUrl,
+        headers: {
+          'Authorization': `Bearer ${useCookie('auth_token').value}`,
+          'Accept': 'application/json'
+        }
+      })
+      user.value = response as User
+      // Update cookie with fresh data
+      userCookie.value = JSON.stringify(response)
     } catch (err) {
-      // Handle error if needed
+      console.error('Failed to load user from API:', err)
     }
   }
 
