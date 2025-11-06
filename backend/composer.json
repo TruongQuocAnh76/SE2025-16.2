@@ -10,7 +10,9 @@
         "darkaonline/l5-swagger": "*",
         "illuminate/hashing": "*",
         "laravel/framework": "^12.0",
+        "laravel/pail": "^1.2",
         "laravel/sanctum": "^4.2",
+        "laravel/socialite": "^5.17",
         "laravel/tinker": "^2.10.1",
         "league/flysystem-aws-s3-v3": "^3.30"
     },
@@ -72,7 +74,9 @@
     },
     "extra": {
         "laravel": {
-            "dont-discover": []
+            "dont-discover": [
+                "laravel/pail"
+            ]
         }
     },
     "config": {

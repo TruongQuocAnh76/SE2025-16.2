@@ -86,6 +86,9 @@
           >
             Sign In
           </button>
+          
+          <!-- Social Auth Buttons -->
+          <SocialAuthButtons button-text="Login" />
         </form>
 
         <!-- Register Form -->
@@ -141,6 +144,9 @@
           >
             Sign Up
           </button>
+          
+          <!-- Social Auth Buttons -->
+          <SocialAuthButtons button-text="Sign up" />
         </form>
       </div>
     </div>

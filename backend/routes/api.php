@@ -28,6 +28,14 @@ Route::prefix('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 });
 
+// OAuth Routes - Need session middleware for Socialite
+Route::middleware(['web'])->prefix('auth')->group(function () {
+    Route::get('/google', [AuthController::class, 'redirectToGoogle']);
+    Route::get('/google/callback', [AuthController::class, 'handleGoogleCallback']);
+    Route::get('/facebook', [AuthController::class, 'redirectToFacebook']);
+    Route::get('/facebook/callback', [AuthController::class, 'handleFacebookCallback']);
+});
+
 Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
 });
