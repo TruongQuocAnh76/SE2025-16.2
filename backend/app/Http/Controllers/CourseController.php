@@ -14,9 +14,9 @@ use App\Models\Lesson;
 use App\Models\Enrollment;
 use App\Models\Review;
 use App\Models\User;
-use App\Models\Quiz;
-use App\Models\Question;
 use App\Services\CourseService;
+use App\Helpers\AwsUrlHelper;
+use App\Models\Question;
 
 /**
  * @OA\Server(
@@ -631,9 +631,10 @@ class CourseController extends Controller
                 );
 
                 // Generate the expected HLS master playlist URL
-                $awsEndpoint = env('AWS_ENDPOINT');
                 $awsBucket = env('AWS_BUCKET');
-                $hlsUrl = $awsEndpoint . '/' . $awsBucket . '/' . $hlsBasePath . '/master.m3u8';
+                
+                $frontendAwsEndpoint = AwsUrlHelper::getFrontendAwsEndpoint();
+                $hlsUrl = $frontendAwsEndpoint . '/' . $awsBucket . '/' . $hlsBasePath . '/master.m3u8';
 
                 return response()->json([
                     'message' => 'Video uploaded successfully. HLS processing started in background.',

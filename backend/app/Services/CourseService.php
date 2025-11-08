@@ -7,6 +7,7 @@ use App\Repositories\QuizRepository;
 use App\Repositories\QuestionRepository;
 use App\Models\Review;
 use App\Services\HlsVideoService;
+use App\Helpers\AwsUrlHelper;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 
@@ -69,10 +70,13 @@ class CourseService {
             $thumbnailUploadUrl = null;
             if (empty($data['thumbnail'])) {
                 $thumbnailPath = 'courses/thumbnails/' . $data['id'] . '.jpg';
-                $awsEndpoint = env('AWS_ENDPOINT');
                 $awsBucket = env('AWS_BUCKET');
-                $data['thumbnail'] = $awsEndpoint . '/' . $awsBucket . '/' . $thumbnailPath;
-                $thumbnailUploadUrl = Storage::disk('s3')->temporaryUrl(
+                
+                // Use frontend-accessible endpoint
+                $frontendAwsEndpoint = AwsUrlHelper::getFrontendAwsEndpoint();
+                $data['thumbnail'] = $frontendAwsEndpoint . '/' . $awsBucket . '/' . $thumbnailPath;
+                
+                $thumbnailUploadUrl = AwsUrlHelper::generateFrontendPresignedUrl(
                     $thumbnailPath,
                     now()->addMinutes(30),
                     ['ContentType' => 'image/jpeg']
@@ -109,14 +113,14 @@ class CourseService {
                         if (empty($lessonData['content_url'])) {
                             $originalVideoPath = 'courses/original-videos/' . $course->id . '/modules/' . $module->id . '/lessons/' . $lessonData['id'] . '.mp4';
                             $hlsBasePath = 'courses/hls/' . $course->id . '/modules/' . $module->id . '/lessons/' . $lessonData['id'];
-                            $awsEndpoint = env('AWS_ENDPOINT');
                             $awsBucket = env('AWS_BUCKET');
                             
-                            // Set the final HLS master playlist URL
-                            $lessonData['content_url'] = $awsEndpoint . '/' . $awsBucket . '/' . $hlsBasePath . '/master.m3u8';
+                            $frontendAwsEndpoint = AwsUrlHelper::getFrontendAwsEndpoint();
+                            
+                            $lessonData['content_url'] = $frontendAwsEndpoint . '/' . $awsBucket . '/' . $hlsBasePath . '/master.m3u8';
                             
                             // Generate upload URL for original video file
-                            $videoUploadUrl = Storage::disk('s3')->temporaryUrl(
+                            $videoUploadUrl = AwsUrlHelper::generateFrontendPresignedUrl(
                                 $originalVideoPath,
                                 now()->addMinutes(120), // 2 hours to upload video
                                 ['ContentType' => 'video/mp4']

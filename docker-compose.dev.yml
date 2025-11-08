@@ -8,6 +8,10 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    environment:
+      - BACKEND_URL=http://localhost:8000
+      - AWS_ENDPOINT=http://localhost:4566
+      - AWS_BUCKET=certchain-dev
     depends_on:
       - backend
     networks:
@@ -34,6 +38,7 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+      - localstack-init
     networks:
       - app_network
 
@@ -100,6 +105,12 @@ services:
       - CORS_ALLOWED_ORIGINS=*
       - CORS_ALLOWED_HEADERS=*
       - CORS_ALLOWED_METHODS=*
+      - CORS_EXPOSE_HEADERS=ETag
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - S3_HOSTNAME=localhost
+      - S3_HOST=localhost
     volumes:
       - localstack_data:/var/lib/localstack
       - /var/run/docker.sock:/var/run/docker.sock
@@ -117,6 +128,8 @@ services:
     depends_on:
       - localstack
     entrypoint: ["/bin/sh", "/init-localstack.sh"]
+    networks:
+      - app_network
 
   nginx:
     image: nginx:alpine
