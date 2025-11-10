@@ -1,15 +1,28 @@
 import { ref, computed } from 'vue'
-import type { User, LoginRequest, RegisterRequest, LoginResponse, RegisterResponse } from '../types/auth'
+import type { User, LoginRequest, RegisterRequest, LoginResponse, RegisterResponse, AuthError } from '../types/auth'
+import { validateLoginForm, validateRegisterForm } from '../utils/validation'
 
 export const useAuth = () => {
   const config = useRuntimeConfig()
+  const { $toast } = useNuxtApp() as any
   const user = ref<User | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const validationErrors = ref<Record<string, string>>({})
 
   const login = async (login: string, password: string) => {
     isLoading.value = true
     error.value = null
+    validationErrors.value = {}
+
+    // Client-side validation
+    const validation = validateLoginForm(login, password)
+    if (!validation.isValid) {
+      validationErrors.value = validation.errors
+      isLoading.value = false
+      $toast.error('Please fix the validation errors')
+      throw new Error('Validation failed')
+    }
 
     try {
       const response = await $fetch('/api/auth/login', {
@@ -31,18 +44,38 @@ export const useAuth = () => {
 
       user.value = response.user
 
+      $toast.success('Login successful! Welcome back.')
+
       return response
     } catch (err: any) {
-      error.value = err.data?.message || 'Login failed'
+      const errorMessage = err.data?.message || 'Login failed. Please try again.'
+      error.value = errorMessage
+      $toast.error(errorMessage)
+      
+      // Handle backend validation errors
+      if (err.data?.errors) {
+        validationErrors.value = err.data.errors
+      }
+      
       throw err
     } finally {
       isLoading.value = false
     }
   }
 
-  const register = async (email: string, username: string, password: string) => {
+  const register = async (email: string, username: string, password: string, firstName: string, lastName: string) => {
     isLoading.value = true
     error.value = null
+    validationErrors.value = {}
+
+    // Client-side validation
+    const validation = validateRegisterForm(email, username, password, firstName, lastName)
+    if (!validation.isValid) {
+      validationErrors.value = validation.errors
+      isLoading.value = false
+      $toast.error('Please fix the validation errors')
+      throw new Error('Validation failed')
+    }
 
     try {
       const response = await $fetch('/api/auth/register', {
@@ -51,15 +84,31 @@ export const useAuth = () => {
         body: {
           email,
           username,
-          password
+          password,
+          first_name: firstName,
+          last_name: lastName
         }
       }) as RegisterResponse
 
       user.value = response.user
 
+      $toast.success('Registration successful! Welcome to Certchain.')
+
       return response
     } catch (err: any) {
-      error.value = err.data?.message || 'Registration failed'
+      const errorMessage = err.data?.message || 'Registration failed. Please try again.'
+      error.value = errorMessage
+      $toast.error(errorMessage)
+      
+      // Handle backend validation errors
+      if (err.data?.errors) {
+        const backendErrors: Record<string, string> = {}
+        Object.keys(err.data.errors).forEach(key => {
+          backendErrors[key] = err.data.errors[key][0] || err.data.errors[key]
+        })
+        validationErrors.value = backendErrors
+      }
+      
       throw err
     } finally {
       isLoading.value = false
@@ -84,8 +133,12 @@ export const useAuth = () => {
       userCookie.value = null
 
       user.value = null
+
+      $toast.success('Logged out successfully')
     } catch (err: any) {
-      error.value = err.data?.message || 'Logout failed'
+      const errorMessage = err.data?.message || 'Logout failed'
+      error.value = errorMessage
+      $toast.error(errorMessage)
       throw err
     } finally {
       isLoading.value = false
@@ -117,14 +170,21 @@ export const useAuth = () => {
     return !!tokenCookie.value
   })
 
+  const clearErrors = () => {
+    error.value = null
+    validationErrors.value = {}
+  }
+
   return {
     user,
     isLoading,
     error,
+    validationErrors,
     login,
     register,
     logout,
     getUser,
-    isAuthenticated
+    isAuthenticated,
+    clearErrors
   }
 }
