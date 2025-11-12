@@ -75,6 +75,18 @@ class PaymentController extends Controller
                 ], 400);
             }
             Log::info('Stripe payment method id:', ['id' => $stripePaymentMethodId]);
+            // Tạo bản ghi Payment trước khi tạo Stripe Intent
+            $payment = Payment::create([
+                'id' => Str::uuid(),
+                'user_id' => $user->id,
+                'payment_type' => $request->payment_type,
+                'course_id' => $request->course_id,
+                'membership_plan' => $request->membership_plan,
+                'payment_method' => $request->payment_method,
+                'amount' => $amount,
+                'currency' => 'USD',
+                'status' => 'PENDING',
+            ]);
             try {
                 $stripe = new \Stripe\StripeClient(env('STRIPE_SECRET_KEY'));
                 $intent = $stripe->paymentIntents->create([
@@ -91,6 +103,26 @@ class PaymentController extends Controller
                     ],
                 ]);
                 Log::info('Stripe intent:', (array) $intent);
+                // Có thể cập nhật payment với intent id nếu cần
+                // Map status Stripe về đúng giá trị hợp lệ của DB
+                $stripeStatus = strtolower($intent->status);
+                if ($stripeStatus === 'succeeded') {
+                    $dbStatus = 'COMPLETED';
+                } elseif ($stripeStatus === 'canceled') {
+                    $dbStatus = 'FAILED';
+                } else {
+                    $dbStatus = 'PENDING';
+                }
+                $payment->update([
+                    'transaction_id' => $intent->id,
+                    'status' => $dbStatus,
+                ]);
+                return response()->json([
+                    'success' => true,
+                    'payment' => $payment,
+                    'amount' => $amount,
+                    'stripe_intent' => $intent,
+                ]);
             } catch (\Exception $e) {
                 Log::error('Stripe error: ' . $e->getMessage(), []);
                 return response()->json([
@@ -99,23 +131,25 @@ class PaymentController extends Controller
                 ], 400);
             }
         }
-        $payment = Payment::create([
-            'id' => Str::uuid(),
-            'user_id' => $user->id,
-            'payment_type' => $request->payment_type,
-            'course_id' => $request->course_id,
-            'membership_plan' => $request->membership_plan,
-            'payment_method' => $request->payment_method,
-            'amount' => $amount,
-            'currency' => 'USD',
-            'status' => 'PENDING',
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'payment' => $payment,
-            'amount' => $amount,
-        ]);
+        // ...existing code...
+        if ($request->payment_method !== 'STRIPE') {
+            $payment = Payment::create([
+                'id' => Str::uuid(),
+                'user_id' => $user->id,
+                'payment_type' => $request->payment_type,
+                'course_id' => $request->course_id,
+                'membership_plan' => $request->membership_plan,
+                'payment_method' => $request->payment_method,
+                'amount' => $amount,
+                'currency' => 'USD',
+                'status' => 'PENDING',
+            ]);
+            return response()->json([
+                'success' => true,
+                'payment' => $payment,
+                'amount' => $amount,
+            ]);
+        }
     }
 
     /**
