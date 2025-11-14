@@ -32,7 +32,7 @@ class PaymentController extends Controller
      *             @OA\Property(property="payment_type", type="string", enum={"COURSE", "MEMBERSHIP"}),
      *             @OA\Property(property="course_id", type="string", format="uuid", nullable=true),
      *             @OA\Property(property="membership_plan", type="string", enum={"PREMIUM"}, nullable=true),
-     *             @OA\Property(property="payment_method", type="string", enum={"PAYPAL", "VNPAY"})
+     *             @OA\Property(property="payment_method", type="string", enum={"STRIPE"})
      *         )
      *     ),
      *     @OA\Response(response=200, description="Payment created successfully")
@@ -44,10 +44,10 @@ class PaymentController extends Controller
             'payment_type' => 'required|in:COURSE,MEMBERSHIP',
             'course_id' => 'required_if:payment_type,COURSE|uuid|exists:courses,id',
             'membership_plan' => 'required_if:payment_type,MEMBERSHIP|in:PREMIUM',
-            'payment_method' => 'required|in:PAYPAL,VNPAY,STRIPE',
+            'payment_method' => 'required|in:STRIPE',
         ]);
 
-    Log::info('Payment request:', (array) $request->all());
+        Log::info('Payment request:', (array) $request->all());
 
         $user = $request->user();
         $amount = 0;
@@ -131,232 +131,8 @@ class PaymentController extends Controller
                 ], 400);
             }
         }
-        // ...existing code...
-        if ($request->payment_method !== 'STRIPE') {
-            $payment = Payment::create([
-                'id' => Str::uuid(),
-                'user_id' => $user->id,
-                'payment_type' => $request->payment_type,
-                'course_id' => $request->course_id,
-                'membership_plan' => $request->membership_plan,
-                'payment_method' => $request->payment_method,
-                'amount' => $amount,
-                'currency' => 'USD',
-                'status' => 'PENDING',
-            ]);
-            return response()->json([
-                'success' => true,
-                'payment' => $payment,
-                'amount' => $amount,
-            ]);
-        }
     }
 
-    /**
-     * @OA\Post(
-     *     path="/payments/{id}/paypal/create-order",
-     *     summary="Create PayPal Order",
-     *     tags={"Payments"},
-     *     security={{"sanctum":{}}},
-     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string")),
-     *     @OA\Response(response=200, description="PayPal order created")
-     * )
-     */
-    public function createPayPalOrder(Request $request, $id)
-    {
-        $payment = Payment::findOrFail($id);
-        
-        if ($payment->user_id !== $request->user()->id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        try {
-            $result = $this->paymentService->createPayPalOrder(
-                $payment->amount,
-                $payment->currency,
-                [
-                    'payment_id' => $payment->id,
-                    'description' => $payment->payment_type === 'COURSE' 
-                        ? 'Course Payment: ' . ($payment->course->title ?? 'N/A')
-                        : 'Premium Membership',
-                ]
-            );
-
-            if (!$result['success']) {
-                return response()->json([
-                    'message' => 'Failed to create PayPal order',
-                    'error' => $result['error'],
-                ], 500);
-            }
-
-            // Update payment with PayPal order ID
-            $payment->update([
-                'transaction_id' => $result['order_id'],
-                'payment_details' => [
-                    'paypal_order_id' => $result['order_id'],
-                    'status' => $result['status'],
-                ],
-            ]);
-
-            return response()->json([
-                'order_id' => $result['order_id'],
-                'status' => $result['status'],
-                'links' => $result['links'],
-            ]);
-        } catch (\Exception $e) {
-            Log::error('PayPal order creation failed', (array) [
-                'payment_id' => $payment->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'message' => 'Failed to create PayPal order',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * @OA\Post(
-     *     path="/payments/{id}/paypal/capture",
-     *     summary="Capture PayPal Order",
-     *     tags={"Payments"},
-     *     security={{"sanctum":{}}},
-     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string")),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="order_id", type="string")
-     *         )
-     *     ),
-     *     @OA\Response(response=200, description="Payment captured successfully")
-     * )
-     */
-    public function capturePayPalOrder(Request $request, $id)
-    {
-        $request->validate([
-            'order_id' => 'required|string',
-        ]);
-
-        $payment = Payment::findOrFail($id);
-        
-        if ($payment->user_id !== $request->user()->id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        try {
-            $result = $this->paymentService->capturePayPalOrder($request->order_id);
-
-            if (!$result['success']) {
-                return response()->json([
-                    'message' => 'Failed to capture PayPal order',
-                    'error' => $result['error'],
-                ], 500);
-            }
-
-            // Update payment status
-            $payment->update([
-                'status' => 'COMPLETED',
-                'paid_at' => now(),
-                'transaction_id' => $result['order_id'],
-                'payment_details' => [
-                    'paypal_order_id' => $result['order_id'],
-                    'status' => $result['status'],
-                    'payer' => $result['payer'],
-                    'purchase_units' => $result['purchase_units'],
-                ],
-            ]);
-
-            // If course payment, enroll user
-            if ($payment->payment_type === 'COURSE' && $payment->course_id) {
-                Enrollment::firstOrCreate([
-                    'student_id' => $payment->user_id,
-                    'course_id' => $payment->course_id,
-                ], [
-                    'id' => Str::uuid(),
-                    'status' => 'ACTIVE',
-                    'progress' => 0,
-                    'enrolled_at' => now(),
-                ]);
-            }
-
-            return response()->json([
-                'message' => 'Payment completed successfully',
-                'payment' => $payment->fresh(['course', 'user']),
-            ]);
-        } catch (\Exception $e) {
-            Log::error('PayPal order capture failed', (array) [
-                'payment_id' => $payment->id,
-                'order_id' => $request->order_id,
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'message' => 'Failed to capture PayPal order',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * @OA\Post(
-     *     path="/payments/{id}/vnpay/callback",
-     *     summary="VNPay callback",
-     *     tags={"Payments"},
-     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string")),
-     *     @OA\Response(response=200, description="Payment processed")
-     * )
-     */
-    public function vnpayCallback(Request $request, $id)
-    {
-        $payment = Payment::findOrFail($id);
-
-        // Verify VNPay signature
-        $vnp_SecureHash = $request->vnp_SecureHash;
-        $inputData = $request->except('vnp_SecureHash');
-        ksort($inputData);
-        
-        $hashData = urldecode(http_build_query($inputData));
-        $vnpHashSecret = env('VNPAY_HASH_SECRET');
-        $secureHash = hash_hmac('sha512', $hashData, $vnpHashSecret);
-
-        if ($secureHash === $vnp_SecureHash) {
-            if ($request->vnp_ResponseCode == '00') {
-                // Payment successful
-                $payment->update([
-                    'status' => 'COMPLETED',
-                    'transaction_id' => $request->vnp_TransactionNo,
-                    'paid_at' => now(),
-                    'payment_details' => $inputData,
-                ]);
-
-                // If course payment, enroll user
-                if ($payment->payment_type === 'COURSE' && $payment->course_id) {
-                    Enrollment::firstOrCreate([
-                        'student_id' => $payment->user_id,
-                        'course_id' => $payment->course_id,
-                    ], [
-                        'id' => Str::uuid(),
-                        'status' => 'ACTIVE',
-                        'progress' => 0,
-                        'enrolled_at' => now(),
-                    ]);
-                }
-
-                return redirect(env('FRONTEND_URL') . '/payment/success?payment_id=' . $payment->id);
-            } else {
-                // Payment failed
-                $payment->update([
-                    'status' => 'FAILED',
-                    'payment_details' => $inputData,
-                ]);
-
-                return redirect(env('FRONTEND_URL') . '/payment/failed?payment_id=' . $payment->id);
-            }
-        }
-
-        return response()->json(['message' => 'Invalid signature'], 400);
-    }
 
     /**
      * @OA\Post(

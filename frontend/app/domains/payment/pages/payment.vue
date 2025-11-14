@@ -30,36 +30,6 @@
               <div class="mb-6">
                 <label class="block text-sm font-medium text-slate-700 mb-3">Card Type</label>
                 <div class="grid grid-cols-4 gap-3">
-                  <!-- PayPal -->
-                  <button
-                    @click="selectedCardType = 'PAYPAL'"
-                    :class="[
-                      'p-4 rounded-lg border-2 transition-all flex items-center justify-center',
-                      selectedCardType === 'PAYPAL'
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-slate-200 hover:border-slate-300'
-                    ]"
-                  >
-                    <svg class="w-10 h-10" viewBox="0 0 24 24" fill="#003087">
-                      <path d="M20.905 9.5c.18-1.153.028-1.94-.513-2.64-.612-.79-1.806-1.16-3.445-1.16H9.856c-.375 0-.696.27-.755.638l-2.232 14.16c-.044.28.173.531.458.531h3.322l-.21 1.33c-.04.25.153.474.407.474h2.857c.328 0 .608-.236.66-.556l.028-.143.528-3.354.034-.184c.052-.32.332-.556.66-.556h.416c2.976 0 5.307-1.21 5.987-4.71.283-1.463.136-2.686-.607-3.546-.225-.26-.494-.478-.794-.65z"/>
-                    </svg>
-                  </button>
-                  
-                  <!-- VNPay -->
-                  <button
-                    @click="selectedCardType = 'VNPAY'"
-                    :class="[
-                      'p-4 rounded-lg border-2 transition-all flex items-center justify-center',
-                      selectedCardType === 'VNPAY'
-                        ? 'border-blue-600 bg-blue-50'
-                        : 'border-slate-200 hover:border-slate-300'
-                    ]"
-                  >
-                    <svg class="w-12 h-8" viewBox="0 0 80 24" fill="none">
-                      <rect width="80" height="24" rx="2" fill="#0066B2"/>
-                      <text x="6" y="16" fill="white" font-size="11" font-weight="bold">VNPAY</text>
-                    </svg>
-                  </button>
                   
                   <!-- Visa -->
                   <button
@@ -97,18 +67,21 @@
               </div>
 
               <!-- Stripe Elements Card Form -->
-              <div class="space-y-4">
-                <div id="stripe-card-element" class="mb-4"></div>
-                <div id="stripe-card-errors" class="text-red-500 text-sm"></div>
-                <button
-                  @click="handlePayment"
-                  :disabled="loading"
-                  class="w-full bg-gradient-to-r from-teal-400 to-teal-500 text-white font-semibold py-4 rounded-xl hover:shadow-lg transition-all disabled:opacity-50 mt-6"
-                >
-                  <span v-if="loading">Processing...</span>
-                  <span v-else>Confirm Payment</span>
-                </button>
-              </div>
+              <template v-if="selectedCardType === 'VISA' || selectedCardType === 'MASTERCARD'">
+                <div class="space-y-4">
+                  <div id="stripe-card-element" class="mb-4"></div>
+                  <div id="stripe-card-errors" class="text-red-500 text-sm"></div>
+                  <button
+                    @click="handlePayment"
+                    :disabled="loading"
+                    class="w-full bg-gradient-to-r from-teal-400 to-teal-500 text-white font-semibold py-4 rounded-xl hover:shadow-lg transition-all disabled:opacity-50 mt-6"
+                  >
+                    <span v-if="loading">Processing...</span>
+                    <span v-else>Thanh toán Visa/MasterCard</span>
+                  </button>
+                </div>
+              </template>
+
             </div>
           </div>
 
@@ -242,36 +215,46 @@ const STRIPE_TEST_MODE = false
 // Payment data - use computed to make reactive
 const paymentType = computed(() => route.query.type || 'MEMBERSHIP')
 const courseId = computed(() => route.query.course_id || null)
-const selectedCardType = ref('PAYPAL')
+const selectedCardType = ref('VISA')
 const loading = ref(false)
 
 // Stripe instance
 let stripeInstance: any = null
 
-// Initialize Stripe
-onMounted(async () => {
-  if (!STRIPE_TEST_MODE) {
-    try {
+
+// Stripe Elements chỉ mount khi chọn VISA/MASTERCARD
+onMounted(() => {
+  loadCourseData()
+})
+
+watch(selectedCardType, async (val, oldVal) => {
+  if (!STRIPE_TEST_MODE && (val === 'VISA' || val === 'MASTERCARD')) {
+    // Đợi DOM render xong
+    await nextTick()
+    if (!stripeInstance) {
       stripeInstance = await loadStripe(config.public.stripePublishableKey)
-      if (stripeInstance) {
-        elements = stripeInstance.elements()
-        cardElement = elements.create('card')
-        cardElement.mount('#stripe-card-element')
-        cardElement.on('change', (event: any) => {
-          const errorDiv = document.getElementById('stripe-card-errors')
-          if (event.error) {
-            errorDiv.textContent = event.error.message
-          } else {
-            errorDiv.textContent = ''
-          }
-        })
-      }
-      console.log('Stripe initialized:', stripeInstance ? 'success' : 'failed')
-    } catch (error) {
-      console.error('Failed to load Stripe:', error)
+    }
+    if (stripeInstance) {
+      elements = stripeInstance.elements()
+      cardElement = elements.create('card')
+      cardElement.mount('#stripe-card-element')
+      cardElement.on('change', (event: any) => {
+        const errorDiv = document.getElementById('stripe-card-errors')
+        if (event.error) {
+          errorDiv.textContent = event.error.message
+        } else {
+          errorDiv.textContent = ''
+        }
+      })
+    }
+    console.log('Stripe initialized:', stripeInstance ? 'success' : 'failed')
+  } else if (oldVal === 'VISA' || oldVal === 'MASTERCARD') {
+    // Unmount Stripe Elements khi chuyển sang loại khác
+    if (cardElement && cardElement.unmount) {
+      cardElement.unmount()
+      cardElement = null
     }
   }
-  loadCourseData()
 })
 
 // Card form data
@@ -321,12 +304,7 @@ const handlePayment = async () => {
     }
 
     // Map card type to payment method
-    let paymentMethod = 'PAYPAL'
-    if (selectedCardType.value === 'VNPAY') {
-      paymentMethod = 'VNPAY'
-    } else if (selectedCardType.value === 'VISA' || selectedCardType.value === 'MASTERCARD') {
-      paymentMethod = 'STRIPE'
-    }
+    let paymentMethod = 'STRIPE'
 
     // Nếu là STRIPE thì xác thực qua Stripe Elements
     if (paymentMethod === 'STRIPE') {
@@ -373,32 +351,10 @@ const handlePayment = async () => {
       } else {
         router.push('/')
       }
-    } else {
-      // PayPal/VNPay
-      const paymentData: any = {
-        payment_type: paymentType.value,
-        payment_method: paymentMethod,
-      }
-      if (paymentType.value === 'COURSE') {
-        paymentData.course_id = courseId.value
-      } else {
-        paymentData.membership_plan = 'PREMIUM'
-      }
-      const response = await $fetch('http://localhost:8000/api/payments/create', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: paymentData,
-      })
-      alert(`Payment với ${selectedCardType.value} thành công!`)
-      // Xử lý tiếp
     }
   } catch (error) {
     console.error('Payment failed:', error)
     alert('Payment failed. Please try lại.')
-  } finally {
     loading.value = false
   }
 }
@@ -518,44 +474,4 @@ const completeStripePayment = async (paymentId: string, paymentIntentId: string)
   }
 }
 
-// Complete PayPal payment (demo)
-const completePaypalPayment = async (paymentId: string) => {
-  try {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-    console.log('Completing payment:', paymentId)
-    console.log('Using token:', token)
-    
-    const response = await $fetch(`http://localhost:8000/api/payments/${paymentId}/paypal/complete`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: {
-        order_id: 'DEMO_ORDER_' + Date.now(),
-      },
-    })
-
-    console.log('Payment completed:', response)
-    
-    // Show success message
-    alert('Payment successful! Thank you for your purchase.')
-    
-    // Redirect based on payment type
-    if (paymentType.value === 'COURSE' && courseId.value) {
-      // Redirect to the course page
-      router.push(`/courses/${courseId.value}`)
-    } else if (paymentType.value === 'MEMBERSHIP') {
-      // Redirect to membership page
-      router.push('/membership')
-    } else {
-      // Fallback to home
-      router.push('/')
-    }
-  } catch (error) {
-    console.error('Payment completion failed:', error)
-    console.error('Error details:', error.data || error.message)
-    alert('Payment completion failed')
-  }
-}
 </script>
