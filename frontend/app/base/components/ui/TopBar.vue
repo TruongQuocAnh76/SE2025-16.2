@@ -274,9 +274,14 @@ onMounted(async () => {
   const userCookie = useCookie('user_data')
   if (userCookie.value && !user.value) {
     try {
-      user.value = JSON.parse(userCookie.value)
+      const parsed = typeof userCookie.value === 'string' 
+        ? JSON.parse(userCookie.value) 
+        : userCookie.value
+      user.value = parsed
     } catch (err) {
       console.error('Failed to parse user cookie:', err)
+      // Clear invalid cookie
+      userCookie.value = null
     }
   }
 

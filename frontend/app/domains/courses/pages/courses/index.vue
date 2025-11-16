@@ -175,28 +175,7 @@
     </section>
 
         <!-- Recommended for You Section -->
-    <section class="bg-accent-blue bg-opacity-20 py-12 mt-16">
-      <div class="max-w-7xl mx-auto px-4">
-        <div class="flex justify-between items-center mb-8">
-          <h2 class="text-2xl font-bold text-dark">Recommended for You</h2>
-          <button class="px-6 py-2 text-brand-secondary font-semibold rounded-lg hover:bg-gray-100 transition-colors">
-            See All
-          </button>
-        </div>
-        <div v-if="courses.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <NuxtLink
-            v-for="course in recommendedCourses"
-            :key="`rec-${course.id}`"
-            :to="`/courses/${course.id}`"
-          >
-            <CourseCard :course="mapCourseForCard(course)" />
-          </NuxtLink>
-        </div>
-        <div v-else class="text-center text-white">
-          <p>Loading recommendations...</p>
-        </div>
-      </div>
-    </section>
+    <RecommendedCourses />
 
     <!-- what our students have to say-->
      <section class="py-20 bg-white">
@@ -279,6 +258,7 @@
 
 <script setup lang="ts">
 import type { Course } from '../../types/course'
+import RecommendedCourses from '../../../../base/RecommendedCourses.vue'
 // import CourseCard from '../../components/ui/CourseCard.vue'
 import { ref } from 'vue'
 
@@ -290,9 +270,6 @@ const courses = ref<Course[]>([])
 const loading = ref(false)
 const searchQuery = ref('')
 const hasNextPage = ref(false)
-
-// TODO: ADD ACTUAL RECOMMENDATION LOGIC
-const recommendedCourses = computed(() => courses.value.slice(0, 4))
 
 // User role check
 const { user } = useAuth()

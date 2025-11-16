@@ -10,6 +10,7 @@ use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\SystemController;
+use App\Http\Controllers\Api\RecommendationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -54,6 +55,11 @@ Route::middleware('auth:sanctum')->prefix('users')->group(function () {
     Route::get('/{id}/enrollments', [UserController::class, 'getUserEnrollments']);
     Route::get('/{id}/quiz-attempts-count', [UserController::class, 'getUserQuizAttemptsCount']);
 });
+
+/* ========================
+ * RECOMMENDATIONS
+ * ======================== */
+Route::middleware('auth:sanctum')->get('/recommendations', [RecommendationController::class, 'getRecommendations']);
 
 /* ========================
  * COURSE MANAGEMENT
