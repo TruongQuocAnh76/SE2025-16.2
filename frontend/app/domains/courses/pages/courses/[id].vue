@@ -143,6 +143,7 @@
               </div>
             <div v-if="activeTab === 'curriculum'">
               <h2 class="text-2xl font-bold mb-4">Curriculum</h2>
+              <!-- Prefer showing structured modules if available -->
               <div v-if="course.modules && course.modules.length > 0" class="space-y-6">
                 <div v-for="module in course.modules" :key="module.id">
                   <h3 class="text-xl font-semibold mb-3 p-3 bg-gray-100 rounded">
@@ -161,7 +162,22 @@
                   <p v-else class="pl-4 text-gray-500">No lessons in this module yet.</p>
                 </div>
               </div>
-              <p v-else>No modules available yet.</p>
+              <!-- Fallback to text-based curriculum when no modules exist -->
+              <div v-else-if="course.curriculum" class="space-y-6">
+                <div v-for="section in parsedCurriculum" :key="section.title">
+                  <h3 class="text-xl font-semibold mb-3 p-3 bg-gray-100 rounded">
+                    {{ section.title }}
+                  </h3>
+                  <ul v-if="section.items.length > 0" class="space-y-2 pl-4">
+                    <li v-for="(item, idx) in section.items" :key="item + idx" class="border-b p-3 flex justify-between items-center">
+                      <span>{{ idx + 1 }}. {{ item }}</span>
+                      <span class="text-sm text-gray-500">N/A minutes</span>
+                    </li>
+                  </ul>
+                  <p v-else class="pl-4 text-gray-500">No lessons in this section yet.</p>
+                </div>
+              </div>
+              <p v-else>No curriculum available yet.</p>
             </div>
           </div>
         </div>
@@ -226,6 +242,49 @@ const tabs = [
   { id: 'review', name: 'Review' },
   { id: 'curriculum', name: 'Curriculum' }
 ]
+
+// Parse curriculum string into sections and items
+const parsedCurriculum = computed(() => {
+  if (!course.value?.curriculum) return []
+  const raw = course.value.curriculum
+  const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+  const sections: Array<{ title: string, items: string[] }> = []
+  let currentSection: { title: string, items: string[] } | null = null
+  const sectionRegex = /^\d+\.?\s+(.+)/
+  const itemRegex = /^\d+\.\d+\.?\s+(.+)/
+
+  // First pass: try to parse numbered sections like "1. Title" and "1.1. Subtitle"
+  lines.forEach(line => {
+    const sectionMatch = line.match(sectionRegex)
+    const itemMatch = line.match(itemRegex)
+    if (sectionMatch && !itemMatch) {
+      if (currentSection) sections.push(currentSection)
+      currentSection = { title: sectionMatch[1] ?? 'Untitled', items: [] }
+    } else if (itemMatch && currentSection) {
+      if (itemMatch[1] !== undefined) {
+        currentSection.items.push(itemMatch[1])
+      }
+    }
+  })
+  if (currentSection) sections.push(currentSection)
+
+  // If nothing parsed, fallback to block-based parsing: split by blank lines
+  if (sections.length === 0) {
+    const blocks = raw.split(/\n{2,}/).map(b => b.trim()).filter(Boolean)
+    blocks.forEach(block => {
+      const blockLines = block.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+      if (blockLines.length === 1) {
+        sections.push({ title: blockLines[0] || 'Untitled', items: [] })
+      } else {
+        const title = blockLines[0] || 'Untitled'
+        const items = blockLines.slice(1).map(it => it.replace(/^[-\*\d\.\s]+/, '').trim()).filter(Boolean)
+        sections.push({ title, items })
+      }
+    })
+  }
+
+  return sections
+})
 
 const courseId = route.params.id as string
 

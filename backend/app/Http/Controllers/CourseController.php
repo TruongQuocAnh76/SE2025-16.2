@@ -7,6 +7,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 use App\Models\Course;
 use App\Models\Module;
@@ -106,7 +107,7 @@ class CourseController extends Controller
             'price'       => 'nullable|numeric|min:0',
             'duration'    => 'nullable|integer|min:1',
             'passing_score' => 'integer|min:0|max:100',
-
+            'curriculum'  => 'nullable|string',
             'tags'          => 'nullable|array',
             'tags.*'        => 'string|exists:tags,id'
         ]);
@@ -125,18 +126,32 @@ class CourseController extends Controller
         $data['teacher_id'] = Auth::id();
         $data['status'] = 'DRAFT';
 
+        // Ensure curriculum is set (even if empty)
+        if (!isset($data['curriculum'])) {
+            $data['curriculum'] = '';
+        }
+
         // Generate thumbnail URL if not provided
         $thumbnailUploadUrl = null;
         if (empty($data['thumbnail'])) {
             $thumbnailPath = 'courses/thumbnails/' . $data['id'] . '.jpg';
             $awsEndpoint = env('AWS_ENDPOINT');
             $awsBucket = env('AWS_BUCKET');
+            // Default thumbnail path (may point to S3)
             $data['thumbnail'] = $awsEndpoint . '/' . $awsBucket . '/' . $thumbnailPath;
-            $thumbnailUploadUrl = Storage::disk('s3')->temporaryUrl(
-                $thumbnailPath,
-                now()->addMinutes(30), // URL valid for 30 minutes
-                ['ContentType' => 'image/jpeg']
-            );
+            // Try to create a temporary upload URL. If S3 is not configured, log and continue.
+            try {
+                $thumbnailUploadUrl = Storage::disk('s3')->temporaryUrl(
+                    $thumbnailPath,
+                    now()->addMinutes(30), // URL valid for 30 minutes
+                    ['ContentType' => 'image/jpeg']
+                );
+            } catch (\Exception $e) {
+                Log::warning('Unable to generate S3 temporary URL for course thumbnail: ' . $e->getMessage());
+                // Fallback to a local placeholder if S3 is not available
+                $data['thumbnail'] = '/placeholder-course.jpg';
+                $thumbnailUploadUrl = null;
+            }
         }
 
         $course = Course::create($data);

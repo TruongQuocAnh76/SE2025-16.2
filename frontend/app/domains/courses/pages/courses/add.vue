@@ -59,13 +59,13 @@
               <label for="curriculum" class="block text-sm font-medium text-text-dark mb-2">
                 Curriculum
               </label>
-              <input
+              <textarea
                 id="curriculum"
                 v-model="form.curriculum"
-                type="text"
+                rows="12"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-                placeholder="E.g. B = 8 hours"
-              />
+                placeholder="Enter detailed curriculum, e.g. numbered sections, multi-line..."
+              ></textarea>
             </div>
 
             <div>
@@ -190,9 +190,31 @@
                 isDragging ? 'border-brand-primary bg-blue-50' : 'border-gray-300'
               ]"
             >
-              <img v-if="thumbnailPreview" :src="thumbnailPreview" class="absolute inset-0 w-full h-full object-cover rounded-lg" />
+              <img v-if="thumbnailPreview" :src="thumbnailPreview" @load="onThumbnailPreviewLoad" @error="onThumbnailPreviewError" class="absolute inset-0 w-full h-full object-cover rounded-lg" />
               
               <div :class="['relative z-10', { 'bg-white/70 p-4 rounded-lg': thumbnailPreview }]">
+                <div class="flex items-center justify-center space-x-3 mb-3">
+                  <label class="inline-flex items-center">
+                    <input type="radio" class="form-radio" value="upload" v-model="thumbnailType" />
+                    <span class="ml-2">Upload</span>
+                  </label>
+                  <label class="inline-flex items-center">
+                    <input type="radio" class="form-radio" value="url" v-model="thumbnailType" />
+                    <span class="ml-2">External URL</span>
+                  </label>
+                </div>
+
+                <div v-if="thumbnailType === 'url'" class="mb-3 w-full">
+                  <input
+                    v-model="thumbnailUrl"
+                    type="url"
+                    placeholder="https://example.com/image.jpg"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    @input="onThumbnailUrlInput"
+                  />
+                  <p v-if="thumbnailUrl && !isValidUrl(thumbnailUrl)" class="text-sm text-red-600 mt-1">Please enter a valid image URL</p>
+                </div>
+
                 <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
                   <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
@@ -221,6 +243,11 @@
             <p v-if="selectedThumbnailFile" class="mt-2 text-sm text-brand-primary font-medium">
               Selected: {{ selectedThumbnailFile.name }}
             </p>
+            <p v-if="thumbnailType === 'url' && thumbnailUrl" class="mt-2 text-sm text-brand-primary font-medium">
+              External thumbnail URL set
+            </p>
+            <p v-if="thumbnailLoading" class="mt-2 text-sm text-gray-600">Loading thumbnail preview...</p>
+            <p v-if="thumbnailLoadError" class="mt-2 text-sm text-red-600">{{ thumbnailLoadError }}</p>
           </div> </div> <div class="mt-12">
           <button
             type="submit"
@@ -262,6 +289,9 @@ const thumbnailPreview = ref<string | null>(null)
 const thumbnailType = ref<'url' | 'upload'>('upload')
 const selectedThumbnailFile = ref<File | null>(null)
 const thumbnailFileInput = ref<HTMLInputElement | null>(null)
+const thumbnailUrl = ref<string>('')
+const thumbnailLoading = ref<boolean>(false)
+const thumbnailLoadError = ref<string | null>(null)
 
 // Form data
 const form = ref<CreateCourseData>({
@@ -301,6 +331,7 @@ const handleThumbnailFileSelect = (event: Event) => {
 }
 
 const triggerFileInput = () => {
+  thumbnailType.value = 'upload'
   thumbnailFileInput.value?.click()
 }
 
@@ -315,6 +346,9 @@ const onDrop = (event: DragEvent) => {
 }
 
 const setFile = (file: File) => {
+  thumbnailType.value = 'upload'
+  thumbnailLoadError.value = null
+  thumbnailLoading.value = false
   selectedThumbnailFile.value = file
   const reader = new FileReader()
   reader.onload = (e) => {
@@ -323,7 +357,66 @@ const setFile = (file: File) => {
   reader.readAsDataURL(file)
 }
 
+const isValidUrl = (val: string) => {
+  try {
+    const u = new URL(val)
+    return ['http:', 'https:'].includes(u.protocol)
+  } catch (e) {
+    return false
+  }
+}
+
+const tryNormalizeUrl = (val: string) => {
+  if (!val) return ''
+  // If user provided a URL without protocol, try https
+  try {
+    new URL(val)
+    return val
+  } catch (e) {
+    // If it looks like a domain or path, try adding https://
+    if (/^[^\s]+\.[^\s]+/.test(val)) {
+      return 'https://' + val
+    }
+    return val
+  }
+}
+
+const onThumbnailPreviewLoad = () => {
+  thumbnailLoading.value = false
+  thumbnailLoadError.value = null
+}
+
+const onThumbnailPreviewError = () => {
+  thumbnailLoading.value = false
+  thumbnailLoadError.value = 'Failed to load image. Please check the URL or try another image.'
+  thumbnailPreview.value = null
+}
+
+const onThumbnailUrlInput = () => {
+  thumbnailLoadError.value = null
+  if (!thumbnailUrl.value) {
+    thumbnailPreview.value = null
+    return
+  }
+
+  const normalized = tryNormalizeUrl(thumbnailUrl.value.trim())
+  if (normalized !== thumbnailUrl.value) {
+    thumbnailUrl.value = normalized
+  }
+
+  if (isValidUrl(thumbnailUrl.value)) {
+    // set preview and mark as loading until image fires load event
+    thumbnailLoading.value = true
+    selectedThumbnailFile.value = null
+    thumbnailPreview.value = thumbnailUrl.value
+  } else {
+    thumbnailPreview.value = null
+  }
+}
+
 // Form validation
+
+  // sample curriculum helpers removed — curriculum input restored to single-line
 const validateForm = (): boolean => {
   errors.value = {}
   if (!form.value.title.trim()) {
@@ -337,6 +430,12 @@ const validateForm = (): boolean => {
   }
   if (form.value.passing_score < 0 || form.value.passing_score > 100) {
     errors.value.passing_score = 'Passing score must be between 0 and 100'
+  }
+  // Validate thumbnail URL if selected
+  if (thumbnailType.value === 'url' && thumbnailUrl.value) {
+    if (!isValidUrl(thumbnailUrl.value) || thumbnailLoadError.value) {
+      errors.value.thumbnail = 'Please provide a valid thumbnail URL or switch to upload.'
+    }
   }
   return Object.keys(errors.value).length === 0
 }
@@ -353,6 +452,11 @@ const handleSubmit = async () => {
 
   try {
     const courseData = { ...form.value }
+    // If user provided an external thumbnail URL, include it in course creation
+    if (thumbnailType.value === 'url' && thumbnailUrl.value && isValidUrl(thumbnailUrl.value)) {
+      // backend accepts `thumbnail` as a URL in create API
+      (courseData as any).thumbnail = thumbnailUrl.value
+    }
     if (courseData.price === undefined) delete courseData.price
     if (courseData.duration === undefined) delete courseData.duration
 
