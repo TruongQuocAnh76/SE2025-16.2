@@ -43,7 +43,7 @@
 
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import { useRecommendedCourses } from '../domains/course/useRecommendedCourses'
+import { useRecommendedCourses } from '../domains/courses/composables/useRecommendedCourses'
 import CourseCard from '../domains/courses/components/ui/CourseCard.vue'
 
 const { data, pending, error } = useRecommendedCourses()
