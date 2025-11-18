@@ -14,7 +14,11 @@
         "laravel/sanctum": "^4.2",
         "laravel/socialite": "^5.17",
         "laravel/tinker": "^2.10.1",
-        "league/flysystem-aws-s3-v3": "^3.30"
+        "league/flysystem-aws-s3-v3": "^3.30",
+        "paypal/paypal-checkout-sdk": "^1.0",
+        "paypal/paypal-server-sdk": "^1.1",
+        "paypal/rest-api-sdk-php": "^1.6",
+        "stripe/stripe-php": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
