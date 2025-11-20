@@ -42,6 +42,15 @@ return [
             'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
             'after_commit' => false,
         ],
+        
+            'rabbitmq' => [
+                'driver' => 'rabbitmq',
+                'host' => env('RABBITMQ_HOST', 'localhost'),
+                'port' => env('RABBITMQ_PORT', 5672),
+                'user' => env('RABBITMQ_USER', 'guest'),
+                'password' => env('RABBITMQ_PASSWORD', 'guest'),
+                'queue' => env('RABBITMQ_QUEUE', 'reset_email'),
+            ],
 
         'beanstalkd' => [
             'driver' => 'beanstalkd',
