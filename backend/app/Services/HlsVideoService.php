@@ -54,70 +54,75 @@ class HlsVideoService
      * @param array $qualities Array of quality levels to generate (default: all)
      * @return array Array containing playlist URLs and processing status
      */
-    public function processVideoToHls($inputVideoPath, $outputBasePath, $qualities = null)
+        public function processVideoToHls($inputVideoPath, $outputBasePath, $qualities = null)
     {
         try {
             Log::info("Starting HLS processing for video: {$inputVideoPath}");
-            
-            // Use all qualities if none specified
+
             if ($qualities === null) {
                 $qualities = array_keys($this->qualityLevels);
             }
 
-            // Create temporary directory for processing
-            $tempDir = storage_path('app/temp/hls/' . uniqid());
-            if (!file_exists($tempDir)) {
-                mkdir($tempDir, 0755, true);
+            // create temp root (absolute)
+            $tempRoot = storage_path('app/temp/hls/' . uniqid('hls_'));
+            if (!is_dir($tempRoot)) {
+                mkdir($tempRoot, 0755, true);
             }
 
             $generatedPlaylists = [];
-            $masterPlaylistContent = "#EXTM3U\n#EXT-X-VERSION:3\n";
+            $masterLines = ["#EXTM3U", "#EXT-X-VERSION:3"];
 
-            // Process each quality level
+            // Normalize input path: prefer absolute path if provided, otherwise assume storage disk 'local' path
+            $inputAbsolute = $this->resolveInputPath($inputVideoPath);
+            if (!file_exists($inputAbsolute)) {
+                throw new \Exception("Input video not found at path: {$inputAbsolute}");
+            }
+
             foreach ($qualities as $quality) {
                 if (!isset($this->qualityLevels[$quality])) {
                     Log::warning("Unknown quality level: {$quality}");
                     continue;
                 }
-
                 $config = $this->qualityLevels[$quality];
-                $playlistPath = $this->processQualityLevel(
-                    $inputVideoPath,
-                    $tempDir,
+
+                $qualityPlaylistUrl = $this->processQualityLevel(
+                    $inputAbsolute,
+                    $tempRoot,
                     $quality,
                     $config,
                     $outputBasePath
                 );
 
-                if ($playlistPath) {
-                    $generatedPlaylists[$quality] = $playlistPath;
-                    
-                    // Add to master playlist
-                    $bandwidth = intval(str_replace('k', '000', $config['bitrate']));
-                    $masterPlaylistContent .= "#EXT-X-STREAM-INF:BANDWIDTH={$bandwidth},RESOLUTION={$config['width']}x{$config['height']}\n";
-                    $masterPlaylistContent .= $quality . "/playlist.m3u8\n";
+                if ($qualityPlaylistUrl) {
+                    $generatedPlaylists[$quality] = $qualityPlaylistUrl;
+
+                    // bandwidth integer (bps)
+                    $bandwidth = intval(str_replace('k','',$config['bitrate'])) * 1000;
+                    $masterLines[] = "#EXT-X-STREAM-INF:BANDWIDTH={$bandwidth},RESOLUTION={$config['width']}x{$config['height']}";
+                    // use relative path in master (so browser resolves against master location)
+                    $masterLines[] = "{$quality}/playlist.m3u8";
                 }
             }
 
-            // Create and upload master playlist
-            $masterPlaylistPath = $this->createMasterPlaylist($masterPlaylistContent, $outputBasePath);
+            // write & upload master playlist
+            $masterContent = implode("\n", $masterLines) . "\n";
+            $masterRemoteUrl = $this->createMasterPlaylist($masterContent, $outputBasePath);
 
-            // Clean up temporary directory
-            $this->cleanupTempDirectory($tempDir);
+            // cleanup
+            $this->cleanupTempDirectory($tempRoot);
 
             Log::info("HLS processing completed successfully");
 
             return [
                 'success' => true,
-                'master_playlist' => $masterPlaylistPath,
+                'master_playlist' => $masterRemoteUrl,
                 'quality_playlists' => $generatedPlaylists,
                 'qualities_generated' => array_keys($generatedPlaylists)
             ];
 
         } catch (\Exception $e) {
             Log::error("HLS processing failed: " . $e->getMessage());
-            Log::error("Stack trace: " . $e->getTraceAsString());
-            
+            Log::error($e->getTraceAsString());
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -138,52 +143,96 @@ class HlsVideoService
      * @param string $outputBasePath
      * @return string|null
      */
-    protected function processQualityLevel($inputPath, $tempDir, $quality, $config, $outputBasePath)
+    protected function processQualityLevel($inputAbsolutePath, $tempRoot, $quality, $config, $outputBasePath)
     {
-        try {
-            Log::info("Processing quality level: {$quality}");
+        $qualityTempDir = $tempRoot . '/' . $quality;
+        if (!is_dir($qualityTempDir)) {
+            mkdir($qualityTempDir, 0755, true);
+        }
 
-            $qualityTempDir = $tempDir . '/' . $quality;
-            if (!file_exists($qualityTempDir)) {
-                mkdir($qualityTempDir, 0755, true);
-            }
+        $playlistLocalPath = $qualityTempDir . '/playlist.m3u8';
 
-            // Create format with specific settings
-            $format = new X264('aac');
-            $format->setKiloBitrate(intval(str_replace('k', '', $config['bitrate'])));
-            $format->setAudioKiloBitrate(intval(str_replace('k', '', $config['audio_bitrate'])));
+        // build ffmpeg CLI (explicit and robust) - CHANGED
+        $vbit = $config['bitrate'];
+        $ab  = $config['audio_bitrate'];
+        $w   = intval($config['width']);
+        $h   = intval($config['height']);
+        $segFmt = $qualityTempDir . '/segment_%03d.ts';
 
-            // Get video for processing
-            $media = FFMpeg::fromDisk('local')
-                ->open($inputPath)
-                ->addFilter(['-vf', "scale={$config['width']}:{$config['height']}"])
-                ->addFilter(['-c:v', 'libx264'])
-                ->addFilter(['-preset', 'medium'])
-                ->addFilter(['-crf', '23'])
-                ->addFilter(['-c:a', 'aac'])
-                ->addFilter(['-ar', '44100'])
-                ->addFilter(['-f', 'hls'])
-                ->addFilter(['-hls_time', $this->segmentLength])
-                ->addFilter(['-hls_list_size', '0'])
-                ->addFilter(['-hls_segment_filename', $qualityTempDir . '/segment_%03d.ts']);
+        // Use -preset and -crf for reasonable quality/size; tune for your needs
+        $cmd = [
+            'ffmpeg',
+            '-y',                                    // Overwrite output files without asking
+            '-i', escapeshellarg($inputAbsolutePath), // Input video file path
 
-            // Generate playlist in temp directory
-            $playlistFile = $qualityTempDir . '/playlist.m3u8';
-            $media->export()->toDisk('local')->save($playlistFile);
+            // scale to target resolution
+            '-vf', escapeshellarg("scale={$w}:{$h}"), // Video filter: scale video to target width/height
 
-            // Upload all segments and playlist to S3
-            $s3QualityPath = $outputBasePath . '/' . $quality;
-            $this->uploadHlsFiles($qualityTempDir, $s3QualityPath);
+            // video encoding
+            '-c:v', 'libx264',                       // Video codec: H.264 (libx264 encoder)
+            '-b:v', escapeshellarg($vbit),           // Video bitrate (e.g., '2800k' for 2.8 Mbps)
+            '-preset', 'medium',                     // Encoding preset: balance between speed and quality
+            '-crf', '23',                           // Constant Rate Factor: quality level (lower = better quality)
 
-            // Return S3 path for the playlist
-            $awsEndpoint = env('AWS_ENDPOINT');
-            $awsBucket = env('AWS_BUCKET');
-            return $awsEndpoint . '/' . $awsBucket . '/' . $s3QualityPath . '/playlist.m3u8';
+            // **ensure segment starts with keyframes**
+            '-g', '48',                             // GOP size: maximum keyframe interval (≈ 2 seconds at 24fps)
+            '-keyint_min', '48',                    // Minimum keyframe interval (same as GOP size)
+            '-sc_threshold', '0',                   // Scene change threshold: disable automatic scene-cut keyframes
+            '-hls_flags', 'independent_segments',   // HLS flag: make each segment independently playable
 
-        } catch (\Exception $e) {
-            Log::error("Failed to process quality {$quality}: " . $e->getMessage());
+            // audio encoding
+            '-c:a', 'aac',                          // Audio codec: Advanced Audio Coding
+            '-b:a', escapeshellarg($ab),            // Audio bitrate (e.g., '128k' for 128 kbps)
+            '-ar', '44100',                         // Audio sample rate: 44.1 kHz (CD quality)
+            '-ac', '2',                             // Audio channels: 2 (stereo)
+
+            // HLS config
+            '-f', 'hls',                            // Output format: HTTP Live Streaming
+            '-hls_time', (string)$this->segmentLength, // Segment duration in seconds (default: 6)
+            '-hls_list_size', '0',                  // Playlist size: 0 = keep all segments
+            '-hls_playlist_type', 'vod',            // Playlist type: Video on Demand (not live)
+            '-hls_segment_filename', escapeshellarg($segFmt), // Pattern for segment filenames
+
+            escapeshellarg($playlistLocalPath)      // Output playlist file path
+        ];
+
+
+        // Flatten command to string
+        $cmdStr = implode(' ', $cmd);
+
+        Log::info("Running ffmpeg for quality {$quality}: {$cmdStr}");
+
+        // run and capture output - NEW
+        [$exitCode, $output] = $this->runCommand($cmdStr);
+        Log::info("FFmpeg exit code: {$exitCode}");
+        Log::info("FFmpeg output for {$quality}: " . $output);
+
+        if ($exitCode !== 0) {
+            Log::error("FFmpeg failed for quality {$quality}");
             return null;
         }
+
+        // verify playlist created and contains segments - NEW
+        if (!file_exists($playlistLocalPath) || filesize($playlistLocalPath) === 0) {
+            Log::error("Playlist missing or empty: {$playlistLocalPath}");
+            return null;
+        }
+
+        $playlistContent = file_get_contents($playlistLocalPath);
+        if (strpos($playlistContent, '#EXTINF:') === false) {
+            Log::error("Playlist does not contain #EXTINF (no segments). Content:\n" . $playlistContent);
+            return null;
+        }
+
+        // upload files from qualityTempDir
+        $s3QualityPath = rtrim($outputBasePath, '/') . '/' . $quality;
+        $this->uploadHlsFiles($qualityTempDir, $s3QualityPath);
+
+        // build returned remote URL (use frontend endpoint for client access)
+        $awsEndpoint = rtrim(env('FRONTEND_AWS_ENDPOINT', env('AWS_ENDPOINT')), '/');
+        $awsBucket   = env('AWS_BUCKET');
+
+        return $awsEndpoint . '/' . $awsBucket . '/' . ltrim($s3QualityPath, '/') . '/playlist.m3u8';
     }
 
     /**
@@ -194,24 +243,26 @@ class HlsVideoService
      */
     protected function uploadHlsFiles($localDir, $s3BasePath)
     {
-        $files = glob($localDir . '/*');
-        
-        foreach ($files as $file) {
-            if (is_file($file)) {
-                $filename = basename($file);
-                $s3Path = $s3BasePath . '/' . $filename;
-                
-                $content = file_get_contents($file);
-                
-                // Set appropriate content type
-                $contentType = $this->getContentType($filename);
-                
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($localDir, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        foreach ($iterator as $file) {
+            if ($file->isFile()) {
+                $localPath = $file->getPathname();
+                $relative = ltrim(str_replace($localDir . '/', '', $localPath), '/');
+                $s3Path = rtrim($s3BasePath, '/') . '/' . $relative;
+
+                $content = file_get_contents($localPath);
+                $contentType = $this->getContentType($localPath);
+
                 Storage::disk('s3')->put($s3Path, $content, [
                     'ContentType' => $contentType,
                     'CacheControl' => 'max-age=31536000'
                 ]);
-                
-                Log::info("Uploaded HLS file: {$s3Path}");
+
+                Log::info("Uploaded HLS file: {$s3Path} (local: {$localPath})");
             }
         }
     }
@@ -223,20 +274,26 @@ class HlsVideoService
      * @param string $outputBasePath
      * @return string
      */
-    protected function createMasterPlaylist($content, $outputBasePath)
+        protected function createMasterPlaylist($content, $outputBasePath)
     {
-        $masterPlaylistPath = $outputBasePath . '/master.m3u8';
-        
-        Storage::disk('s3')->put($masterPlaylistPath, $content, [
+        // save master locally first (optional)
+        $tempMaster = storage_path('app/temp/master_' . uniqid() . '.m3u8');
+        file_put_contents($tempMaster, $content);
+
+        // upload master (ensure path normalized)
+        $masterRemotePath = rtrim($outputBasePath, '/') . '/master.m3u8';
+        Storage::disk('s3')->put($masterRemotePath, $content, [
             'ContentType' => 'application/vnd.apple.mpegurl',
             'CacheControl' => 'max-age=3600'
         ]);
-        
-        Log::info("Created master playlist: {$masterPlaylistPath}");
-        
-        $awsEndpoint = env('AWS_ENDPOINT');
-        $awsBucket = env('AWS_BUCKET');
-        return $awsEndpoint . '/' . $awsBucket . '/' . $masterPlaylistPath;
+
+        Log::info("Created master playlist: {$masterRemotePath}");
+
+        // Use frontend endpoint for URLs that will be accessed by browser
+        $awsEndpoint = rtrim(env('FRONTEND_AWS_ENDPOINT', env('AWS_ENDPOINT')), '/');
+        $awsBucket   = env('AWS_BUCKET');
+
+        return $awsEndpoint . '/' . $awsBucket . '/' . ltrim($masterRemotePath, '/');
     }
 
     /**
@@ -245,17 +302,15 @@ class HlsVideoService
      * @param string $filename
      * @return string
      */
-    protected function getContentType($filename)
+        protected function getContentType($filename)
     {
-        $extension = pathinfo($filename, PATHINFO_EXTENSION);
-        
-        switch (strtolower($extension)) {
-            case 'm3u8':
-                return 'application/vnd.apple.mpegurl';
-            case 'ts':
-                return 'video/mp2t';
-            default:
-                return 'application/octet-stream';
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        switch ($ext) {
+            case 'm3u8': return 'application/vnd.apple.mpegurl';
+            case 'ts':   return 'video/mp2t';
+            case 'jpg': case 'jpeg': return 'image/jpeg';
+            case 'png':  return 'image/png';
+            default:     return 'application/octet-stream';
         }
     }
 
@@ -266,7 +321,7 @@ class HlsVideoService
      */
     protected function cleanupTempDirectory($tempDir)
     {
-        if (file_exists($tempDir)) {
+        if (is_dir($tempDir)) {
             $this->recursiveDelete($tempDir);
         }
     }
@@ -278,19 +333,42 @@ class HlsVideoService
      */
     protected function recursiveDelete($dir)
     {
-        if (is_dir($dir)) {
-            $objects = scandir($dir);
-            foreach ($objects as $object) {
-                if ($object != "." && $object != "..") {
-                    if (is_dir($dir . "/" . $object)) {
-                        $this->recursiveDelete($dir . "/" . $object);
-                    } else {
-                        unlink($dir . "/" . $object);
-                    }
-                }
-            }
-            rmdir($dir);
+        if (!is_dir($dir)) return;
+        $files = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($files as $fileinfo) {
+            $todo = ($fileinfo->isDir() ? 'rmdir' : 'unlink');
+            $todo($fileinfo->getRealPath());
         }
+        rmdir($dir);
+    }
+
+    /**
+     * Resolve input path passed to service to absolute filesystem path
+     *
+     * - If given path exists as-is, return it
+     * - Otherwise assume it's relative to storage/app and return absolute path
+     */
+    protected function resolveInputPath($inputPath)
+    {
+        if (file_exists($inputPath)) return $inputPath;
+
+        $candidate = storage_path('app/' . ltrim($inputPath, '/'));
+        return $candidate;
+    }
+
+    /**
+     * Run shell command and return [exitCode, output]
+     */
+    protected function runCommand(string $cmd): array
+    {
+        // Redirect stderr to stdout
+        $output = [];
+        $exit = null;
+        exec($cmd . ' 2>&1', $output, $exit);
+        return [$exit, implode("\n", $output)];
     }
 
     /**

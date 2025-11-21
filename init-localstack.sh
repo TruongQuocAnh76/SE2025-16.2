@@ -20,7 +20,7 @@ aws --endpoint-url=http://localstack:4566 s3api put-bucket-cors \
             {
                 "AllowedHeaders": ["*"],
                 "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
-                "AllowedOrigins": ["http://localhost:3000", "http://localhost:8000", "*"],
+                "AllowedOrigins": ["*"],
                 "ExposeHeaders": ["ETag", "x-amz-meta-custom-header", "Content-Length"],
                 "MaxAgeSeconds": 3000
             }

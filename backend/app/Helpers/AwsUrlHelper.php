@@ -11,14 +11,7 @@ class AwsUrlHelper
      */
     public static function getFrontendAwsEndpoint(): string
     {
-        $awsEndpoint = env('AWS_ENDPOINT');
-        
-        // In development with LocalStack, replace docker service name with localhost
-        if (app()->environment('local', 'development')) {
-            return str_replace('localstack:4566', 'localhost:4566', $awsEndpoint);
-        }
-        
-        return $awsEndpoint;
+        return env('FRONTEND_AWS_ENDPOINT');
     }
     
     /**

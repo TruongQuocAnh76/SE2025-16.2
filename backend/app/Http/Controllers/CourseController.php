@@ -597,15 +597,15 @@ class CourseController extends Controller
     }
 
     /**
-     * Upload video for a lesson with HLS processing
+     * Notify backend that video upload is complete and start HLS processing
      */
-    public function uploadLessonVideo(Request $request)
+    public function notifyVideoUploadComplete(Request $request, $lessonId)
     {
         $validator = Validator::make($request->all(), [
-            'lesson_id' => 'required|string|exists:lessons,id',
-            'video_path' => 'required|string',
+            'original_video_path' => 'required|string',
             'hls_base_path' => 'required|string',
-            'video_file' => 'required|file|mimes:mp4,mov,avi,mkv'
+            'video_size' => 'nullable|integer',
+            'video_duration' => 'nullable|integer'
         ]);
 
         if ($validator->fails()) {
@@ -613,45 +613,37 @@ class CourseController extends Controller
         }
 
         try {
-            $lessonId = $request->lesson_id;
-            $originalVideoPath = $request->video_path;
+            $originalVideoPath = $request->original_video_path;
             $hlsBasePath = $request->hls_base_path;
-            $videoFile = $request->file('video_file');
-
-            // Upload the original video and get temp path for processing
-            $uploadResult = $this->courseService->uploadLessonVideo($originalVideoPath, $videoFile);
-
-            if ($uploadResult['success']) {
-                // Dispatch HLS processing job
-                $this->courseService->dispatchHlsProcessing(
-                    $uploadResult['temp_path'], 
-                    $hlsBasePath, 
-                    $lessonId, 
-                    $originalVideoPath
-                );
-
-                // Generate the expected HLS master playlist URL
-                $awsBucket = env('AWS_BUCKET');
-                
-                $frontendAwsEndpoint = AwsUrlHelper::getFrontendAwsEndpoint();
-                $hlsUrl = $frontendAwsEndpoint . '/' . $awsBucket . '/' . $hlsBasePath . '/master.m3u8';
-
-                return response()->json([
-                    'message' => 'Video uploaded successfully. HLS processing started in background.',
-                    'original_video_uploaded' => true,
-                    'hls_processing_started' => true,
-                    'expected_hls_url' => $hlsUrl,
-                    'processing_status' => 'in_progress'
-                ]);
-            } else {
-                throw new \Exception('Failed to upload original video');
+            
+            $metadata = [];
+            if ($request->has('video_size')) {
+                $metadata['video_size'] = $request->video_size;
             }
+            if ($request->has('video_duration')) {
+                $metadata['video_duration'] = $request->video_duration;
+            }
+            
+            // Use the service method to handle the upload completion
+            $result = $this->courseService->handleVideoUploadComplete(
+                $lessonId,
+                $originalVideoPath,
+                $hlsBasePath,
+                $metadata
+            );
+
+            return response()->json([
+                'message' => $result['message'],
+                'lesson_id' => $result['lesson_id'],
+                'hls_processing_started' => true,
+                'expected_hls_url' => $result['expected_hls_url'],
+                'processing_status' => $result['processing_status']
+            ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Failed to upload video',
-                'error' => $e->getMessage(),
-                'hls_processing_started' => false
+                'message' => 'Failed to process video upload notification',
+                'error' => $e->getMessage()
             ], 500);
         }
     }

@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CourseController;
+use App\Http\Controllers\LessonController;
 use App\Http\Controllers\LearningController;
 use App\Http\Controllers\GradingController;
 use App\Http\Controllers\QuestionController;
@@ -67,20 +68,15 @@ Route::prefix('courses')->group(function () {
     Route::get('/search', [CourseController::class, 'search']); // Search courses by name
     Route::get('/{id}', [CourseController::class, 'show']); // Get course details
 });
-// --- NHÓM RIÊNG TƯ (PRIVATE) ---
-// Phải đăng nhập (auth:sanctum) để thực hiện các hành động này
+
+// Protected course management routes (require authentication)
 Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
-    Route::post('/', [CourseController::class, 'store']); // Teacher/Admin create
-    Route::get('/{id}', [CourseController::class, 'show']); // Get course details
-});
-// --- NHÓM RIÊNG TƯ (PRIVATE) ---
-// Phải đăng nhập (auth:sanctum) để thực hiện các hành động này
-Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
-    Route::post('/', [CourseController::class, 'store']); // Teacher/Admin create (now supports modules)
-    Route::post('/upload-lesson-video', [CourseController::class, 'uploadLessonVideo']); // Upload lesson video with HLS processing
+    Route::post('/', [CourseController::class, 'store']); // Teacher/Admin create course (supports modules)
+    Route::post('/videos/{lessonId}/upload-complete', [CourseController::class, 'notifyVideoUploadComplete']); // Notify video upload completion
     Route::get('/lesson/{lessonId}/hls-status', [CourseController::class, 'checkHlsProcessingStatus']); // Check HLS processing status
     Route::get('/{id}/modules', [CourseController::class, 'getModulesWithLessons']);
     Route::get('/{id}/students', [CourseController::class, 'getEnrolledStudents']); // Teacher only
+    Route::get('/{id}/enrollment/check', [LessonController::class, 'checkEnrollment']); // Check enrollment
     Route::put('/{id}', [CourseController::class, 'update']); // Teacher/Admin update
     Route::delete('/{id}', [CourseController::class, 'destroy']); // Teacher/Admin delete
     Route::post('/{id}/enroll', [CourseController::class, 'enroll']); // Student enroll
@@ -88,10 +84,22 @@ Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
 });
 
 /* ========================
+ * LESSONS
+ * ======================== */
+Route::middleware('auth:sanctum')->prefix('lessons')->group(function () {
+    Route::get('/{lessonId}', [LessonController::class, 'show']); // Get lesson details
+});
+
+Route::middleware('auth:sanctum')->prefix('modules')->group(function () {
+    Route::get('/{moduleId}/lessons', [LessonController::class, 'getByModule']); // Get lessons by module
+});
+
+/* ========================
  * LEARNING PROGRESS
  * ======================== */
 Route::middleware('auth:sanctum')->prefix('learning')->group(function () {
     Route::get('/course/{courseId}', [LearningController::class, 'getCourseProgress']);
+    Route::get('/lesson/{lessonId}/progress', [LessonController::class, 'getProgress']); // Get lesson progress
     Route::post('/lesson/{lessonId}/complete', [LearningController::class, 'markLessonCompleted']);
     Route::post('/lesson/{lessonId}/time', [LearningController::class, 'updateTimeSpent']);
     Route::post('/course/{courseId}/complete', [LearningController::class, 'completeCourse']);

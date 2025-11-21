@@ -750,7 +750,7 @@ const config = useRuntimeConfig()
 
 const LEVELS = ['BEGINNER' , 'INTERMEDIATE' , 'ADVANCED' , 'EXPERT'] as const
 
-const { createCourse, uploadCourseThumbnail, updateCourseThumbnail, getTags, uploadLessonVideo } = useCourses()
+const { createCourse, uploadCourseThumbnail, updateCourseThumbnail, getTags, uploadLessonVideo, notifyVideoUploadComplete, checkHlsProcessingStatus } = useCourses()
 const router = useRouter()
 
 // Multi-step form state
@@ -1133,6 +1133,9 @@ const handleSubmit = async () => {
         successMessage.value = 'Course created! Uploading videos...'
         
         const videoUploads = Object.entries(result.video_upload_urls)
+        let uploadedCount = 0
+        let failedCount = 0
+        
         for (const [key, uploadInfo] of videoUploads) {
           // Parse the key to get module and lesson indices
           const keyParts = key.split('_')
@@ -1146,16 +1149,40 @@ const handleSubmit = async () => {
             const lesson = modules.value[moduleIndex]?.lessons[lessonIndex]
             if (lesson?.video_file) {
               try {
-                await uploadLessonVideo(uploadInfo.lesson_id, uploadInfo.upload_url, lesson.video_file)
+                successMessage.value = `Uploading video ${uploadedCount + 1} of ${videoUploads.length}...`
+                const uploadSuccess = await uploadLessonVideo(
+                  uploadInfo.lesson_id, 
+                  uploadInfo.upload_url, 
+                  lesson.video_file,
+                  uploadInfo.original_video_path,
+                  uploadInfo.hls_base_path
+                )
+                
+                if (uploadSuccess) {
+                  uploadedCount++
+                  successMessage.value = `Video ${uploadedCount} of ${videoUploads.length} uploaded and processing started!`
+                } else {
+                  failedCount++
+                  console.warn(`Failed to upload video for lesson ${lesson.title}`)
+                }
               } catch (error) {
+                failedCount++
                 console.warn(`Failed to upload video for lesson ${lesson.title}:`, error)
               }
             }
           }
         }
+        
+        if (failedCount === 0) {
+          successMessage.value = `Course created successfully! All ${uploadedCount} videos uploaded and are being processed. Redirecting...`
+        } else {
+          successMessage.value = `Course created! ${uploadedCount} videos uploaded, ${failedCount} failed. Check console for details. Redirecting...`
+        }
+      } else {
+        successMessage.value = 'Course created successfully! Redirecting...'
       }
 
-      successMessage.value = 'Course created successfully with all content! Redirecting...'
+      successMessage.value = successMessage.value + ' Videos will be processed in background and converted to streaming format.'
       
       // Reset form
       form.value = {

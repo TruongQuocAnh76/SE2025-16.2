@@ -17,7 +17,7 @@ class ProgressService {
         $modules = Module::where('course_id', $courseId)->with(['lessons' => function ($query) use ($studentId) {
             $query->leftJoin('progress', function ($join) use ($studentId) {
                 $join->on('lessons.id', '=', 'progress.lesson_id')->where('progress.student_id', '=', $studentId);
-            })->select('lessons.id', 'lessons.title', 'lessons.order_index', 'lessons.content_type', 'lessons.duration', DB::raw('IFNULL(progress.is_completed, 0) as is_completed'), DB::raw('IFNULL(progress.time_spent, 0) as time_spent'))->orderBy('lessons.order_index');
+            })->select('lessons.id', 'lessons.title', 'lessons.order_index', 'lessons.content_type', 'lessons.duration', DB::raw('COALESCE(progress.is_completed, false) as is_completed'), DB::raw('COALESCE(progress.time_spent, 0) as time_spent'))->orderBy('lessons.order_index');
         }])->orderBy('order_index')->get();
         $totalLessons = Lesson::whereIn('module_id', $modules->pluck('id'))->count();
         $completedLessons = $this->progressRepository->getByStudentId($studentId)->whereIn('lesson_id', Lesson::whereIn('module_id', $modules->pluck('id'))->pluck('id'))->where('is_completed', true)->count();

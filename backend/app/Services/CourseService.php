@@ -223,81 +223,6 @@ class CourseService {
         return $this->enrollmentRepository->getByCourseId($courseId);
     }
 
-    public function uploadLessonVideo($videoPath, $videoFile) {
-        try {
-            // Validate the file
-            if (!$videoFile || !in_array($videoFile->getClientOriginalExtension(), ['mp4', 'mov', 'avi', 'mkv'])) {
-                throw new \Exception('Only video files (MP4, MOV, AVI, MKV) are allowed');
-            }
-
-            // Store the original video temporarily in local storage for processing
-            $tempVideoPath = 'temp/videos/' . uniqid() . '.' . $videoFile->getClientOriginalExtension();
-            Storage::disk('local')->put($tempVideoPath, file_get_contents($videoFile));
-            
-            // Upload original video to S3
-            $uploaded = Storage::disk('s3')->put($videoPath, file_get_contents($videoFile));
-            
-            if (!$uploaded) {
-                throw new \Exception('Failed to upload original video file');
-            }
-
-            return [
-                'success' => true,
-                'original_uploaded' => true,
-                'temp_path' => $tempVideoPath,
-                'message' => 'Original video uploaded successfully. HLS processing will begin shortly.'
-            ];
-
-        } catch (\Exception $e) {
-            throw $e;
-        }
-    }
-
-    /**
-     * Process uploaded video into HLS format
-     *
-     * @param string $tempVideoPath Path to temporary video file in local storage
-     * @param string $hlsBasePath Base path for HLS output in S3
-     * @param string $lessonId Lesson ID for updating the content URL
-     * @return array Processing result
-     */
-    public function processVideoToHls($tempVideoPath, $hlsBasePath, $lessonId) {
-        try {
-            // Get the full local path
-            $localVideoPath = Storage::disk('local')->path($tempVideoPath);
-            
-            // Process video to HLS
-            $result = $this->hlsVideoService->processVideoToHls($localVideoPath, $hlsBasePath);
-            
-            if ($result['success']) {
-                // Update lesson with HLS master playlist URL
-                $this->updateLessonVideo($lessonId, $result['master_playlist']);
-                
-                // Clean up temporary file
-                Storage::disk('local')->delete($tempVideoPath);
-                
-                return [
-                    'success' => true,
-                    'master_playlist' => $result['master_playlist'],
-                    'qualities_generated' => $result['qualities_generated'],
-                    'message' => 'Video processed successfully into HLS format'
-                ];
-            } else {
-                // Clean up temporary file even on failure
-                Storage::disk('local')->delete($tempVideoPath);
-                
-                throw new \Exception('HLS processing failed: ' . $result['error']);
-            }
-
-        } catch (\Exception $e) {
-            // Clean up temporary file on error
-            if (Storage::disk('local')->exists($tempVideoPath)) {
-                Storage::disk('local')->delete($tempVideoPath);
-            }
-            throw $e;
-        }
-    }
-
     public function updateLessonVideo($lessonId, $videoUrl) {
         return $this->lessonRepository->update($lessonId, ['content_url' => $videoUrl]);
     }
@@ -305,13 +230,70 @@ class CourseService {
     /**
      * Dispatch HLS processing job for a lesson video
      *
-     * @param string $tempVideoPath Temporary video file path
+     * @param string|null $tempVideoPath Temporary video file path (null if already in S3)
      * @param string $hlsBasePath HLS output base path
      * @param string $lessonId Lesson ID
-     * @param string|null $originalVideoPath Optional original video path in S3
+     * @param string|null $originalVideoPath Original video path in S3
      * @return void
      */
     public function dispatchHlsProcessing($tempVideoPath, $hlsBasePath, $lessonId, $originalVideoPath = null) {
         \App\Jobs\ProcessVideoToHlsJob::dispatch($tempVideoPath, $hlsBasePath, $lessonId, $originalVideoPath);
+    }
+
+    /**
+     * Handle video upload completion notification
+     * This method is called when the frontend has successfully uploaded a video to S3
+     *
+     * @param string $lessonId Lesson ID
+     * @param string $originalVideoPath Path to original video in S3
+     * @param string $hlsBasePath Base path for HLS output
+     * @param array $metadata Optional metadata (size, duration, etc.)
+     * @return array Processing result
+     */
+    public function handleVideoUploadComplete($lessonId, $originalVideoPath, $hlsBasePath, $metadata = []) {
+        try {
+            // Verify the lesson exists
+            $lesson = $this->lessonRepository->getById($lessonId);
+            if (!$lesson) {
+                throw new \Exception('Lesson not found');
+            }
+
+            // Verify the video file exists in S3
+            if (!Storage::disk('s3')->exists($originalVideoPath)) {
+                throw new \Exception('Original video file not found in S3');
+            }
+
+            // Update lesson metadata if provided
+            if (!empty($metadata)) {
+                $updateData = [];
+                if (isset($metadata['video_duration'])) {
+                    $updateData['duration'] = $metadata['video_duration'];
+                }
+                
+                if (!empty($updateData)) {
+                    $this->lessonRepository->update($lessonId, $updateData);
+                }
+            }
+
+            // Dispatch HLS processing job
+            $this->dispatchHlsProcessing(null, $hlsBasePath, $lessonId, $originalVideoPath);
+
+            // Generate expected HLS URL
+            $awsBucket = env('AWS_BUCKET');
+            $frontendAwsEndpoint = AwsUrlHelper::getFrontendAwsEndpoint();
+            $expectedHlsUrl = $frontendAwsEndpoint . '/' . $awsBucket . '/' . $hlsBasePath . '/master.m3u8';
+
+            return [
+                'success' => true,
+                'lesson_id' => $lessonId,
+                'original_video_path' => $originalVideoPath,
+                'expected_hls_url' => $expectedHlsUrl,
+                'processing_status' => 'started',
+                'message' => 'HLS processing job dispatched successfully'
+            ];
+
+        } catch (\Exception $e) {
+            throw $e;
+        }
     }
 }

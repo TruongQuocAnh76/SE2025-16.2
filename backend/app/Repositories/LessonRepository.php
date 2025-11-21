@@ -18,11 +18,14 @@ class LessonRepository
         return $this->model->create($data);
     }
 
-    public function getByModuleId($moduleId)
+    public function getById($id)
     {
-        return $this->model->where('module_id', $moduleId)
-            ->orderBy('order_index')
-            ->get();
+        return $this->model->find($id);
+    }
+
+    public function getByIdOrFail($id)
+    {
+        return $this->model->findOrFail($id);
     }
 
     public function update($id, array $data)

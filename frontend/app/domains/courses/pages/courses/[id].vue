@@ -152,16 +152,41 @@
                     <li 
                       v-for="lesson in module.lessons" 
                       :key="lesson.id" 
-                      class="border-b p-3 flex justify-between items-center"
+                      class="border-b p-3 flex justify-between items-center hover:bg-gray-50 transition-colors"
                     >
-                      <span>{{ lesson.order_index }}. {{ lesson.title }}</span>
-                      <span class="text-sm text-gray-500">{{ lesson.duration || 'N/A' }} minutes</span>
+                      <NuxtLink 
+                        :to="`/courses/${course.id}/lessons/${lesson.id}`"
+                        class="flex-1 text-brand-primary hover:text-brand-secondary font-medium"
+                      >
+                        {{ lesson.order_index }}. {{ lesson.title }}
+                      </NuxtLink>
+                      <span class="text-sm text-gray-500 ml-4">{{ lesson.duration || 'N/A' }} minutes</span>
                     </li>
                   </ul>
                   <p v-else class="pl-4 text-gray-500">No lessons in this module yet.</p>
                 </div>
               </div>
               <p v-else>No modules available yet.</p>
+              
+              <!-- Quizzes Section -->
+              <div v-if="course.quizzes && course.quizzes.length > 0" class="mt-8">
+                <h3 class="text-xl font-semibold mb-4 p-3 bg-gray-100 rounded">Course Quizzes</h3>
+                <ul class="space-y-2">
+                  <li 
+                    v-for="quiz in course.quizzes" 
+                    :key="quiz.id" 
+                    class="border-b p-3 flex justify-between items-center hover:bg-gray-50 transition-colors"
+                  >
+                    <NuxtLink 
+                      :to="`/courses/${course.id}/quizzes/${quiz.id}`"
+                      class="flex-1 text-brand-primary hover:text-brand-secondary font-medium"
+                    >
+                      {{ quiz.title }}
+                    </NuxtLink>
+                    <span class="text-sm text-gray-500 ml-4">{{ quiz.duration || 'N/A' }} minutes</span>
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
@@ -174,11 +199,23 @@
                 <span class="text-4xl font-bold text-teal-600">${{ course.price }}</span>
                 <span v-if="course.originalPrice" class="text-2xl text-gray-400 line-through">${{ course.originalPrice }}</span>
               </div>
+              
+              <p v-if="enrollError" class="text-red-500 text-sm mb-3">{{ enrollError }}</p>
+              <p v-if="enrollSuccess" class="text-green-500 text-sm mb-3">{{ enrollSuccess }}</p>
+              
               <button 
                 @click="handleEnroll"
-                class="w-full bg-brand-primary text-white py-3 rounded-lg font-semibold text-lg hover:bg-brand-secondary transition"
+                :disabled="enrollLoading"
+                class="w-full bg-brand-primary text-white py-3 rounded-lg font-semibold text-lg hover:bg-brand-secondary transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Enroll Now
+                <span v-if="enrollLoading" class="flex items-center justify-center">
+                  <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Enrolling...
+                </span>
+                <span v-else>Enroll Now</span>
               </button>
             </div>
             
@@ -204,6 +241,7 @@
       </main>
     </div>
   </div>
+  <NuxtPage />
 </template>
 
 <script setup lang="ts">
@@ -211,7 +249,7 @@
 import type { Course, Review } from '../../types/course'
 import { ref, onMounted, computed } from 'vue'
 
-const { getCourseById, addReview } = useCourses()
+const { getCourseById, addReview, enrollInCourse } = useCourses()
 const route = useRoute()
 const router = useRouter()
 
@@ -224,6 +262,9 @@ const activeTab = ref('description') // Default to 'description' to match tabs
 const newRating = ref(0)
 const newComment = ref('')
 const reviewError = ref('')
+const enrollLoading = ref(false)
+const enrollError = ref('')
+const enrollSuccess = ref('')
 
 const tabs = [
   { id: 'description', name: 'Description' },
@@ -318,6 +359,32 @@ const handleSubmitReview = async () => {
 
   } catch (err: any) {
     reviewError.value = err.data?.message || 'Unable to submit review.'
+  }
+}
+
+const handleEnroll = async () => {
+  if (!course.value) {
+    enrollError.value = 'Course not found.'
+    return
+  }
+
+  enrollLoading.value = true
+  enrollError.value = ''
+  enrollSuccess.value = ''
+
+  try {
+    const response = await enrollInCourse(courseId)
+    
+    if (response.success) {
+      enrollSuccess.value = response.message || 'Successfully enrolled in the course!'
+      // Optionally refresh the page or update UI to show enrolled status
+    } else {
+      enrollError.value = response.message || 'Failed to enroll in the course.'
+    }
+  } catch (err: any) {
+    enrollError.value = err.data?.message || 'Failed to enroll in the course. Please try again.'
+  } finally {
+    enrollLoading.value = false
   }
 }
 

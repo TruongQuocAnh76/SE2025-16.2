@@ -42,12 +42,15 @@ export interface Module {
 export interface Lesson {
   id: string
   title: string
+  description?: string
+  text_content?: string
   content_type: string
   content_url?: string
   duration?: number
   order_index: number
   is_free: boolean
   module_id: string
+  completed?: boolean
   created_at?: string
   updated_at?: string
   module?: Module
@@ -96,12 +99,43 @@ export interface Quiz {
   title: string
   description?: string
   duration?: number
+  time_limit?: number
+  quiz_type: string
   passing_score: number
   max_attempts: number
+  total_questions?: number
+  total_points?: number
   is_active: boolean
   created_at?: string
   updated_at?: string
   course?: Course
+}
+
+export interface QuizAttempt {
+  id: string
+  quiz_id: string
+  student_id: string
+  started_at: string
+  submitted_at?: string
+  score?: number
+  passed?: boolean
+  time_spent?: number
+  answers?: QuizAnswer[]
+}
+
+export interface QuizAnswer {
+  id: string
+  question_id: string
+  answer_text: string
+  is_correct?: boolean
+  points_earned?: number
+}
+
+export interface QuizStats {
+  total_attempts: number
+  best_score: number
+  average_score: number
+  last_attempt?: QuizAttempt
 }
 
 export interface Progress {

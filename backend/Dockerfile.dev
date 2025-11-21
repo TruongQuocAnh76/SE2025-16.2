@@ -13,6 +13,12 @@ RUN apk add --no-cache \
     ffmpeg \
     ffmpeg-dev
 
+# Install Redis extension
+RUN apk add --no-cache autoconf g++ make \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del autoconf g++ make
+
 # Install PHP extensions
 RUN docker-php-ext-install pdo pdo_pgsql zip bcmath pcntl
 
