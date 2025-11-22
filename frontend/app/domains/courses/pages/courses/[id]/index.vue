@@ -241,12 +241,12 @@
       </main>
     </div>
   </div>
-  <NuxtPage />
+  <!-- <NuxtPage /> -->
 </template>
 
 <script setup lang="ts">
 
-import type { Course, Review } from '../../types/course'
+import type { Course, Review } from '../../../types/course'
 import { ref, onMounted, computed } from 'vue'
 
 const { getCourseById, addReview, enrollInCourse } = useCourses()
