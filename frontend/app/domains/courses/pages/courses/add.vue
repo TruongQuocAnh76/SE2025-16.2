@@ -1113,6 +1113,11 @@ const handleSubmit = async () => {
     if (courseData.price === undefined) delete courseData.price
     if (courseData.duration === undefined) delete courseData.duration
 
+    // Only request thumbnail upload if a file is selected
+    if (selectedThumbnailFile.value) {
+      courseData.thumbnail = 'UPLOAD_REQUESTED'
+    }
+
     const result = await createCourse(courseData)
 
     if (result) {
@@ -1154,8 +1159,8 @@ const handleSubmit = async () => {
                   uploadInfo.lesson_id, 
                   uploadInfo.upload_url, 
                   lesson.video_file,
-                  uploadInfo.original_video_path,
-                  uploadInfo.hls_base_path
+                  uploadInfo.video_path,
+                  uploadInfo.video_path.replace('.mp4', '')
                 )
                 
                 if (uploadSuccess) {

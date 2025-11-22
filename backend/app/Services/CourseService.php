@@ -66,9 +66,13 @@ class CourseService {
             $data['slug'] = Str::slug($data['title']) . '-' . Str::random(5);
             $data['status'] = 'DRAFT';
 
-            // Generate thumbnail URL if not provided
+            // Handle thumbnail - only generate upload URL if thumbnail is requested
             $thumbnailUploadUrl = null;
             if (empty($data['thumbnail'])) {
+                // Use default placeholder thumbnail instead of generating upload URL
+                $data['thumbnail'] = '/placeholder-course.jpg';
+            } else if ($data['thumbnail'] === 'UPLOAD_REQUESTED') {
+                // Frontend specifically requested thumbnail upload
                 $thumbnailPath = 'courses/thumbnails/' . $data['id'] . '.jpg';
                 $awsBucket = env('AWS_BUCKET');
                 

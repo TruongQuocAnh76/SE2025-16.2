@@ -126,6 +126,7 @@ services:
     environment:
       - SERVICES=s3,sqs,dynamodb,ses
       - DEBUG=1
+      - PERSISTENCE=1
       - DATA_DIR=/var/lib/localstack/data
       - DOCKER_HOST=unix:///var/run/docker.sock
       - S3_SKIP_SIGNATURE_VALIDATION=1

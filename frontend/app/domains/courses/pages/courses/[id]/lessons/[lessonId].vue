@@ -282,9 +282,6 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({
-  layout: false
-})
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import Hls from 'hls.js'
 import type { Lesson, Module, Course } from '../../../../types/course'
@@ -662,7 +659,7 @@ const checkVideoProcessingStatus = async () => {
   if (!lesson.value?.id) return
   
   try {
-    const response = await $fetch<any>(`/api/courses/videos/${lesson.value.id}/status`, {
+    const response = await $fetch<any>(`/api/courses/lesson/${lesson.value.id}/hls-status`, {
       baseURL: useRuntimeConfig().public.backendUrl as string,
       headers: {
         'Accept': 'application/json',
