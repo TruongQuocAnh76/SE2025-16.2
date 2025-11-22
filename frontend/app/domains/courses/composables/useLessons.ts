@@ -3,7 +3,7 @@ import type { Lesson, Module, Progress } from '../types/course'
 
 export const useLessons = () => {
   const config = useRuntimeConfig()
-  const { $fetch } = useNuxtApp()
+  // Remove $fetch from useNuxtApp since it should be auto-imported
 
   // Reactive state
   const lessons = ref<Lesson[]>([])
@@ -71,7 +71,7 @@ export const useLessons = () => {
   }
 
   // Get course modules with lessons for navigation
-  const getCourseModulesWithLessons = async (courseId: string): Promise<Module[]> => {
+  const getCourseModulesWithLessons = async (courseId: string): Promise<any> => {
     try {
       const response = await $fetch<any>(`/api/courses/${courseId}/modules`, {
         baseURL: config.public.backendUrl as string,
@@ -81,10 +81,10 @@ export const useLessons = () => {
         }
       })
 
-      return response.modules || []
+      return response
     } catch (err: any) {
       console.error('Error fetching course modules:', err)
-      return []
+      return { modules: [] }
     }
   }
 
@@ -178,17 +178,18 @@ export const useLessons = () => {
   // Get next and previous lessons in course
   const getAdjacentLessons = async (courseId: string, currentLessonId: string): Promise<{ prev: Lesson | null, next: Lesson | null }> => {
     try {
-      const modules = await getCourseModulesWithLessons(courseId)
+      const courseData = await getCourseModulesWithLessons(courseId)
+      const modules = courseData.modules || []
       
       // Flatten all lessons from all modules
       const allLessons: Lesson[] = []
-      modules.forEach(module => {
+      modules.forEach((module: any) => {
         if (module.lessons) {
-          allLessons.push(...module.lessons.sort((a, b) => a.order_index - b.order_index))
+          allLessons.push(...module.lessons.sort((a: any, b: any) => a.order_index - b.order_index))
         }
       })
 
-      const currentIndex = allLessons.findIndex(lesson => lesson.id === currentLessonId)
+      const currentIndex = allLessons.findIndex((lesson: any) => lesson.id === currentLessonId)
       
       return {
         prev: currentIndex > 0 ? allLessons[currentIndex - 1] || null : null,
@@ -222,6 +223,24 @@ export const useLessons = () => {
     } catch (err: any) {
       console.error('Error checking lesson access:', err)
       return false
+    }
+  }
+
+  // Check video processing status for HLS streaming
+  const checkVideoProcessingStatus = async (lessonId: string): Promise<{ status: string; hls_url?: string } | null> => {
+    try {
+      const response = await $fetch<any>(`/api/courses/lesson/${lessonId}/hls-status`, {
+        baseURL: config.public.backendUrl as string,
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${useCookie('auth_token').value}`
+        }
+      })
+
+      return response
+    } catch (err: any) {
+      console.error('Error checking video processing status:', err)
+      return null
     }
   }
 
@@ -277,6 +296,7 @@ export const useLessons = () => {
     getCourseProgress,
     getAdjacentLessons,
     canAccessLesson,
+    checkVideoProcessingStatus,
     
     // Utilities
     formatDuration,

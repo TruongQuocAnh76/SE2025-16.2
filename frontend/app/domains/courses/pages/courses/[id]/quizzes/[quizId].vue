@@ -131,7 +131,7 @@
           
           <button
             @click="startQuiz"
-            :disabled="startingQuiz || (quiz.max_attempts && previousAttempts && previousAttempts.length >= quiz.max_attempts)"
+            :disabled="startingQuiz || Boolean(quiz.max_attempts && previousAttempts && previousAttempts.length >= (quiz.max_attempts || 0))"
             class="px-8 py-4 bg-brand-primary text-white rounded-lg hover:bg-brand-secondary transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ startingQuiz ? 'Starting Quiz...' : 'Start Quiz' }}
@@ -180,7 +180,7 @@
         <div v-if="questions" class="space-y-8">
           <div
             v-for="(question, index) in questions"
-            :key="question.id"
+            :key="question.id || index"
             class="bg-white rounded-lg shadow-sm p-8"
           >
             <div class="flex items-start justify-between mb-6">
@@ -189,7 +189,7 @@
                 <span class="text-body text-text-muted ml-2">({{ question.points }} points)</span>
               </h3>
               <span 
-                v-if="answers[question.id]"
+                v-if="question.id && answers[question.id]"
                 class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-caption"
               >
                 Answered
@@ -199,54 +199,54 @@
             <div class="text-body text-text-dark mb-6" v-html="question.question_text"></div>
             
             <!-- Multiple Choice Questions -->
-            <div v-if="question.question_type === 'MULTIPLE_CHOICE'" class="space-y-3">
+            <div v-if="question.question_type === 'MULTIPLE_CHOICE' && question.id" class="space-y-3">
               <label
                 v-for="(option, optionIndex) in question.options"
                 :key="optionIndex"
                 class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition"
-                :class="{ 'border-brand-primary bg-brand-primary/5': answers[question.id] === option }"
+                :class="{ 'border-brand-primary bg-brand-primary/5': answers[question.id] === getOptionValue(option) }"
               >
                 <input
                   type="radio"
                   :name="`question_${question.id}`"
-                  :value="option"
+                  :value="getOptionValue(option)"
                   v-model="answers[question.id]"
                   class="sr-only"
                 />
                 <div class="w-5 h-5 border-2 border-gray-300 rounded-full mr-4 flex items-center justify-center"
-                     :class="{ 'border-brand-primary': answers[question.id] === option }">
-                  <div v-if="answers[question.id] === option" class="w-3 h-3 bg-brand-primary rounded-full"></div>
+                     :class="{ 'border-brand-primary': answers[question.id] === getOptionValue(option) }">
+                  <div v-if="answers[question.id] === getOptionValue(option)" class="w-3 h-3 bg-brand-primary rounded-full"></div>
                 </div>
-                <span>{{ option }}</span>
+                <span>{{ getOptionText(option) }}</span>
               </label>
             </div>
             
             <!-- Checkbox Questions -->
-            <div v-else-if="question.question_type === 'CHECKBOX'" class="space-y-3">
+            <div v-else-if="question.question_type === 'CHECKBOX' && question.id" class="space-y-3">
               <label
                 v-for="(option, optionIndex) in question.options"
                 :key="optionIndex"
                 class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition"
-                :class="{ 'border-brand-primary bg-brand-primary/5': (answers[question.id] || []).includes(option) }"
+                :class="{ 'border-brand-primary bg-brand-primary/5': (answers[question.id] || []).includes(getOptionValue(option)) }"
               >
                 <input
                   type="checkbox"
-                  :value="option"
+                  :value="getOptionValue(option)"
                   v-model="answers[question.id]"
                   class="sr-only"
                 />
                 <div class="w-5 h-5 border-2 border-gray-300 rounded mr-4 flex items-center justify-center"
-                     :class="{ 'border-brand-primary bg-brand-primary': (answers[question.id] || []).includes(option) }">
-                  <svg v-if="(answers[question.id] || []).includes(option)" class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                     :class="{ 'border-brand-primary bg-brand-primary': (answers[question.id] || []).includes(getOptionValue(option)) }">
+                  <svg v-if="(answers[question.id] || []).includes(getOptionValue(option))" class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                   </svg>
                 </div>
-                <span>{{ option }}</span>
+                <span>{{ getOptionText(option) }}</span>
               </label>
             </div>
             
             <!-- Short Answer Questions -->
-            <div v-else-if="question.question_type === 'SHORT_ANSWER'">
+            <div v-else-if="question.question_type === 'SHORT_ANSWER' && question.id">
               <textarea
                 v-model="answers[question.id]"
                 rows="4"
@@ -394,6 +394,31 @@ const formatTime = (seconds: number): string => {
   }
 }
 
+// Helper methods to handle options that might be JSON objects or plain strings
+const getOptionText = (option: any): string => {
+  if (typeof option === 'string') {
+    try {
+      const parsed = JSON.parse(option)
+      return parsed.text || parsed.value || option
+    } catch {
+      return option
+    }
+  }
+  return option?.text || option?.value || String(option)
+}
+
+const getOptionValue = (option: any): string => {
+  if (typeof option === 'string') {
+    try {
+      const parsed = JSON.parse(option)
+      return parsed.value || parsed.text || option
+    } catch {
+      return option
+    }
+  }
+  return option?.value || option?.text || String(option)
+}
+
 const fetchQuizData = async () => {
   try {
     loading.value = true
@@ -503,15 +528,25 @@ const submitQuiz = async () => {
   try {
     submittingQuiz.value = true
     
-    // Format answers for submission
-    const formattedAnswers = questions.value.map(question => {
+    // Format answers for submission - backend expects answers[question.id] = answer
+    const formattedAnswers: Record<string, string> = {}
+    
+    questions.value.forEach((question: Question) => {
+      // Ensure question has an id before proceeding
+      if (!question.id) return
+      
       const answer = answers.value[question.id]
       
       if (question.question_type === 'CHECKBOX' && Array.isArray(answer)) {
-        return answer.join(',')
+        // For checkbox questions, join selected values with comma
+        formattedAnswers[question.id] = answer.join(',')
+      } else if (answer !== undefined && answer !== null) {
+        // For other question types, use the answer as string
+        formattedAnswers[question.id] = String(answer)
+      } else {
+        // If no answer provided, send empty string
+        formattedAnswers[question.id] = ''
       }
-      
-      return answer || ''
     })
     
     const response = await $fetch<any>(`/api/quizzes/attempt/${currentAttempt.value.id}/submit`, {

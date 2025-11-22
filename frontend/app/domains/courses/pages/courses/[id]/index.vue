@@ -142,50 +142,153 @@
                 <p v-else class="text-gray-500">No reviews yet for this course.</p>
               </div>
             <div v-if="activeTab === 'curriculum'">
-              <h2 class="text-2xl font-bold mb-4">Curriculum</h2>
-              <div v-if="course.modules && course.modules.length > 0" class="space-y-6">
-                <div v-for="module in course.modules" :key="module.id">
-                  <h3 class="text-xl font-semibold mb-3 p-3 bg-gray-100 rounded">
-                    {{ module.title }} (Module {{ module.order_index }})
-                  </h3>
-                  <ul v-if="module.lessons && module.lessons.length > 0" class="space-y-2 pl-4">
-                    <li 
-                      v-for="lesson in module.lessons" 
-                      :key="lesson.id" 
-                      class="border-b p-3 flex justify-between items-center hover:bg-gray-50 transition-colors"
-                    >
-                      <NuxtLink 
-                        :to="`/courses/${course.id}/lessons/${lesson.id}`"
-                        class="flex-1 text-brand-primary hover:text-brand-secondary font-medium"
-                      >
-                        {{ lesson.order_index }}. {{ lesson.title }}
-                      </NuxtLink>
-                      <span class="text-sm text-gray-500 ml-4">{{ lesson.duration || 'N/A' }} minutes</span>
-                    </li>
-                  </ul>
-                  <p v-else class="pl-4 text-gray-500">No lessons in this module yet.</p>
+              <h2 class="text-2xl font-bold mb-6">Curriculum</h2>
+              
+              <!-- Course Content Summary -->
+              <div class="bg-gradient-to-r from-blue-50 to-green-50 border border-gray-200 rounded-lg p-6 mb-6">
+                <h3 class="text-lg font-semibold mb-3 text-gray-800">Course Content Overview</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                  <div class="bg-white rounded-lg p-3 shadow-sm">
+                    <div class="text-2xl font-bold text-green-600">{{ course.modules?.length || 0 }}</div>
+                    <div class="text-sm text-gray-600">Modules</div>
+                  </div>
+                  <div class="bg-white rounded-lg p-3 shadow-sm">
+                    <div class="text-2xl font-bold text-teal-600">{{ totalLessonCount }}</div>
+                    <div class="text-sm text-gray-600">Lessons</div>
+                  </div>
+                  <div class="bg-white rounded-lg p-3 shadow-sm">
+                    <div class="text-2xl font-bold text-blue-600">{{ course.quizzes?.length || 0 }}</div>
+                    <div class="text-sm text-gray-600">Quizzes</div>
+                  </div>
+                  <div class="bg-white rounded-lg p-3 shadow-sm">
+                    <div class="text-2xl font-bold text-purple-600">{{ course.duration || 'N/A' }}</div>
+                    <div class="text-sm text-gray-600">Hours</div>
+                  </div>
                 </div>
               </div>
-              <p v-else>No modules available yet.</p>
+              <div v-if="course.modules && course.modules.length > 0" class="space-y-6">
+                <div v-for="module in course.modules" :key="module.id">
+                  <h3 class="text-xl font-semibold mb-3 p-3 bg-green-50 rounded flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h4a2 2 0 012 2v2M7 7V5a2 2 0 012-2h6a2 2 0 012 2v2"></path>
+                    </svg>
+                    {{ module.title }} (Module {{ module.order_index }})
+                  </h3>
+                  <div v-if="module.lessons && module.lessons.length > 0" class="space-y-2">
+                    <div 
+                      v-for="lesson in module.lessons" 
+                      :key="lesson.id" 
+                      class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                    >
+                      <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                          <NuxtLink 
+                            :to="`/courses/${course.id}/lessons/${lesson.id}`"
+                            class="text-lg font-medium text-brand-primary hover:text-brand-secondary block mb-1"
+                          >
+                            {{ lesson.order_index }}. {{ lesson.title }}
+                          </NuxtLink>
+                          <p v-if="lesson.description" class="text-gray-600 text-sm mb-2">
+                            {{ lesson.description }}
+                          </p>
+                          <div class="flex items-center gap-2 text-sm text-gray-500">
+                            <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                              Lesson
+                            </span>
+                            <span v-if="lesson.duration" class="flex items-center gap-1">
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                              </svg>
+                              {{ lesson.duration }} minutes
+                            </span>
+                            <span v-if="lesson.content_type" class="flex items-center gap-1">
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h4a1 1 0 011 1v2h4a1 1 0 011 1v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5a1 1 0 011-1h4z"></path>
+                              </svg>
+                              {{ lesson.content_type.charAt(0).toUpperCase() + lesson.content_type.slice(1) }}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-else class="p-4 bg-gray-50 rounded-lg text-center">
+                    <svg class="mx-auto h-8 w-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                    </svg>
+                    <p class="text-gray-500">No lessons in this module yet.</p>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="p-6 bg-gray-50 rounded-lg text-center">
+                <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h4a2 2 0 012 2v2M7 7V5a2 2 0 012-2h6a2 2 0 012 2v2"></path>
+                </svg>
+                <p class="text-gray-500">No modules available yet.</p>
+              </div>
               
               <!-- Quizzes Section -->
               <div v-if="course.quizzes && course.quizzes.length > 0" class="mt-8">
-                <h3 class="text-xl font-semibold mb-4 p-3 bg-gray-100 rounded">Course Quizzes</h3>
-                <ul class="space-y-2">
-                  <li 
+                <h3 class="text-xl font-semibold mb-4 p-3 bg-blue-50 rounded flex items-center gap-2">
+                  <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                  </svg>
+                  Course Quizzes ({{ course.quizzes.length }})
+                </h3>
+                <div class="space-y-3">
+                  <div 
                     v-for="quiz in course.quizzes" 
                     :key="quiz.id" 
-                    class="border-b p-3 flex justify-between items-center hover:bg-gray-50 transition-colors"
+                    class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                   >
-                    <NuxtLink 
-                      :to="`/courses/${course.id}/quizzes/${quiz.id}`"
-                      class="flex-1 text-brand-primary hover:text-brand-secondary font-medium"
-                    >
-                      {{ quiz.title }}
-                    </NuxtLink>
-                    <span class="text-sm text-gray-500 ml-4">{{ quiz.duration || 'N/A' }} minutes</span>
-                  </li>
-                </ul>
+                    <div class="flex justify-between items-start mb-2">
+                      <NuxtLink 
+                        :to="`/courses/${course.id}/quizzes/${quiz.id}`"
+                        class="flex-1 text-lg font-medium text-brand-primary hover:text-brand-secondary"
+                      >
+                        {{ quiz.title }}
+                      </NuxtLink>
+                      <span class="ml-4 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                        Quiz
+                      </span>
+                    </div>
+                    <p v-if="quiz.description" class="text-gray-600 text-sm mb-3">
+                      {{ quiz.description }}
+                    </p>
+                    <div class="flex flex-wrap gap-4 text-sm text-gray-500">
+                      <span v-if="quiz.duration" class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        {{ quiz.duration }} minutes
+                      </span>
+                      <span v-if="quiz.total_questions" class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        {{ quiz.total_questions }} questions
+                      </span>
+                      <span v-if="quiz.passing_score" class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Pass: {{ quiz.passing_score }}%
+                      </span>
+                      <span v-if="quiz.max_attempts" class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        {{ quiz.max_attempts }} attempts
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-else-if="course.modules && course.modules.length > 0" class="mt-8 p-6 bg-gray-50 rounded-lg text-center">
+                <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                </svg>
+                <p class="text-gray-500">No quizzes available for this course yet.</p>
               </div>
             </div>
           </div>
@@ -222,16 +325,40 @@
             <div class="bg-white rounded-lg shadow-lg p-6">
               <h4 class="text-xl font-bold mb-4">This course includes</h4>
               <ul class="space-y-3 text-gray-700">
-                <li class="flex items-center gap-2">
-                  <span>{{ course.modules?.length || 'Multiple' }} modules</span>
+                <li class="flex items-center gap-3">
+                  <svg class="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h4a2 2 0 012 2v2M7 7V5a2 2 0 012-2h6a2 2 0 012 2v2"></path>
+                  </svg>
+                  <span>{{ course.modules?.length || 0 }} modules</span>
                 </li>
-                <li class="flex items-center gap-2">
+                <li v-if="totalLessonCount > 0" class="flex items-center gap-3">
+                  <svg class="w-5 h-5 text-teal-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                  </svg>
+                  <span>{{ totalLessonCount }} lesson{{ totalLessonCount === 1 ? '' : 's' }}</span>
+                </li>
+                <li v-if="course.quizzes && course.quizzes.length > 0" class="flex items-center gap-3">
+                  <svg class="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                  </svg>
+                  <span>{{ course.quizzes.length }} quiz{{ course.quizzes.length === 1 ? '' : 'zes' }}</span>
+                </li>
+                <li class="flex items-center gap-3">
+                  <svg class="w-5 h-5 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
                   <span>Duration: {{ course.duration || 'N/A' }} hours</span>
                 </li>
-                <li class="flex items-center gap-2">
+                <li class="flex items-center gap-3">
+                  <svg class="w-5 h-5 text-orange-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                  </svg>
                   <span>Access on any device</span>
                 </li>
-                <li class="flex items-center gap-2">
+                <li class="flex items-center gap-3">
+                  <svg class="w-5 h-5 text-yellow-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                  </svg>
                   <span>Blockchain Certificate</span>
                 </li>
               </ul>
@@ -405,6 +532,16 @@ const ratingPercentages = computed(() => {
   }
   
   return percentages
+})
+
+const totalLessonCount = computed(() => {
+  if (!course.value || !course.value.modules) {
+    return 0
+  }
+  
+  return course.value.modules.reduce((total, module) => {
+    return total + (module.lessons ? module.lessons.length : 0)
+  }, 0)
 })
 
 // SEO

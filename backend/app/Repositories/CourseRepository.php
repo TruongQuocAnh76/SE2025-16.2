@@ -51,6 +51,12 @@ class CourseRepository
                 }])->orderBy('order_index');
             },
             'reviews.student:id,first_name,last_name',
+            // Include quizzes and their questions so course detail responses contain quizzes
+            'quizzes' => function ($q) {
+                $q->with(['questions' => function ($qq) {
+                    $qq->orderBy('order_index');
+                }]);
+            },
             'tags:id,name,slug'
         ])->findOrFail($id);
     }

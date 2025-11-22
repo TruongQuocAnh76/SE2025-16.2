@@ -285,11 +285,22 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import Hls from 'hls.js'
 import type { Lesson, Module, Course } from '../../../../types/course'
+import { useLessons } from '../../../../composables/useLessons'
 
 // Route parameters
 const route = useRoute()
 const courseId = route.params.id as string
 const lessonId = route.params.lessonId as string
+
+// Initialize composable
+const {
+  getLessonById,
+  getCourseModulesWithLessons,
+  getCourseProgress,
+  markLessonCompleted,
+  updateLessonTimeSpent,
+  checkVideoProcessingStatus: checkVideoProcessingStatusComposable
+} = useLessons()
 
 // Reactive data
 const lesson = ref<Lesson | null>(null)
@@ -360,50 +371,34 @@ const fetchLessonData = async () => {
     lastSentTime = 0 // Reset time tracking for new lesson
     
     // Fetch lesson details
-    const lessonResponse = await $fetch<any>(`/api/lessons/${lessonId}`, {
-      baseURL: useRuntimeConfig().public.backendUrl as string,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${useCookie('auth_token').value}`
-      }
-    })
-    
-    // Extract the lesson data from the response
-    lesson.value = lessonResponse.data || lessonResponse
+    lesson.value = await getLessonById(lessonId)
 
     // Fetch course with modules
-    const courseResponse = await $fetch<Course>(`/api/courses/${courseId}/modules`, {
-      baseURL: useRuntimeConfig().public.backendUrl as string,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${useCookie('auth_token').value}`
-      }
-    })
+    const courseData = await getCourseModulesWithLessons(courseId)
+    modules.value = courseData.modules || []
+    course.value = courseData
     
-    modules.value = courseResponse.modules || []
-    course.value = courseResponse
-
     // Check enrollment and progress
-    const progressResponse = await $fetch<any>(`/api/learning/course/${courseId}`, {
-      baseURL: useRuntimeConfig().public.backendUrl as string,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${useCookie('auth_token').value}`
-      }
-    })
+    const progressResponse = await getCourseProgress(courseId)
     
-    userEnrolled.value = true
-    courseProgress.value = progressResponse.progress_percent || 0
-    
-    // Check if lesson is completed
-    if (progressResponse.modules) {
-      const moduleData = progressResponse.modules.find((m: any) => 
-        m.lessons?.some((l: any) => l.id === lessonId)
-      )
-      if (moduleData) {
-        const lessonData = moduleData.lessons.find((l: any) => l.id === lessonId)
-        lessonCompleted.value = lessonData?.completed || false
+    if (progressResponse) {
+      userEnrolled.value = true
+      courseProgress.value = progressResponse.progress_percent || 0
+      
+      // Check if lesson is completed
+      if (progressResponse.modules) {
+        const moduleData = progressResponse.modules.find((m: any) => 
+          m.lessons?.some((l: any) => l.id === lessonId)
+        )
+        if (moduleData) {
+          const lessonData = moduleData.lessons.find((l: any) => l.id === lessonId)
+          lessonCompleted.value = lessonData?.completed || false
+        }
       }
+    } else {
+      // Handle case where progress couldn't be fetched
+      userEnrolled.value = false
+      courseProgress.value = 0
     }
 
     // Initialize video after data is loaded
@@ -437,14 +432,7 @@ const markAsCompleted = async () => {
   try {
     markingComplete.value = true
     
-    await $fetch(`/api/learning/lesson/${lessonId}/complete`, {
-      method: 'POST',
-      baseURL: useRuntimeConfig().public.backendUrl as string,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${useCookie('auth_token').value}`
-      }
-    })
+    await markLessonCompleted(lessonId)
     
     lessonCompleted.value = true
     
@@ -467,18 +455,7 @@ const updateTimeSpent = async () => {
   if (timeSpent === lastSentTime) return
   
   try {
-    await $fetch(`/api/learning/lesson/${lessonId}/time`, {
-      method: 'POST',
-      baseURL: useRuntimeConfig().public.backendUrl as string,
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${useCookie('auth_token').value}`
-      },
-      body: JSON.stringify({
-        time_spent: timeSpent
-      })
-    })
+    await updateLessonTimeSpent(lessonId, timeSpent)
     
     // Update the last sent time only on successful update
     lastSentTime = timeSpent
@@ -659,15 +636,9 @@ const checkVideoProcessingStatus = async () => {
   if (!lesson.value?.id) return
   
   try {
-    const response = await $fetch<any>(`/api/courses/lesson/${lesson.value.id}/hls-status`, {
-      baseURL: useRuntimeConfig().public.backendUrl as string,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${useCookie('auth_token').value}`
-      }
-    })
+    const response = await checkVideoProcessingStatusComposable(lesson.value.id)
     
-    if (response.status === 'completed' && response.hls_url) {
+    if (response && response.status === 'completed' && response.hls_url) {
       // Update the lesson's content URL and reinitialize video
       if (lesson.value) {
         lesson.value.content_url = response.hls_url
@@ -675,7 +646,7 @@ const checkVideoProcessingStatus = async () => {
         await nextTick()
         initializeVideo()
       }
-    } else if (response.status === 'processing' || response.status === 'pending') {
+    } else if (response && (response.status === 'processing' || response.status === 'pending')) {
       processingVideo.value = true
       // Check again in 5 seconds
       setTimeout(checkVideoProcessingStatus, 5000)

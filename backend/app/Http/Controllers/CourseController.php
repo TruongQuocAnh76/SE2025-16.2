@@ -104,8 +104,11 @@ class CourseController extends Controller
             // Course validation
             'title'       => 'required|string|max:255',
             'description' => 'required|string',
-            'thumbnail'   => 'nullable|url',
-            'thumbnail'   => 'nullable|url',
+            'thumbnail'   => ['nullable', function($attribute, $value, $fail) {
+                if ($value !== null && $value !== 'UPLOAD_REQUESTED' && !filter_var($value, FILTER_VALIDATE_URL)) {
+                    $fail('The thumbnail must be a valid URL or "UPLOAD_REQUESTED" for file upload.');
+                }
+            }],
             'level'       => 'in:BEGINNER,INTERMEDIATE,ADVANCED,EXPERT',
             'price'       => 'nullable|numeric|min:0',
             'duration'    => 'nullable|integer|min:1',
@@ -317,7 +320,11 @@ class CourseController extends Controller
         $validator = Validator::make($request->all(), [
             'title'       => 'sometimes|string|max:255',
             'description' => 'sometimes|string',
-            'thumbnail'   => 'nullable|url',
+            'thumbnail'   => ['nullable', function($attribute, $value, $fail) {
+                if ($value !== null && $value !== 'UPLOAD_REQUESTED' && !filter_var($value, FILTER_VALIDATE_URL)) {
+                    $fail('The thumbnail must be a valid URL or "UPLOAD_REQUESTED" for file upload.');
+                }
+            }],
             'status'      => 'in:DRAFT,PENDING,PUBLISHED,ARCHIVED',
             'level'       => 'in:BEGINNER,INTERMEDIATE,ADVANCED,EXPERT',
             'price'       => 'nullable|numeric|min:0',
