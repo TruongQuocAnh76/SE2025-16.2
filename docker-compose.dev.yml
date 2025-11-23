@@ -34,6 +34,7 @@ services:
       - QUEUE_CONNECTION=redis
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - BLOCKCHAIN_SERVICE_URL=http://blockchain:3001
     depends_on:
       - db
       - redis
@@ -69,6 +70,45 @@ services:
     networks:
       - app_network
     restart: unless-stopped
+      - blockchain
+
+  blockchain:
+    build:
+      context: ./blockchain
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3001:3001"
+      - "8545:8545" # Hardhat node port
+    volumes:
+      - ./blockchain:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - BLOCKCHAIN_NETWORK=hardhat
+      - HARDHAT_RPC_URL=http://localhost:8545
+      - POLYGON_RPC_URL=https://polygon-rpc.com
+      - POLYGON_MUMBAI_RPC_URL=https://rpc-mumbai.maticvigil.com
+      - PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+      - CERTIFICATE_CONTRACT_ADDRESS_HARDHAT=0x5FbDB2315678afecb367f032d93F642f64180aa3
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000
+      - LOG_LEVEL=debug
+    command: >
+      sh -c "
+        echo 'Starting Hardhat node...' &&
+        pnpm run hardhat:node &
+        sleep 10 &&
+        echo 'Deploying contracts...' &&
+        pnpm run deploy:local &&
+        echo 'Starting blockchain service...' &&
+        pnpm run dev
+      "
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/v1/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   db:
     image: postgres:15-alpine

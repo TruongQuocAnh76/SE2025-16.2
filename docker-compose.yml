@@ -16,10 +16,33 @@ services:
     volumes:
       - ./backend:/var/www
       - ./backend/.env.production:/var/www/.env
+    environment:
+      - BLOCKCHAIN_SERVICE_URL=http://blockchain:3001
     networks:
       - app_network
     depends_on:
       - redis
+      - blockchain
+
+  blockchain:
+    build:
+      context: ./blockchain
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    volumes:
+      - blockchain_data:/app/logs
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/v1/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   nginx:
     image: nginx:alpine
@@ -42,6 +65,7 @@ services:
 
 volumes:
   redis_data:
+  blockchain_data:
 
 networks:
   app_network:
