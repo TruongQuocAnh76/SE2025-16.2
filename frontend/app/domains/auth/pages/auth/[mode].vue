@@ -76,9 +76,9 @@
             </div>
           </div>
           <div class="flex items-center justify-between">
-            <NuxtLink to="/forgot-password" class="text-sm text-blue-600 hover:text-blue-500">
+            <button type="button" class="text-sm text-blue-600 hover:underline" @click="goToForgotPassword">
               Forgot Password?
-            </NuxtLink>
+            </button>
           </div>
           <button
             type="submit"
@@ -154,6 +154,11 @@
 </template>
 
 <script setup lang="ts">
+const router = useRouter()
+
+const goToForgotPassword = () => {
+  router.push('/auth/forgot-password')
+}
 definePageMeta({
   layout: 'auth'
 });
