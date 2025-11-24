@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use App\Models\User;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 // Model PasswordReset cho chức năng quên mật khẩu 
 if (!class_exists('App\\Models\\PasswordReset')) {
     class PasswordReset extends Model
@@ -274,10 +275,31 @@ class AuthController extends Controller
                 'created_at' => now(),
             ]
         );
-        // Gửi message tới RabbitMQ (giả lập, sẽ tích hợp service sau)
-        // RabbitMQService::sendResetEmail($request->email, $token);
-        Log::info('Send reset password email', ['email' => $request->email, 'token' => $token]);
-        return response()->json(['message' => 'Reset link sent to email']);
+    // Try to send message to RabbitMQ; fallback to direct email if it fails
+    try {
+        \App\Services\RabbitMQService::sendResetEmail($request->email, $token);
+        Log::info('Send reset password email via RabbitMQ', ['email' => $request->email, 'token' => $token]);
+    } catch (\Throwable $e) {
+        Log::error('RabbitMQ send failed, falling back to direct mail', ['error' => $e->getMessage()]);
+        // Fallback: send email directly
+        $frontend = env('FRONTEND_URL', 'http://localhost:3000');
+        $link = rtrim($frontend, '/') . '/auth/reset-password?token=' . $token;
+        $body = "Click the link to reset your password: $link";
+        try {
+            Mail::raw($body, function ($message) use ($request) {
+                $message->to($request->email)
+                    ->subject('Reset your password');
+            });
+            Log::info('Sent reset email directly', ['email' => $request->email]);
+        } catch (\Throwable $mailErr) {
+            Log::error('Direct mail send failed', ['error' => $mailErr->getMessage()]);
+            return response()->json(['message' => 'Failed to send reset email'], 500);
+        }
+    }
+    
+    // If we reach here, either RabbitMQ or direct mail succeeded
+    
+    return response()->json(['message' => 'Reset link sent to email']);
     }
 
     /**

@@ -8,6 +8,18 @@ class RabbitMQService
 {
     public static function sendResetEmail($email, $token)
     {
+
+        // Define socket-related constants if they are missing in the PHP runtime
+        if (!defined('SOCKET_EAGAIN')) {
+            define('SOCKET_EAGAIN', 11);
+        }
+        if (!defined('SOCKET_EWOULDBLOCK')) {
+            define('SOCKET_EWOULDBLOCK', SOCKET_EAGAIN);
+        }
+        if (!defined('SOCKET_EINTR')) {
+            define('SOCKET_EINTR', 4);
+        }
+
         $host = env('RABBITMQ_HOST', 'localhost');
         $port = env('RABBITMQ_PORT', 5672);
         $user = env('RABBITMQ_USER', 'guest');
