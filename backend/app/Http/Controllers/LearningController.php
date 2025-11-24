@@ -12,6 +12,7 @@ use App\Models\Lesson;
 use App\Models\Progress;
 use App\Models\Module;
 use App\Models\Course;
+use App\Jobs\IssueCertificateToBlockchain;
 
 /**
  * @OA\Server(
@@ -23,7 +24,7 @@ class LearningController extends Controller
 {
     /**
      * @OA\Get(
-     *     path="/courses/{courseId}/progress",
+     *     path="/learning/course/{courseId}",
      *     summary="Get course progress for student",
      *     tags={"Learning"},
      *     security={{"sanctum":{}}},
@@ -244,23 +245,18 @@ class LearningController extends Controller
             return response()->json(['error' => 'Not enrolled in this course'], 403);
         }
 
-        $progress = Progress::where('student_id', $studentId)
-            ->where('lesson_id', $lessonId)
-            ->first();
-
-        if ($progress) {
-            // Update existing progress - increment time_spent
-            $progress->increment('time_spent', $validated['time_spent']);
-            $progress->update(['last_accessed_at' => now()]);
-        } else {
-            // Create new progress record
-            $progress = Progress::create([
+        $progress = Progress::updateOrCreate(
+            [
                 'student_id' => $studentId,
                 'lesson_id' => $lessonId,
-                'time_spent' => $validated['time_spent'],
+            ],
+            [
                 'last_accessed_at' => now(),
-            ]);
-        }
+            ]
+        );
+
+        // Increment time_spent regardless of new or existing
+        $progress->increment('time_spent', $validated['time_spent']);
 
         return response()->json(['message' => 'Progress time updated', 'progress' => $progress]);
     }
@@ -282,9 +278,41 @@ class LearningController extends Controller
 
         $progressPercent = $totalLessons > 0 ? round(($completedLessons / $totalLessons) * 100) : 0;
 
-        Enrollment::where('course_id', $courseId)
+        // Update enrollment progress
+        $enrollment = Enrollment::where('course_id', $courseId)
             ->where('student_id', $studentId)
-            ->update(['progress' => $progressPercent]);
+            ->first();
+
+        if ($enrollment) {
+            $enrollment->update(['progress' => $progressPercent]);
+
+            // If course is 100% complete, dispatch certificate issuance job
+            if ($progressPercent == 100 && !$enrollment->completed_at) {
+                $enrollment->update(['completed_at' => now()]);
+                
+                // Check if certificate already exists
+                $existingCertificate = \App\Models\Certificate::where([
+                    'student_id' => $studentId,
+                    'course_id' => $courseId
+                ])->first();
+                
+                if (!$existingCertificate) {
+                    // Create certificate
+                    $certificate = \App\Models\Certificate::create([
+                        'id' => Str::uuid(),
+                        'student_id' => $studentId,
+                        'course_id' => $courseId,
+                        'certificate_number' => 'CERT-' . strtoupper(Str::random(8)),
+                        'issued_at' => now(),
+                        'status' => 'PENDING',
+                        'final_score' => 100.00
+                    ]);
+
+                    // Dispatch job to issue certificate to blockchain
+                    IssueCertificateToBlockchain::dispatch($studentId, $courseId);
+                }
+            }
+        }
 
         return $progressPercent;
     }

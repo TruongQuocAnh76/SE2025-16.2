@@ -1,5 +1,5 @@
 # Development Dockerfile for blockchain microservice
-FROM node:20-alpine
+FROM node:22-alpine
 
 # Install pnpm
 RUN npm install -g pnpm
@@ -7,12 +7,15 @@ RUN npm install -g pnpm
 # Create app directory
 WORKDIR /app
 
+# Install system dependencies for development
+RUN apk add --no-cache git python3 make g++ curl sudo
+
 # Create non-root user (optional in development)
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S blockchain -u 1001
-
-# Install system dependencies for development
-RUN apk add --no-cache git python3 make g++
+    adduser -S blockchain -u 1001 && \
+    echo 'blockchain ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers && \
+    mkdir -p /home/blockchain && \
+    chown blockchain:nodejs /home/blockchain
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
@@ -25,9 +28,6 @@ COPY . .
 
 # Change ownership to blockchain user
 RUN chown -R blockchain:nodejs /app
-
-# Switch to non-root user
-USER blockchain
 
 # Expose port
 EXPOSE 3001
