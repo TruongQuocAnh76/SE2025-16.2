@@ -120,7 +120,7 @@ const loginWithFacebook = () => {
   height: 20px;
 }
 
-/* Google Button - White background with border */
+/* Google Button - Blue background */
 .google-button {
   background-color: #4285f4;
   color: white;
@@ -130,13 +130,13 @@ const loginWithFacebook = () => {
   background-color: #357ae8;
 }
 
-/* Facebook Button - Blue background */
+/* Facebook Button - Blue background (same as Google) */
 .facebook-button {
-  background-color: #1877f2;
+  background-color: #4285f4;
   color: white;
 }
 
 .facebook-button:hover {
-  background-color: #166fe5;
+  background-color: #357ae8;
 }
 </style>
