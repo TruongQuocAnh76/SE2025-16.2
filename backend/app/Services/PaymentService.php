@@ -1,0 +1,119 @@
+<?php
+
+namespace App\Services;
+
+use Stripe\Stripe;
+use Stripe\PaymentIntent;
+use PaypalServerSdkLib\PaypalServerSdkClient;
+use PaypalServerSdkLib\PaypalServerSdkClientBuilder;
+use PaypalServerSdkLib\Models\OrderRequest;
+use PaypalServerSdkLib\Models\PurchaseUnitRequest;
+use PaypalServerSdkLib\Models\AmountWithBreakdown;
+use PaypalServerSdkLib\Controllers\OrdersController;
+use PaypalServerSdkLib\Exceptions\ApiException;
+use Illuminate\Support\Facades\Log;
+
+
+class PaymentService
+{
+
+    /**
+     * Get PayPal Order Details
+     * @param string $orderId
+     * @return array
+     */
+    public function getPayPalOrderDetails($orderId)
+    {
+        try {
+            $authBuilder = \PaypalServerSdkLib\Authentication\ClientCredentialsAuthCredentialsBuilder::init(
+                env('PAYPAL_CLIENT_ID'),
+                env('PAYPAL_CLIENT_SECRET')
+            );
+            $mode = strtolower(env('PAYPAL_MODE', 'sandbox')) === 'live'
+                ? \PaypalServerSdkLib\Environment::LIVE
+                : \PaypalServerSdkLib\Environment::SANDBOX;
+            $paypalClient = PaypalServerSdkClientBuilder::init()
+                ->clientCredentialsAuthCredentials($authBuilder)
+                ->environment($mode)
+                ->build();
+            $paypalOrdersController = $paypalClient->getOrdersController();
+
+            $response = $paypalOrdersController->ordersGet($orderId);
+            $result = $response->getResult();
+
+            return [
+                'success' => true,
+                'order_id' => $result->getId(),
+                'status' => $result->getStatus(),
+                'payer' => $result->getPayer(),
+                'purchase_units' => $result->getPurchaseUnits(),
+                'create_time' => $result->getCreateTime(),
+                'update_time' => $result->getUpdateTime(),
+                'full_response' => $result,
+            ];
+        } catch (ApiException $e) {
+            Log::error('PayPal get order details failed', [
+                'order_id' => $orderId,
+                'error' => $e->getMessage(),
+            ]);
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        } catch (\Exception $ex) {
+            Log::error('PayPal get order details unknown exception', [
+                'order_id' => $orderId,
+                'error' => $ex->getMessage(),
+                'trace' => $ex->getTraceAsString(),
+            ]);
+            return [
+                'success' => false,
+                'error' => $ex->getMessage(),
+            ];
+        }
+    }
+    public function __construct()
+    {
+        // Initialize Stripe
+        Stripe::setApiKey(env('STRIPE_SECRET_KEY'));
+    }
+
+    // ==========================================
+    // STRIPE METHODS
+    // ==========================================
+
+    /**
+     * Create Stripe Payment Intent
+     */
+    public function createStripeIntent($amount, $currency = 'usd', $metadata = [])
+    {
+        return PaymentIntent::create([
+            'amount' => $amount * 100, // Convert to cents
+            'currency' => $currency,
+            'automatic_payment_methods' => [
+                'enabled' => true,
+            ],
+            'metadata' => $metadata,
+        ]);
+    }
+
+    /**
+     * Retrieve Stripe Payment Intent
+     */
+    public function retrieveStripeIntent($paymentIntentId)
+    {
+        return PaymentIntent::retrieve($paymentIntentId);
+    }
+
+    /**
+     * Confirm Stripe Payment Intent
+     */
+    public function confirmStripeIntent($paymentIntentId, $paymentMethodId)
+    {
+        return PaymentIntent::update($paymentIntentId, [
+            'payment_method' => $paymentMethodId,
+        ]);
+    }
+
+    // ==========================================
+}
