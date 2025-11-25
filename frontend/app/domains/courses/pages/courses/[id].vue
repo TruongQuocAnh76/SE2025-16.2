@@ -174,7 +174,10 @@
                 <span class="text-4xl font-bold text-teal-600">${{ course.price }}</span>
                 <span v-if="course.originalPrice" class="text-2xl text-gray-400 line-through">${{ course.originalPrice }}</span>
               </div>
-              <button class="w-full bg-brand-primary text-white py-3 rounded-lg font-semibold text-lg hover:bg-brand-secondary transition">
+              <button 
+                @click="handleEnroll"
+                class="w-full bg-brand-primary text-white py-3 rounded-lg font-semibold text-lg hover:bg-brand-secondary transition"
+              >
                 Enroll Now
               </button>
             </div>
@@ -210,6 +213,7 @@ import { ref, onMounted, computed } from 'vue'
 
 const { getCourseById, addReview } = useCourses()
 const route = useRoute()
+const router = useRouter()
 
 
 // State
@@ -228,6 +232,21 @@ const tabs = [
 ]
 
 const courseId = route.params.id as string
+
+// Handle Enrollment - Redirect to payment page
+const handleEnroll = () => {
+  if (!course.value) return
+  
+  // Check if course is free
+  if (course.value.price === 0 || !course.value.price) {
+    // For free courses, enroll directly (you can add API call here)
+    alert('Enrolling in free course...')
+    // TODO: Add direct enrollment API call
+  } else {
+    // For paid courses, redirect to payment page
+    router.push(`/payment?type=COURSE&course_id=${courseId}`)
+  }
+}
 
 onMounted(async () => {
   if (!courseId) return

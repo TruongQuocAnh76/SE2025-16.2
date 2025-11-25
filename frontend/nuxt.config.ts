@@ -3,6 +3,7 @@ export default defineNuxtConfig({
     './app/domains/landing',
     './app/domains/auth',
     './app/domains/courses',
+    './app/domains/payment',
     './app/base'
   ],
 
@@ -12,7 +13,8 @@ export default defineNuxtConfig({
     public: {
       backendUrl: process.env.BACKEND_URL || 'http://localhost:8000',
       awsEndpoint: process.env.AWS_ENDPOINT || 'http://localhost:4566',
-      awsBucket: process.env.AWS_BUCKET || 'certchain-dev'
+      awsBucket: process.env.AWS_BUCKET || 'certchain-dev',
+      stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || ''
     }
   },
 
@@ -20,6 +22,7 @@ export default defineNuxtConfig({
     { path: './app/domains/landing/components', pathPrefix: false },
     { path: './app/domains/auth/components', pathPrefix: false },
     { path: './app/domains/courses/components', pathPrefix: false },
+    { path: './app/domains/payment/components', pathPrefix: false },
     { path: './app/base/components', pathPrefix: false }
   ],
 
