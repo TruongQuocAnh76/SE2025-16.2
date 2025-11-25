@@ -25,7 +25,7 @@ onMounted(async () => {
       error.value = String(errorParam)
       $toast.error(error.value)
       setTimeout(() => {
-        navigateTo('/auth/signin')
+        navigateTo('/auth/login')
       }, 2000)
       return
     }
@@ -51,7 +51,7 @@ onMounted(async () => {
       error.value = 'Authentication failed. No token or user data received.'
       $toast.error(error.value)
       setTimeout(() => {
-        navigateTo('/auth/signin')
+        navigateTo('/auth/login')
       }, 2000)
     }
   } catch (e) {
