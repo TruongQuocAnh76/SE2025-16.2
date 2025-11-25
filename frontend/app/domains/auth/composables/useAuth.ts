@@ -4,7 +4,8 @@ import { validateLoginForm, validateRegisterForm } from '../utils/validation'
 
 export const useAuth = () => {
   const config = useRuntimeConfig()
-  const { $toast } = useNuxtApp() as any
+  const nuxtApp = useNuxtApp() as any
+  const $toast = nuxtApp.$toast
   const user = ref<User | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
@@ -20,7 +21,7 @@ export const useAuth = () => {
     if (!validation.isValid) {
       validationErrors.value = validation.errors
       isLoading.value = false
-      $toast.error('Please fix the validation errors')
+      if ($toast) $toast.error('Please fix the validation errors')
       throw new Error('Validation failed')
     }
 
@@ -44,13 +45,13 @@ export const useAuth = () => {
 
       user.value = response.user
 
-      $toast.success('Login successful! Welcome back.')
+      if ($toast) $toast.success('Login successful! Welcome back.')
 
       return response
     } catch (err: any) {
       const errorMessage = err.data?.message || 'Login failed. Please try again.'
       error.value = errorMessage
-      $toast.error(errorMessage)
+      if ($toast) $toast.error(errorMessage)
       
       // Handle backend validation errors
       if (err.data?.errors) {
@@ -63,17 +64,17 @@ export const useAuth = () => {
     }
   }
 
-  const register = async (email: string, username: string, password: string, firstName: string, lastName: string) => {
+  const register = async (email: string, username: string, password: string, confirmPassword: string, firstName: string, lastName: string) => {
     isLoading.value = true
     error.value = null
     validationErrors.value = {}
 
     // Client-side validation
-    const validation = validateRegisterForm(email, username, password, firstName, lastName)
+    const validation = validateRegisterForm(email, username, password, confirmPassword, firstName, lastName)
     if (!validation.isValid) {
       validationErrors.value = validation.errors
       isLoading.value = false
-      $toast.error('Please fix the validation errors')
+      if ($toast) $toast.error('Please fix the validation errors')
       throw new Error('Validation failed')
     }
 
@@ -92,19 +93,22 @@ export const useAuth = () => {
 
       user.value = response.user
 
-      $toast.success('Registration successful! Welcome to Certchain.')
+      if ($toast) $toast.success('Registration successful! Welcome to Certchain.')
 
       return response
     } catch (err: any) {
       const errorMessage = err.data?.message || 'Registration failed. Please try again.'
       error.value = errorMessage
-      $toast.error(errorMessage)
+      if ($toast) $toast.error(errorMessage)
       
       // Handle backend validation errors
       if (err.data?.errors) {
         const backendErrors: Record<string, string> = {}
         Object.keys(err.data.errors).forEach(key => {
-          backendErrors[key] = err.data.errors[key][0] || err.data.errors[key]
+          let mappedKey = key
+          if (key === 'first_name') mappedKey = 'firstName'
+          if (key === 'last_name') mappedKey = 'lastName'
+          backendErrors[mappedKey] = err.data.errors[key][0] || err.data.errors[key]
         })
         validationErrors.value = backendErrors
       }
@@ -134,11 +138,11 @@ export const useAuth = () => {
 
       user.value = null
 
-      $toast.success('Logged out successfully')
+      if ($toast) $toast.success('Logged out successfully')
     } catch (err: any) {
       const errorMessage = err.data?.message || 'Logout failed'
       error.value = errorMessage
-      $toast.error(errorMessage)
+      if ($toast) $toast.error(errorMessage)
       throw err
     } finally {
       isLoading.value = false
