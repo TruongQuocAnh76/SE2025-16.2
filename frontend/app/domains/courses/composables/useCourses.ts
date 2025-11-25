@@ -210,6 +210,24 @@ export const useCourses = () => {
     }
   }
 
+  const createTag = async (tagName: string): Promise<Tag | null> => {
+    try {
+      const data = await $fetch<{ message: string; tag: Tag }>('/api/tags', {
+        baseURL: config.public.backendUrl as string,
+        method: 'POST',
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: { name: tagName }
+      })
+      return data.tag
+    } catch (error) {
+      console.error('Failed to create tag:', error)
+      throw error
+    }
+  }
+
 
   return {
     createCourse,
@@ -222,5 +240,6 @@ export const useCourses = () => {
     updateCourseThumbnail,
     addReview,
     getTags,
+    createTag,
   }
 }
