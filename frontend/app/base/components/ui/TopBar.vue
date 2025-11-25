@@ -105,7 +105,7 @@
                     {{ user?.username }}
                   </div>
                   <button
-                    @click="logout"
+                    @click="handleLogout"
                     class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
                   >
                     Logout
@@ -117,7 +117,7 @@
           <template v-else>
             <Button
               variant="transparent"
-              @click="navigateTo('/auth/signin')"
+              @click="navigateTo('/auth/login')"
               class="bg-white hidden sm:flex text-text-dark hover:text-accent-star border-white/20 hover:border-accent-star/50 bg-background rounded-3xl cursor-pointer p-4"
             >
               Login
@@ -215,7 +215,7 @@
               </div>
               <Button
                 size="sm"
-                @click="logout; isMobileMenuOpen = false"
+                @click="handleLogout"
                 class="w-full justify-center bg-accent-star hover:bg-accent-star/80 text-text-dark"
               >
                 Logout
@@ -262,19 +262,31 @@ const userInitials = computed(() => {
   return ''
 })
 
-function logout() {
-  authLogout()
-  isDropdownOpen.value = false
-  navigateTo('/')
+const handleLogout = async () => {
+  try {
+    await authLogout() // Use authLogout from useAuth composable
+    const token = useCookie<string | null>('auth_token')
+    token.value = null
+    const userCookie = useCookie<string | null>('user_data')
+    userCookie.value = null
+    
+    // Close mobile menu if open
+    isMobileMenuOpen.value = false
+    isDropdownOpen.value = false // Close dropdown as well
+    
+    navigateTo('/auth/login')
+  } catch (error) {
+    console.error('Logout failed:', error)
+  }
 }
 
 // Initialize user data if authenticated
 onMounted(async () => {
   // Load user data from cookie if available
-  const userCookie = useCookie('user_data')
+  const userCookie = useCookie<string | null>('user_data')
   if (userCookie.value && !user.value) {
     try {
-      user.value = JSON.parse(userCookie.value)
+      user.value = JSON.parse(userCookie.value) as User
     } catch (err) {
       console.error('Failed to parse user cookie:', err)
     }
