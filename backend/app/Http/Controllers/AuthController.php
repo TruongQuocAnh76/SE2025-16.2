@@ -364,8 +364,8 @@ class AuthController extends Controller
         ]);
 
         $user = User::where('email', $validated['login'])
-                    ->orWhere('username', $validated['login'])
-                    ->first();
+            ->orWhere('username', $validated['login'])
+            ->first();
 
         if (!$user) {
             return response()->json([
@@ -477,7 +477,7 @@ class AuthController extends Controller
     {
         try {
             $socialiteUser = Socialite::driver('google')->user();
-            
+
             $user = User::firstOrCreate(
                 ['email' => $socialiteUser->email],
                 [
@@ -549,7 +549,7 @@ class AuthController extends Controller
     {
         try {
             $socialiteUser = Socialite::driver('facebook')->user();
-            
+
             $user = User::firstOrCreate(
                 ['email' => $socialiteUser->email],
                 [
