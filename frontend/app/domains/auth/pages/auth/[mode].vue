@@ -17,14 +17,14 @@
         <div class="relative bg-brand-primary/50 rounded-full p-4">
           <div class="flex">
             <button
-              @click="mode = 'login'"
+              @click="navigateTo('/auth/login')"
               class="flex-1 py-2 px-4 rounded-full text-sm font-medium transition-colors duration-200"
               :class="mode === 'login' ? 'bg-brand-primary text-white' : 'bg-transparent text-brand-primary'"
             >
               Sign In
             </button>
             <button
-              @click="mode = 'register'"
+              @click="navigateTo('/auth/signup')"
               class="flex-1 py-2 px-4 rounded-full text-sm font-medium transition-colors duration-200"
               :class="mode === 'register' ? 'bg-brand-primary text-white' : 'bg-transparent text-brand-primary'"
             >
@@ -40,6 +40,22 @@
 
         <!-- Login Form -->
         <form v-if="mode === 'login'" @submit.prevent="handleLogin" class="space-y-6">
+          <!-- General Error Alert -->
+          <div v-if="auth.error.value" class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-red-700">
+                  {{ auth.error.value }}
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div>
             <label for="username" class="block text-sm font-medium text-gray-700">Username or Email</label>
             <input
@@ -255,7 +271,7 @@ definePageMeta({
 const route = useRoute()
 const mode = ref<'login' | 'register'>(route.params.mode === 'signup' ? 'register' : 'login')
 
-watch(() => route.params.mode, (newMode) => {
+watch(() => route.params.mode, (newMode: string | string[]) => {
   mode.value = newMode === 'signup' ? 'register' : 'login'
 })
 
@@ -300,7 +316,7 @@ const handleRegister = async () => {
       registerForm.lastName
     )
     // Auto login after successful registration
-    const tokenCookie = useCookie('auth_token')
+    const tokenCookie = useCookie<string | null>('auth_token')
     if (auth.user.value) {
       tokenCookie.value = 'temp_token' // Backend should return token
       await navigateTo(`/s/${auth.user.value.username}`)

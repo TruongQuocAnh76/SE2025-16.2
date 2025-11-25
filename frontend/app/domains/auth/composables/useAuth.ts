@@ -52,12 +52,18 @@ export const useAuth = () => {
       const errorMessage = err.data?.message || 'Login failed. Please try again.'
       error.value = errorMessage
       if ($toast) $toast.error(errorMessage)
-      
+
       // Handle backend validation errors
       if (err.data?.errors) {
         validationErrors.value = err.data.errors
+      } else if (err.data?.error === 'authentication_failed') {
+        // Map generic auth failure to fields to show inline error
+        validationErrors.value = {
+          login: 'Invalid credentials',
+          password: ' ' // Mark as invalid but don't duplicate message
+        }
       }
-      
+
       throw err
     } finally {
       isLoading.value = false
@@ -100,7 +106,7 @@ export const useAuth = () => {
       const errorMessage = err.data?.message || 'Registration failed. Please try again.'
       error.value = errorMessage
       if ($toast) $toast.error(errorMessage)
-      
+
       // Handle backend validation errors
       if (err.data?.errors) {
         const backendErrors: Record<string, string> = {}
@@ -112,7 +118,7 @@ export const useAuth = () => {
         })
         validationErrors.value = backendErrors
       }
-      
+
       throw err
     } finally {
       isLoading.value = false
