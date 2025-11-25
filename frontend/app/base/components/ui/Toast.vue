@@ -63,7 +63,7 @@
           <p class="text-sm font-medium">{{ toast.message }}</p>
         </div>
         <button
-          @click="$toast.remove(toast.id)"
+          @click="removeToast(toast.id)"
           class="flex-shrink-0 ml-4 hover:opacity-75 transition-opacity"
         >
           <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -80,14 +80,25 @@
 </template>
 
 <script setup lang="ts">
-const { $toast } = useNuxtApp() as any
-const toasts = $toast.getToasts()
+import { ref, computed } from 'vue'
+
+const nuxtApp = useNuxtApp() as any
+const toasts = computed(() => {
+  if (!nuxtApp.$toast) return []
+  return nuxtApp.$toast.getToasts().value
+})
 
 const toastClasses: Record<string, string> = {
   success: 'bg-green-50 text-green-800 border border-green-200',
   error: 'bg-red-50 text-red-800 border border-red-200',
   warning: 'bg-yellow-50 text-yellow-800 border border-yellow-200',
   info: 'bg-blue-50 text-blue-800 border border-blue-200',
+}
+
+const removeToast = (id: string) => {
+  if (nuxtApp.$toast) {
+    nuxtApp.$toast.remove(id)
+  }
 }
 </script>
 

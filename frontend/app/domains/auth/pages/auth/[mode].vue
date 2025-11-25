@@ -90,9 +90,9 @@
             </p>
           </div>
           <div class="flex items-center justify-between">
-            <NuxtLink to="/forgot-password" class="text-sm text-blue-600 hover:text-blue-500">
-              Forgot Password?
-            </NuxtLink>
+            <span class="text-sm text-gray-400 cursor-not-allowed">
+              Forgot Password? (Coming soon)
+            </span>
           </div>
           <button
             type="submit"
@@ -211,6 +211,25 @@
               {{ auth.validationErrors.value.password }}
             </p>
           </div>
+          <div>
+            <label for="reg-confirm-password" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+            <div class="relative">
+              <input
+                id="reg-confirm-password"
+                v-model="registerForm.confirmPassword"
+                :type="showPassword ? 'text' : 'password'"
+                :class="[
+                  'mt-1 block w-full px-3 py-2 pr-10 border rounded-3xl shadow-sm focus:outline-none focus:ring-2',
+                  auth.validationErrors.value.confirmPassword 
+                    ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                    : 'border-brand-primary focus:ring-blue-500 focus:border-blue-500'
+                ]"
+              />
+              <p v-if="auth.validationErrors.value.confirmPassword" class="mt-1 text-sm text-red-600">
+                {{ auth.validationErrors.value.confirmPassword }}
+              </p>
+            </div>
+          </div>
           <button
             type="submit"
             :disabled="auth.isLoading.value"
@@ -254,7 +273,8 @@ const registerForm = reactive({
   lastName: '',
   email: '',
   username: '',
-  password: ''
+  password: '',
+  confirmPassword: ''
 })
 
 const handleLogin = async () => {
@@ -275,6 +295,7 @@ const handleRegister = async () => {
       registerForm.email,
       registerForm.username,
       registerForm.password,
+      registerForm.confirmPassword,
       registerForm.firstName,
       registerForm.lastName
     )
@@ -300,6 +321,7 @@ watch(mode, () => {
   registerForm.email = ''
   registerForm.username = ''
   registerForm.password = ''
+  registerForm.confirmPassword = ''
 })
 </script>
 
