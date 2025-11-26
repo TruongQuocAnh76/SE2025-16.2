@@ -380,21 +380,66 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
-        $request->validate([
-            'username' => 'required|string|unique:users,username',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|min:6',
-            'first_name' => 'required|string',
-            'last_name' => 'required|string',
+        $validated = $request->validate([
+            'username' => [
+                'required',
+                'string',
+                'min:3',
+                'max:20',
+                'regex:/^[a-zA-Z0-9_]+$/',
+                'unique:users,username'
+            ],
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                'unique:users,email'
+            ],
+            'password' => [
+                'required',
+                'string',
+                'min:6',
+                'max:100'
+            ],
+            'first_name' => [
+                'required',
+                'string',
+                'min:2',
+                'max:50'
+            ],
+            'last_name' => [
+                'required',
+                'string',
+                'min:2',
+                'max:50'
+            ],
+        ], [
+            'username.required' => 'Username is required',
+            'username.min' => 'Username must be at least 3 characters',
+            'username.max' => 'Username must not exceed 20 characters',
+            'username.regex' => 'Username can only contain letters, numbers, and underscores',
+            'username.unique' => 'This username is already taken',
+            'email.required' => 'Email is required',
+            'email.email' => 'Please enter a valid email address',
+            'email.unique' => 'This email is already registered',
+            'password.required' => 'Password is required',
+            'password.min' => 'Password must be at least 6 characters',
+            'password.max' => 'Password is too long',
+            'first_name.required' => 'First name is required',
+            'first_name.min' => 'First name must be at least 2 characters',
+            'first_name.max' => 'First name must not exceed 50 characters',
+            'last_name.required' => 'Last name is required',
+            'last_name.min' => 'Last name must be at least 2 characters',
+            'last_name.max' => 'Last name must not exceed 50 characters',
         ]);
 
         $user = User::create([
             'id' => Str::uuid(),
-            'username' => $request->username,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
+            'username' => $validated['username'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
             'auth_provider' => 'EMAIL',
             'role' => 'STUDENT',
         ]);
@@ -439,18 +484,46 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        $request->validate([
-            'login' => 'required',
-            'password' => 'required'
+        $validated = $request->validate([
+            'login' => [
+                'required',
+                'string'
+            ],
+            'password' => [
+                'required',
+                'string',
+                'min:6'
+            ]
+        ], [
+            'login.required' => 'Username or email is required',
+            'password.required' => 'Password is required',
+            'password.min' => 'Password must be at least 6 characters',
         ]);
 
-        $user = User::where('email', $request->login)->orWhere('username', $request->login)->first();
+        $user = User::where('email', $validated['login'])
+            ->orWhere('username', $validated['login'])
+            ->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (!$user) {
             return response()->json([
-                'message' => 'Invalid email or password.',
+                'message' => 'Invalid credentials. Please check your username/email and password.',
                 'error' => 'authentication_failed'
             ], 401);
+        }
+
+        if (!Hash::check($validated['password'], $user->password)) {
+            return response()->json([
+                'message' => 'Invalid credentials. Please check your username/email and password.',
+                'error' => 'authentication_failed'
+            ], 401);
+        }
+
+        // Check if user is active
+        if (!$user->is_active) {
+            return response()->json([
+                'message' => 'Your account has been deactivated. Please contact support.',
+                'error' => 'account_deactivated'
+            ], 403);
         }
 
         // Tạo token (Laravel Sanctum)
@@ -541,7 +614,7 @@ class AuthController extends Controller
     {
         try {
             $socialiteUser = Socialite::driver('google')->user();
-            
+
             $user = User::firstOrCreate(
                 ['email' => $socialiteUser->email],
                 [
@@ -613,7 +686,7 @@ class AuthController extends Controller
     {
         try {
             $socialiteUser = Socialite::driver('facebook')->user();
-            
+
             $user = User::firstOrCreate(
                 ['email' => $socialiteUser->email],
                 [

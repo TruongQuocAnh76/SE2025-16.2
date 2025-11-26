@@ -10,6 +10,9 @@
 
     <!-- Simple footer -->
      <Footer/>
+
+    <!-- Toast Notifications -->
+    <Toast />
   </div>
 </template>
 
@@ -17,4 +20,5 @@
 // Explicitly import components from base layer
 import TopBar from '../components/ui/TopBar.vue'
 import Footer from '../components/ui/Footer.vue'
+import Toast from '../components/ui/Toast.vue'
 </script>
