@@ -30,6 +30,10 @@ services:
       - db
       - redis
       - localstack
+      - rabbitmq
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
 
   db:
     image: postgres:15-alpine
@@ -48,6 +52,32 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  rabbitmq-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    command: php artisan rabbitmq:consume-reset-email
+    depends_on:
+      - backend
+      - rabbitmq
+    volumes:
+      - ./backend:/var/www
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
 
   localstack:
     image: localstack/localstack:latest
@@ -84,3 +114,5 @@ volumes:
   postgres_data:
   redis_data:
   localstack_data:
+  rabbitmq_data:
+version: '3'
