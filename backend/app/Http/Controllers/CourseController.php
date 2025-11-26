@@ -15,7 +15,6 @@ use App\Models\Enrollment;
 use App\Models\Review;
 use App\Models\User;
 use App\Services\CourseService;
-use App\Services\RecommendationService;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -27,14 +26,43 @@ use Illuminate\Support\Facades\Log;
 class CourseController extends Controller
 {
     protected $courseService;
-    protected $recommendationService;
 
-    public function __construct(CourseService $courseService, RecommendationService $recommendationService)
+    public function __construct(CourseService $courseService)
     {
         $this->courseService = $courseService;
-        $this->recommendationService = $recommendationService;
     }
 
+    /**
+     * @OA\Get(
+     *     path="/courses",
+     *     summary="Get all courses",
+     *     tags={"Courses"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="status",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="level",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"beginner", "intermediate", "advanced"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="keyword",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of courses",
+     *         @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/Course"))
+     *     )
+     * )
+     */
     public function index(Request $request)
     {
         $filters = [];
@@ -45,6 +73,35 @@ class CourseController extends Controller
         $courses = $this->courseService->getAllCourses($filters);
         return response()->json($courses);
     }
+
+    /**
+     * @OA\Post(
+     *     path="/courses",
+     *     summary="Create a new course",
+     *     tags={"Courses"},
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"title","description"},
+     *             @OA\Property(property="title", type="string", example="Introduction to Programming"),
+     *             @OA\Property(property="description", type="string", example="Learn the basics of programming"),
+     *             @OA\Property(property="thumbnail", type="string", format="url", example="https://example.com/thumbnail.jpg"),
+     *             @OA\Property(property="level", type="string", enum={"BEGINNER","INTERMEDIATE","ADVANCED","EXPERT"}, example="BEGINNER"),
+     *             @OA\Property(property="price", type="number", format="float", example=99.99),
+     *             @OA\Property(property="duration", type="integer", example=30),
+     *             @OA\Property(property="passing_score", type="integer", example=70)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Course created successfully",
+     *         @OA\JsonContent(ref="#/components/schemas/Course")
+     *     ),
+     *     @OA\Response(response=403, description="Unauthorized"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
 
 
     public function store(Request $request)
@@ -170,7 +227,7 @@ class CourseController extends Controller
                 ], 401);
             }
 
-            $recommendations = $this->recommendationService->getRecommendations($user);
+            $recommendations = $this->courseService->getRecommendations($user);
 
             return response()->json([
                 'success' => true,

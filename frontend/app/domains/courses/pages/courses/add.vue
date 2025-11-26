@@ -93,7 +93,7 @@
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-white"
                 >
                   <option value="">Select an Category</option>
-                  </select>
+                </select>
               </div>
               <div>
                 <label for="language" class="block text-sm font-medium text-text-dark mb-2">
@@ -105,23 +105,50 @@
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-white"
                 >
                   <option value="">Select Language</option>
-                  </select>
+                </select>
               </div>
-            </div> <div>
+            </div>
+
+            <div>
               <label for="tags" class="block text-sm font-medium text-text-dark mb-2">
-                Tags (Hold Ctrl/Cmd to select multiple)
+                Tags (search and select multiple)
               </label>
+
+              <!-- Selected tags as chips -->
+              <div v-if="selectedTags.length > 0" class="flex flex-wrap gap-2 mb-2">
+                <span v-for="t in selectedTags" :key="t.id" class="inline-flex items-center px-3 py-1 bg-teal-100 text-teal-800 rounded-full text-sm">
+                  {{ t.name }}
+                  <button type="button" @click="removeTag(t.id)" class="ml-2 text-teal-600 hover:text-red-500 font-bold">&times;</button>
+                </span>
+              </div>
+
+              <input
+                type="text"
+                v-model="tagSearch"
+                placeholder="Search tags..."
+                class="w-full mb-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+              />
+
               <select
                 id="tags"
                 v-model="form.tags"
-                multiple 
+                multiple
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-white"
-                size="5" 
+                size="10"
               >
-                <option v-for="tag in allTags" :key="tag.id" :value="tag.id">
+                <option v-for="tag in filteredTags" :key="tag.id" :value="tag.id">
                   {{ tag.name }}
                 </option>
               </select>
+              
+              <div class="mt-2 flex items-center gap-2">
+                <button type="button" @click="showCreateTagModal = true" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                  + Create New Tag
+                </button>
+                <p class="text-sm text-gray-500">Can't find a tag? Create a new one!</p>
+              </div>
+              
+              <p class="mt-1 text-sm text-gray-500">Tip: hold Ctrl/Cmd to multi-select, or use the search box above.</p>
             </div>
 
             <div>
@@ -177,7 +204,9 @@
               </div>
             </div>
             
-          </div> <div class="lg:col-span-1">
+          </div>
+
+          <div class="lg:col-span-1">
             <label class="block text-sm font-medium text-text-dark mb-2">
               Upload Course Image
             </label>
@@ -221,7 +250,10 @@
             <p v-if="selectedThumbnailFile" class="mt-2 text-sm text-brand-primary font-medium">
               Selected: {{ selectedThumbnailFile.name }}
             </p>
-          </div> </div> <div class="mt-12">
+          </div>
+        </div>
+
+        <div class="mt-12">
           <button
             type="submit"
             :disabled="isSubmitting"
@@ -240,6 +272,48 @@
         </div>
 
       </form>
+
+      <!-- Create Tag Modal -->
+      <div v-if="showCreateTagModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showCreateTagModal = false">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <h3 class="text-xl font-bold text-gray-900 mb-4">Create New Tag</h3>
+          
+          <div class="mb-4">
+            <label for="newTagName" class="block text-sm font-medium text-gray-700 mb-2">Tag Name</label>
+            <input
+              id="newTagName"
+              v-model="newTagName"
+              type="text"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+              placeholder="Enter tag name (e.g., React, Node.js)"
+              @keyup.enter="handleCreateTag"
+            />
+          </div>
+          
+          <div v-if="createTagError" class="mb-4 text-sm text-red-600">
+            {{ createTagError }}
+          </div>
+          
+          <div class="flex gap-3">
+            <button
+              type="button"
+              @click="handleCreateTag"
+              :disabled="!newTagName.trim() || isCreatingTag"
+              class="flex-1 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span v-if="isCreatingTag">Creating...</span>
+              <span v-else>Create Tag</span>
+            </button>
+            <button
+              type="button"
+              @click="showCreateTagModal = false; newTagName = ''; createTagError = ''"
+              class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -251,7 +325,7 @@ const config = useRuntimeConfig()
 
 const LEVELS = ['BEGINNER' , 'INTERMEDIATE' , 'ADVANCED' , 'EXPERT'] as const
 
-const { createCourse, uploadCourseThumbnail, updateCourseThumbnail, getTags } = useCourses()
+const { createCourse, uploadCourseThumbnail, updateCourseThumbnail, getTags, createTag } = useCourses()
 const router = useRouter()
 
 // State cho Dropzone
@@ -280,6 +354,58 @@ const form = ref<CreateCourseData>({
 })
 
 const allTags = ref<Tag[]>([])
+const tagSearch = ref('')
+const showCreateTagModal = ref(false)
+const newTagName = ref('')
+const isCreatingTag = ref(false)
+const createTagError = ref('')
+
+const filteredTags = computed(() => {
+  if (!tagSearch.value.trim()) return allTags.value
+  const search = tagSearch.value.toLowerCase()
+  return allTags.value.filter(tag => tag.name.toLowerCase().includes(search))
+})
+const selectedTags = computed(() => {
+  const tags = form.value.tags || []
+  return allTags.value.filter(tag => tags.includes(tag.id))
+})
+
+const removeTag = (tagId: string) => {
+  if (!form.value.tags) return
+  form.value.tags = form.value.tags.filter(id => id !== tagId)
+}
+
+const handleCreateTag = async () => {
+  if (!newTagName.value.trim()) return
+  
+  isCreatingTag.value = true
+  createTagError.value = ''
+  
+  try {
+    const newTag = await createTag(newTagName.value.trim())
+    if (newTag) {
+      // Add new tag to the list
+      allTags.value.push(newTag)
+      // Auto-select the new tag
+      if (!form.value.tags) form.value.tags = []
+      form.value.tags.push(newTag.id)
+      // Close modal and reset
+      showCreateTagModal.value = false
+      newTagName.value = ''
+    }
+  } catch (error: any) {
+    console.error('Failed to create tag:', error)
+    if (error.data?.errors?.name) {
+      createTagError.value = error.data.errors.name[0]
+    } else if (error.data?.message) {
+      createTagError.value = error.data.message
+    } else {
+      createTagError.value = 'Failed to create tag. Please try again.'
+    }
+  } finally {
+    isCreatingTag.value = false
+  }
+}
 
 // Fetch all tags on mount
 onMounted(async () => {

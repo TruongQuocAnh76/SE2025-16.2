@@ -2,6 +2,7 @@
 use App\Repositories\CourseRepository;
 use App\Repositories\EnrollmentRepository;
 use App\Models\Review;
+use App\Models\User;
 use Illuminate\Support\Str;
 
 class CourseService {
@@ -75,5 +76,23 @@ class CourseService {
 
     public function getEnrolledStudents($courseId) {
         return $this->enrollmentRepository->getByCourseId($courseId);
+    }
+
+    /**
+     * Get course recommendations for a user.
+     *
+     * @param User $user
+     * @return \Illuminate\Database\Eloquent\Collection|array
+     */
+    public function getRecommendations(User $user)
+    {
+        // Check if user has any enrollments
+        if ($user->enrollments->isEmpty()) {
+            // New user: return popular courses
+            return $this->courseRepository->getPopularCourses();
+        }
+
+        // Existing user: return content-based recommendations
+        return $this->courseRepository->getContentBasedRecommendations($user);
     }
 }

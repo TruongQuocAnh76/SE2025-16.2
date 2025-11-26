@@ -228,6 +228,20 @@ export const useCourses = () => {
     }
   }
 
+  const getRecommendations = async (): Promise<Course[]> => {
+    try {
+      const response = await $fetch<{ success: boolean; data: Course[] }>('/api/recommendations', {
+        baseURL: config.public.backendUrl as string,
+        method: 'GET',
+        headers: getAuthHeaders()
+      })
+      return response.data || []
+    } catch (error) {
+      console.error('Failed to fetch recommendations:', error)
+      return []
+    }
+  }
+
 
   return {
     createCourse,
@@ -241,5 +255,6 @@ export const useCourses = () => {
     addReview,
     getTags,
     createTag,
+    getRecommendations,
   }
 }
