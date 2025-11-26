@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -9,6 +10,23 @@ use Illuminate\Support\Str;
 use App\Models\User;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+// Model PasswordReset cho chức năng quên mật khẩu 
+if (!class_exists('App\\Models\\PasswordReset')) {
+    class PasswordReset extends Model
+    {
+        protected $table = 'password_resets';
+        public $timestamps = false;
+        protected $primaryKey = 'email';
+        public $incrementing = false;
+        protected $keyType = 'string';
+        protected $fillable = [
+            'email',
+            'token',
+            'created_at',
+        ];
+    }
+}
 
 /**
  * @OA\Info(
@@ -214,6 +232,125 @@ use Illuminate\Support\Facades\Log;
  */
 class AuthController extends Controller
 {
+    /**
+     * Forgot Password: Nhận email, tạo token, lưu DB, gửi message RabbitMQ (giả lập)
+     */
+    /**
+     * @OA\Post(
+     *     path="/auth/forgot-password",
+     *     summary="Yêu cầu reset mật khẩu qua email",
+     *     tags={"Auth"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"email"},
+     *             @OA\Property(property="email", type="string", format="email", example="user@example.com")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Email xác nhận đã được gửi",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Reset email sent")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Email không tồn tại"
+     *     )
+     * )
+     */
+    public function forgotPassword(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            return response()->json(['message' => 'Email not found'], 404);
+        }
+        $token = Str::random(64);
+        PasswordReset::updateOrCreate(
+            ['email' => $request->email],
+            [
+                'token' => $token,
+                'created_at' => now(),
+            ]
+        );
+    // Try to send message to RabbitMQ; fallback to direct email if it fails
+    try {
+        \App\Services\RabbitMQService::sendResetEmail($request->email, $token);
+        Log::info('Send reset password email via RabbitMQ', ['email' => $request->email, 'token' => $token]);
+    } catch (\Throwable $e) {
+        Log::error('RabbitMQ send failed, falling back to direct mail', ['error' => $e->getMessage()]);
+        // Fallback: send email directly
+        $frontend = env('FRONTEND_URL', 'http://localhost:3000');
+        $link = rtrim($frontend, '/') . '/auth/reset-password?token=' . $token;
+        $body = "Click the link to reset your password: $link";
+        try {
+            Mail::raw($body, function ($message) use ($request) {
+                $message->to($request->email)
+                    ->subject('Reset your password');
+            });
+            Log::info('Sent reset email directly', ['email' => $request->email]);
+        } catch (\Throwable $mailErr) {
+            Log::error('Direct mail send failed', ['error' => $mailErr->getMessage()]);
+            return response()->json(['message' => 'Failed to send reset email'], 500);
+        }
+    }
+    
+    // If we reach here, either RabbitMQ or direct mail succeeded
+    
+    return response()->json(['message' => 'Reset link sent to email']);
+    }
+
+    /**
+     * Reset Password: Nhận token và password mới, xác thực token, đổi mật khẩu
+     */
+    /**
+     * @OA\Post(
+     *     path="/auth/reset-password",
+     *     summary="Đặt lại mật khẩu bằng token",
+     *     tags={"Auth"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"token", "password"},
+     *             @OA\Property(property="token", type="string", example="abcdef123456"),
+     *             @OA\Property(property="password", type="string", format="password", example="newpassword123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Mật khẩu đã được đặt lại thành công",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Password reset successful")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Token không hợp lệ hoặc đã hết hạn"
+     *     )
+     * )
+     */
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token' => 'required',
+            'password' => 'required|min:6',
+        ]);
+        $reset = PasswordReset::where('token', $request->token)->first();
+        if (!$reset) {
+            return response()->json(['message' => 'Invalid token'], 400);
+        }
+        $user = User::where('email', $reset->email)->first();
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+        $user->password = Hash::make($request->password);
+        $user->save();
+        // Xóa token sau khi dùng
+        $reset->delete();
+        return response()->json(['message' => 'Password reset successful']);
+    }
     /**
      * @OA\Post(
      *     path="/auth/register",

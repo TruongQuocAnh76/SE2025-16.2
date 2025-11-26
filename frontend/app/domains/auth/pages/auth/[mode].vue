@@ -106,9 +106,9 @@
             </p>
           </div>
           <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-400 cursor-not-allowed">
-              Forgot Password? (Coming soon)
-            </span>
+            <button type="button" class="text-sm text-blue-600 hover:underline" @click="goToForgotPassword">
+              Forgot Password?
+            </button>
           </div>
           <button
             type="submit"
@@ -264,6 +264,11 @@
 </template>
 
 <script setup lang="ts">
+const router = useRouter()
+
+const goToForgotPassword = () => {
+  router.push('/auth/forgot-password')
+}
 definePageMeta({
   layout: 'auth'
 });
