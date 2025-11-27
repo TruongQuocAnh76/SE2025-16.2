@@ -1156,13 +1156,12 @@ const handleSubmit = async () => {
               try {
                 successMessage.value = `Uploading video ${uploadedCount + 1} of ${videoUploads.length}...`
                 const uploadSuccess = await uploadLessonVideo(
-                  uploadInfo.lesson_id, 
-                  uploadInfo.upload_url, 
+                  uploadInfo.lesson_id,
+                  uploadInfo.upload_url,
                   lesson.video_file,
-                  uploadInfo.video_path,
-                  uploadInfo.video_path.replace('.mp4', '')
+                  uploadInfo.original_video_path,
+                  uploadInfo.original_video_path.replace('.mp4', '')
                 )
-                
                 if (uploadSuccess) {
                   uploadedCount++
                   successMessage.value = `Video ${uploadedCount} of ${videoUploads.length} uploaded and processing started!`

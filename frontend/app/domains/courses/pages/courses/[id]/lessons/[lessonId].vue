@@ -283,9 +283,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
-import Hls from 'hls.js'
 import type { Lesson, Module, Course } from '../../../../types/course'
 import { useLessons } from '../../../../composables/useLessons'
+import Hls from 'hls.js'
 
 // Route parameters
 const route = useRoute()

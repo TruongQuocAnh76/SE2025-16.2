@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@stripe/stripe-js": "^8.3.0",
+    "@types/hls.js": "^1.0.0",
     "axios": "^1.13.2",
     "hls.js": "^1.6.14",
     "nuxt": "^4.1.3",

@@ -42,7 +42,6 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
-      - localstack-init
     networks:
       - app_network
 
@@ -149,6 +148,8 @@ services:
 
   localstack-init:
     image: amazon/aws-cli:latest
+    container_name: se2025-162-localstack-init
+    hostname: localstack-init
     volumes:
       - ./init-localstack.sh:/init-localstack.sh
     environment:

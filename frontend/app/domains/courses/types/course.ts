@@ -240,7 +240,8 @@ export interface CreateCourseResponse {
     [key: string]: {
       upload_url: string
       lesson_id: string
-      video_path: string
+      original_video_path: string
+      hls_base_path: string
     }
   }
 }

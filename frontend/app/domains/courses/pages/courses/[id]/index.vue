@@ -14,32 +14,24 @@
 
     <div v-else-if="course">
 
-    <div 
-      class="h-96 bg-cover bg-center" 
-      :style="{ backgroundImage: `url(${course.thumbnail || '/placeholder-course.jpg'})` }"
-    >
-    </div>
+      <div class="h-96 bg-cover bg-center"
+        :style="{ backgroundImage: `url(${course.thumbnail || '/placeholder-course.jpg'})` }">
+      </div>
 
       <main class="container mx-auto px-4 grid lg:grid-cols-3 gap-6 py-12">
-        
+
         <div class="lg:col-span-2">
-          
+
           <h1 class="text-4xl font-bold text-text-dark mb-4">{{ course.title }}</h1>
           <p class="text-lg text-text-muted mb-6">{{ course.description }}</p>
-          
+
           <div class="flex space-x-2 mb-6 border-b border-gray-200">
-            <button 
-              v-for="tab in tabs" 
-              :key="tab.id"
-              @click="activeTab = tab.id" 
-              
-              :class="[
-                'px-6 py-3 font-semibold transition-colors duration-200 focus:outline-none',
-                activeTab === tab.id
-                  ? 'border-b-2 border-brand-primary text-brand-primary'
-                  : 'text-gray-500 hover:text-gray-700'
-              ]"
-            >
+            <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id" :class="[
+              'px-6 py-3 font-semibold transition-colors duration-200 focus:outline-none',
+              activeTab === tab.id
+                ? 'border-b-2 border-brand-primary text-brand-primary'
+                : 'text-gray-500 hover:text-gray-700'
+            ]">
               {{ tab.name }}
             </button>
           </div>
@@ -49,101 +41,93 @@
               <h2 class="text-2xl font-bold mb-4">Detailed Description</h2>
               <div v-html="course.description || 'No detailed description available.'"></div>
             </div>
-              <div v-if="activeTab === 'review'">
-                <h2 class="text-2xl font-bold mb-4">Reviews</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-  <div class="flex flex-col items-center justify-center bg-gray-50 p-6 rounded-lg">
-    <div class="text-6xl font-bold text-brand-primary">
-      {{ (Number(course.average_rating) || 0).toFixed(1) }}
-    </div>
-    <div class="flex text-yellow-400 text-2xl my-2">
-      <span v-for="i in Math.round(Number(course.average_rating) || 0)" :key="`star-${i}`">★</span>
-      <span v-for="i in (5 - Math.round(Number(course.average_rating) || 0))" :key="`empty-${i}`" class="text-gray-300">★</span>
-    </div>
-    <div class="text-gray-600">
-      ({{ course.review_count || 0 }} reviews)
-    </div>
-  </div>
-  
-  <div class="flex flex-col justify-center">
-    <div v-for="star in [5, 4, 3, 2, 1]" :key="`bar-${star}`" class="flex items-center gap-3 mb-2">
-      <span class="w-16 text-sm font-medium text-gray-700">{{ star }} Stars</span>
-      <div class="flex-1 bg-gray-200 rounded-full h-2.5">
-        <div class="bg-brand-primary h-2.5 rounded-full" :style="{ width: `${ratingPercentages[star]}%` }"></div>
-      </div>
-      <span class="w-10 text-sm text-gray-600 text-right">{{ course.rating_counts ? course.rating_counts[star] : 0 }}</span>
-    </div>
-  </div>
-</div>
-<div class="bg-gray-50 p-6 rounded-lg mb-8 border border-gray-200">
-  </div>
-
-<h3 class="text-xl font-bold mb-6">Other Reviews</h3>
-<div v-if="course.reviews && course.reviews.length > 0" class="space-y-6">
-  </div>
-
-                <div class="bg-gray-50 p-6 rounded-lg mb-8 border border-gray-200">
-                  <h3 class="text-lg font-semibold mb-3">Write Your Review</h3>
-
-                  <div class="flex items-center space-x-2 mb-4">
-                    <span class="text-gray-700">Your Rating:</span>
-                    <div class="flex">
-                      <button 
-                        v-for="star in 5" 
-                        :key="star" 
-                        @click="newRating = star"
-                        class="text-3xl focus:outline-none"
-                        :class="star <= newRating ? 'text-yellow-400' : 'text-gray-300'"
-                      >
-                        ★
-                      </button>
-                    </div>
+            <div v-if="activeTab === 'review'">
+              <h2 class="text-2xl font-bold mb-4">Reviews</h2>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                <div class="flex flex-col items-center justify-center bg-gray-50 p-6 rounded-lg">
+                  <div class="text-6xl font-bold text-brand-primary">
+                    {{ (Number(course.average_rating) || 0).toFixed(1) }}
                   </div>
-
-                  <textarea 
-                    v-model="newComment"
-                    rows="4"
-                    placeholder="Write your thoughts about this course..."
-                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
-                  ></textarea>
-
-                  <p v-if="reviewError" class="text-red-500 text-sm mt-2">{{ reviewError }}</p>
-
-                  <button 
-                    @click="handleSubmitReview"
-                    class="mt-4 px-6 py-2 bg-brand-primary text-white font-semibold rounded-lg hover:bg-brand-secondary transition"
-                  >
-                    Submit Review
-                  </button>
+                  <div class="flex text-yellow-400 text-2xl my-2">
+                    <span v-for="i in Math.round(Number(course.average_rating) || 0)" :key="`star-${i}`">★</span>
+                    <span v-for="i in (5 - Math.round(Number(course.average_rating) || 0))" :key="`empty-${i}`"
+                      class="text-gray-300">★</span>
+                  </div>
+                  <div class="text-gray-600">
+                    ({{ course.review_count || 0 }} reviews)
+                  </div>
                 </div>
 
-                <h3 class="text-xl font-bold mb-6">Other Reviews</h3>
-                <div v-if="course.reviews && course.reviews.length > 0" class="space-y-6">
+                <div class="flex flex-col justify-center">
+                  <div v-for="star in [5, 4, 3, 2, 1]" :key="`bar-${star}`" class="flex items-center gap-3 mb-2">
+                    <span class="w-16 text-sm font-medium text-gray-700">{{ star }} Stars</span>
+                    <div class="flex-1 bg-gray-200 rounded-full h-2.5">
+                      <div class="bg-brand-primary h-2.5 rounded-full"
+                        :style="{ width: `${ratingPercentages[star]}%` }"></div>
+                    </div>
+                    <span class="w-10 text-sm text-gray-600 text-right">{{ course.rating_counts ?
+                      course.rating_counts[star] : 0 }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-50 p-6 rounded-lg mb-8 border border-gray-200">
+              </div>
 
-                  <div v-for="review in course.reviews" :key="review.id" class="border-b border-gray-200 pb-6">
-                    <div class="flex items-center justify-between mb-2">
-                      <div class="flex items-center gap-3">
-                        <div>
-                          <h4 class="font-semibold text-gray-900">
-                            {{ review.student?.first_name || 'Student' }} {{ review.student?.last_name }}
-                          </h4>
-                          <div class="flex text-yellow-400 text-sm">
-                            <span v-for="i in review.rating" :key="i">★</span>
-                            <span v-for="i in (5 - review.rating)" :key="i" class="text-gray-300">★</span>
-                          </div>
+              <h3 class="text-xl font-bold mb-6">Other Reviews</h3>
+              <div v-if="course.reviews && course.reviews.length > 0" class="space-y-6">
+              </div>
+
+              <div class="bg-gray-50 p-6 rounded-lg mb-8 border border-gray-200">
+                <h3 class="text-lg font-semibold mb-3">Write Your Review</h3>
+
+                <div class="flex items-center space-x-2 mb-4">
+                  <span class="text-gray-700">Your Rating:</span>
+                  <div class="flex">
+                    <button v-for="star in 5" :key="star" @click="newRating = star" class="text-3xl focus:outline-none"
+                      :class="star <= newRating ? 'text-yellow-400' : 'text-gray-300'">
+                      ★
+                    </button>
+                  </div>
+                </div>
+
+                <textarea v-model="newComment" rows="4" placeholder="Write your thoughts about this course..."
+                  class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"></textarea>
+
+                <p v-if="reviewError" class="text-red-500 text-sm mt-2">{{ reviewError }}</p>
+
+                <button @click="handleSubmitReview"
+                  class="mt-4 px-6 py-2 bg-brand-primary text-white font-semibold rounded-lg hover:bg-brand-secondary transition">
+                  Submit Review
+                </button>
+              </div>
+
+              <h3 class="text-xl font-bold mb-6">Other Reviews</h3>
+              <div v-if="course.reviews && course.reviews.length > 0" class="space-y-6">
+
+                <div v-for="review in course.reviews" :key="review.id" class="border-b border-gray-200 pb-6">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-3">
+                      <div>
+                        <h4 class="font-semibold text-gray-900">
+                          {{ review.student?.first_name || 'Student' }} {{ review.student?.last_name }}
+                        </h4>
+                        <div class="flex text-yellow-400 text-sm">
+                          <span v-for="i in review.rating" :key="i">★</span>
+                          <span v-for="i in (5 - review.rating)" :key="i" class="text-gray-300">★</span>
                         </div>
                       </div>
-                      <span class="text-sm text-gray-500">{{ new Date(review.created_at).toLocaleDateString() }}</span>
                     </div>
-                    <p class="text-gray-700">{{ review.comment }}</p>
+                    <span class="text-sm text-gray-500">{{ new Date(review.created_at).toLocaleDateString() }}</span>
                   </div>
-
+                  <p class="text-gray-700">{{ review.comment }}</p>
                 </div>
-                <p v-else class="text-gray-500">No reviews yet for this course.</p>
+
               </div>
+              <p v-else class="text-gray-500">No reviews yet for this course.</p>
+            </div>
             <div v-if="activeTab === 'curriculum'">
               <h2 class="text-2xl font-bold mb-6">Curriculum</h2>
-              
+
               <!-- Course Content Summary -->
               <div class="bg-gradient-to-r from-blue-50 to-green-50 border border-gray-200 rounded-lg p-6 mb-6">
                 <h3 class="text-lg font-semibold mb-3 text-gray-800">Course Content Overview</h3>
@@ -170,22 +154,19 @@
                 <div v-for="module in course.modules" :key="module.id">
                   <h3 class="text-xl font-semibold mb-3 p-3 bg-green-50 rounded flex items-center gap-2">
                     <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h4a2 2 0 012 2v2M7 7V5a2 2 0 012-2h6a2 2 0 012 2v2"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h4a2 2 0 012 2v2M7 7V5a2 2 0 012-2h6a2 2 0 012 2v2">
+                      </path>
                     </svg>
                     {{ module.title }} (Module {{ module.order_index }})
                   </h3>
                   <div v-if="module.lessons && module.lessons.length > 0" class="space-y-2">
-                    <div 
-                      v-for="lesson in module.lessons" 
-                      :key="lesson.id" 
-                      class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                    >
+                    <div v-for="lesson in module.lessons" :key="lesson.id"
+                      class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div class="flex justify-between items-start">
                         <div class="flex-1">
-                          <NuxtLink 
-                            :to="`/courses/${course.id}/lessons/${lesson.id}`"
-                            class="text-lg font-medium text-brand-primary hover:text-brand-secondary block mb-1"
-                          >
+                          <NuxtLink :to="`/courses/${course.id}/lessons/${lesson.id}`"
+                            class="text-lg font-medium text-brand-primary hover:text-brand-secondary block mb-1">
                             {{ lesson.order_index }}. {{ lesson.title }}
                           </NuxtLink>
                           <p v-if="lesson.description" class="text-gray-600 text-sm mb-2">
@@ -197,13 +178,16 @@
                             </span>
                             <span v-if="lesson.duration" class="flex items-center gap-1">
                               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                               </svg>
                               {{ lesson.duration }} minutes
                             </span>
                             <span v-if="lesson.content_type" class="flex items-center gap-1">
                               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h4a1 1 0 011 1v2h4a1 1 0 011 1v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5a1 1 0 011-1h4z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M7 4V2a1 1 0 011-1h4a1 1 0 011 1v2h4a1 1 0 011 1v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5a1 1 0 011-1h4z">
+                                </path>
                               </svg>
                               {{ lesson.content_type.charAt(0).toUpperCase() + lesson.content_type.slice(1) }}
                             </span>
@@ -213,8 +197,11 @@
                     </div>
                   </div>
                   <div v-else class="p-4 bg-gray-50 rounded-lg text-center">
-                    <svg class="mx-auto h-8 w-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                    <svg class="mx-auto h-8 w-8 text-gray-400 mb-2" fill="none" stroke="currentColor"
+                      viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                      </path>
                     </svg>
                     <p class="text-gray-500">No lessons in this module yet.</p>
                   </div>
@@ -222,30 +209,29 @@
               </div>
               <div v-else class="p-6 bg-gray-50 rounded-lg text-center">
                 <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h4a2 2 0 012 2v2M7 7V5a2 2 0 012-2h6a2 2 0 012 2v2"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h4a2 2 0 012 2v2M7 7V5a2 2 0 012-2h6a2 2 0 012 2v2">
+                  </path>
                 </svg>
                 <p class="text-gray-500">No modules available yet.</p>
               </div>
-              
+
               <!-- Quizzes Section -->
               <div v-if="course.quizzes && course.quizzes.length > 0" class="mt-8">
                 <h3 class="text-xl font-semibold mb-4 p-3 bg-blue-50 rounded flex items-center gap-2">
                   <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                    </path>
                   </svg>
                   Course Quizzes ({{ course.quizzes.length }})
                 </h3>
                 <div class="space-y-3">
-                  <div 
-                    v-for="quiz in course.quizzes" 
-                    :key="quiz.id" 
-                    class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                  >
+                  <div v-for="quiz in course.quizzes" :key="quiz.id"
+                    class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div class="flex justify-between items-start mb-2">
-                      <NuxtLink 
-                        :to="`/courses/${course.id}/quizzes/${quiz.id}`"
-                        class="flex-1 text-lg font-medium text-brand-primary hover:text-brand-secondary"
-                      >
+                      <NuxtLink :to="`/courses/${course.id}/quizzes/${quiz.id}`"
+                        class="flex-1 text-lg font-medium text-brand-primary hover:text-brand-secondary">
                         {{ quiz.title }}
                       </NuxtLink>
                       <span class="ml-4 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
@@ -258,25 +244,31 @@
                     <div class="flex flex-wrap gap-4 text-sm text-gray-500">
                       <span v-if="quiz.duration" class="flex items-center gap-1">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                         {{ quiz.duration }} minutes
                       </span>
                       <span v-if="quiz.total_questions" class="flex items-center gap-1">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                          </path>
                         </svg>
                         {{ quiz.total_questions }} questions
                       </span>
                       <span v-if="quiz.passing_score" class="flex items-center gap-1">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                         Pass: {{ quiz.passing_score }}%
                       </span>
                       <span v-if="quiz.max_attempts" class="flex items-center gap-1">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                          </path>
                         </svg>
                         {{ quiz.max_attempts }} attempts
                       </span>
@@ -284,9 +276,12 @@
                   </div>
                 </div>
               </div>
-              <div v-else-if="course.modules && course.modules.length > 0" class="mt-8 p-6 bg-gray-50 rounded-lg text-center">
+              <div v-else-if="course.modules && course.modules.length > 0"
+                class="mt-8 p-6 bg-gray-50 rounded-lg text-center">
                 <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                  </path>
                 </svg>
                 <p class="text-gray-500">No quizzes available for this course yet.</p>
               </div>
@@ -296,68 +291,85 @@
 
         <div class="lg:col-span-1">
           <div class="sticky top-8 space-y-6">
-            
+
             <div class="bg-white rounded-lg shadow-lg p-6">
               <div class="flex items-baseline gap-3 mb-4">
                 <span class="text-4xl font-bold text-teal-600">${{ course.price }}</span>
-                <span v-if="course.originalPrice" class="text-2xl text-gray-400 line-through">${{ course.originalPrice }}</span>
+                <span v-if="course.originalPrice" class="text-2xl text-gray-400 line-through">${{ course.originalPrice
+                  }}</span>
               </div>
-              
+
               <p v-if="enrollError" class="text-red-500 text-sm mb-3">{{ enrollError }}</p>
               <p v-if="enrollSuccess" class="text-green-500 text-sm mb-3">{{ enrollSuccess }}</p>
-              
-              <button 
-                @click="handleEnroll"
-                :disabled="enrollLoading"
-                class="w-full bg-brand-primary text-white py-3 rounded-lg font-semibold text-lg hover:bg-brand-secondary transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+
+              <button @click="handleEnroll" :disabled="enrollLoading"
+                class="w-full bg-brand-primary text-white py-3 rounded-lg font-semibold text-lg hover:bg-brand-secondary transition disabled:opacity-50 disabled:cursor-not-allowed">
                 <span v-if="enrollLoading" class="flex items-center justify-center">
-                  <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <path class="opacity-75" fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
                   </svg>
                   Enrolling...
                 </span>
                 <span v-else>Enroll Now</span>
               </button>
             </div>
-            
+
             <div class="bg-white rounded-lg shadow-lg p-6">
               <h4 class="text-xl font-bold mb-4">This course includes</h4>
               <ul class="space-y-3 text-gray-700">
                 <li class="flex items-center gap-3">
-                  <svg class="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h4a2 2 0 012 2v2M7 7V5a2 2 0 012-2h6a2 2 0 012 2v2"></path>
+                  <svg class="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h4a2 2 0 012 2v2M7 7V5a2 2 0 012-2h6a2 2 0 012 2v2">
+                    </path>
                   </svg>
                   <span>{{ course.modules?.length || 0 }} modules</span>
                 </li>
                 <li v-if="totalLessonCount > 0" class="flex items-center gap-3">
-                  <svg class="w-5 h-5 text-teal-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                  <svg class="w-5 h-5 text-teal-600 flex-shrink-0" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                    </path>
                   </svg>
                   <span>{{ totalLessonCount }} lesson{{ totalLessonCount === 1 ? '' : 's' }}</span>
                 </li>
                 <li v-if="course.quizzes && course.quizzes.length > 0" class="flex items-center gap-3">
-                  <svg class="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                  <svg class="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                    </path>
                   </svg>
                   <span>{{ course.quizzes.length }} quiz{{ course.quizzes.length === 1 ? '' : 'zes' }}</span>
                 </li>
                 <li class="flex items-center gap-3">
-                  <svg class="w-5 h-5 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  <svg class="w-5 h-5 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
                   <span>Duration: {{ course.duration || 'N/A' }} hours</span>
                 </li>
                 <li class="flex items-center gap-3">
-                  <svg class="w-5 h-5 text-orange-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                  <svg class="w-5 h-5 text-orange-600 flex-shrink-0" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                   </svg>
                   <span>Access on any device</span>
                 </li>
                 <li class="flex items-center gap-3">
-                  <svg class="w-5 h-5 text-yellow-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                  <svg class="w-5 h-5 text-yellow-600 flex-shrink-0" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z">
+                    </path>
                   </svg>
                   <span>Blockchain Certificate</span>
                 </li>
@@ -401,21 +413,6 @@ const tabs = [
 
 const courseId = route.params.id as string
 
-// Handle Enrollment - Redirect to payment page
-const handleEnroll = () => {
-  if (!course.value) return
-  
-  // Check if course is free
-  if (course.value.price === 0 || !course.value.price) {
-    // For free courses, enroll directly (you can add API call here)
-    alert('Enrolling in free course...')
-    // TODO: Add direct enrollment API call
-  } else {
-    // For paid courses, redirect to payment page
-    router.push(`/payment?type=COURSE&course_id=${courseId}`)
-  }
-}
-
 onMounted(async () => {
   if (!courseId) return
 
@@ -449,8 +446,8 @@ const handleSubmitReview = async () => {
     const response = await addReview(courseId, {
       rating: newRating.value,
       comment: newComment.value
-    }) 
-    
+    })
+
     // Get actual review from response
     const newReview = response.review as Review
 
@@ -461,24 +458,24 @@ const handleSubmitReview = async () => {
 
     // Update review list
     const existingIndex = course.value.reviews.findIndex(
-        r => r.student_id === newReview.student_id
+      r => r.student_id === newReview.student_id
     );
 
     if (existingIndex !== -1) {
-        // Update existing review
-        course.value.reviews[existingIndex] = newReview;
+      // Update existing review
+      course.value.reviews[existingIndex] = newReview;
     } else {
-        // Add new review to the beginning of the list
-        course.value.reviews.unshift(newReview);
+      // Add new review to the beginning of the list
+      course.value.reviews.unshift(newReview);
     }
 
     // Update stats (from 'response.course_stats')
-    if (response.course_stats && course.value) { 
-            course.value.average_rating = response.course_stats.average_rating
-            course.value.review_count = response.course_stats.review_count
-            // Important line to update chart:
-            course.value.rating_counts = response.course_stats.rating_counts
-        }
+    if (response.course_stats && course.value) {
+      course.value.average_rating = response.course_stats.average_rating
+      course.value.review_count = response.course_stats.review_count
+      // Important line to update chart:
+      course.value.rating_counts = response.course_stats.rating_counts
+    }
 
     // Clear form
     newRating.value = 0
@@ -500,14 +497,18 @@ const handleEnroll = async () => {
   enrollSuccess.value = ''
 
   try {
-    const response = await enrollInCourse(courseId)
-    
-    if (response.success) {
-      enrollSuccess.value = response.message || 'Successfully enrolled in the course!'
-      // Optionally refresh the page or update UI to show enrolled status
+    if (course.value.price === 0 || !course.value.price) {
+      const response = await enrollInCourse(courseId)
+
+      if (response.success) {
+        enrollSuccess.value = response.message || 'Successfully enrolled in the course!'
+      } else {
+        enrollError.value = response.message || 'Failed to enroll in the course.'
+      }
     } else {
-      enrollError.value = response.message || 'Failed to enroll in the course.'
+      router.push(`/payment?type=COURSE&course_id=${courseId}`)
     }
+
   } catch (err: any) {
     enrollError.value = err.data?.message || 'Failed to enroll in the course. Please try again.'
   } finally {
@@ -517,20 +518,20 @@ const handleEnroll = async () => {
 
 const ratingPercentages = computed(() => {
   const percentages: { [key: number]: number } = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
-  
+
   // Use .value because 'course' is a ref
   if (!course.value || !course.value.rating_counts || !course.value.review_count) {
     return percentages // Return 0% if no data
   }
-  
+
   const totalReviews = course.value.review_count
-  
+
   for (let i = 1; i <= 5; i++) {
     const count = course.value.rating_counts[i] || 0
     // Avoid division by 0 if totalReviews is 0
     percentages[i] = totalReviews > 0 ? (count / totalReviews) * 100 : 0
   }
-  
+
   return percentages
 })
 
@@ -538,7 +539,7 @@ const totalLessonCount = computed(() => {
   if (!course.value || !course.value.modules) {
     return 0
   }
-  
+
   return course.value.modules.reduce((total, module) => {
     return total + (module.lessons ? module.lessons.length : 0)
   }, 0)
