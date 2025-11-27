@@ -3,6 +3,7 @@
 # Wait for LocalStack to be ready
 echo "Waiting for LocalStack to start..."
 while ! curl -s http://localstack:4566/_localstack/health > /dev/null; do
+    echo "LocalStack is not ready yet. Waiting..."
     sleep 2
 done
 
@@ -18,9 +19,10 @@ aws --endpoint-url=http://localstack:4566 s3api put-bucket-cors \
         "CORSRules": [
             {
                 "AllowedHeaders": ["*"],
-                "AllowedMethods": ["GET", "PUT", "POST", "DELETE"],
+                "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
                 "AllowedOrigins": ["*"],
-                "ExposeHeaders": ["ETag"]
+                "ExposeHeaders": ["ETag", "x-amz-meta-custom-header", "Content-Length"],
+                "MaxAgeSeconds": 3000
             }
         ]
     }'

@@ -45,9 +45,19 @@ class CourseRepository
     {
         return $this->model->with([
             'teacher:id,first_name,last_name,email',
-            'modules.lessons:id,title,order_index,module_id,is_free',
+            'modules' => function ($query) {
+                $query->with(['lessons' => function ($lessonQuery) {
+                    $lessonQuery->orderBy('order_index');
+                }])->orderBy('order_index');
+            },
             'reviews.student:id,first_name,last_name',
-            'tags:id,name,slug' // <-- ĐÃ THÊM
+            // Include quizzes and their questions so course detail responses contain quizzes
+            'quizzes' => function ($q) {
+                $q->with(['questions' => function ($qq) {
+                    $qq->orderBy('order_index');
+                }]);
+            },
+            'tags:id,name,slug'
         ])->findOrFail($id);
     }
 

@@ -9,16 +9,26 @@ RUN apk add --no-cache \
     unzip \
     git \
     curl \
-    bash
+    bash \
+    ffmpeg \
+    ffmpeg-dev
+
+# Install Redis extension
+RUN apk add --no-cache autoconf g++ make \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del autoconf g++ make
 
 # Install PHP extensions
 RUN docker-php-ext-install pdo pdo_pgsql zip bcmath pcntl
 
-# Install Redis extension
-RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
-    && apk del .build-deps
+# Install Redis extension (only if not already installed)
+RUN if ! php -m | grep -q redis; then \
+        apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
+        && pecl install redis \
+        && docker-php-ext-enable redis \
+        && apk del .build-deps; \
+    fi
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -50,7 +60,7 @@ RUN chown -R www-data:www-data /var/www \
     && chmod -R 755 /var/www/bootstrap/cache
 
 # Expose port
-EXPOSE 8000
+EXPOSE 9000
 
-# Start Laravel with artisan serve 
-CMD php artisan serve --host=0.0.0.0 --port=8000 2>&1
+# Start PHP-FPM
+CMD ["php-fpm"]

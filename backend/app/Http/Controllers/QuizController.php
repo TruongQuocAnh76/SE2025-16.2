@@ -219,6 +219,9 @@ class QuizController extends Controller
                 ], 404);
             }
 
+            // Check if user can view this quiz
+            $this->authorize('view', $quiz);
+
             // Format questions for student view (hide correct answers)
             $questions = $quiz->questions->map(function ($question) {
                 return $question->toStudentArray();
@@ -242,6 +245,11 @@ class QuizController extends Controller
                     'questions' => $questions,
                 ],
             ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied - enrollment required'
+            ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

@@ -15,6 +15,8 @@ use App\Models\Enrollment;
 use App\Models\Review;
 use App\Models\User;
 use App\Services\CourseService;
+use App\Helpers\AwsUrlHelper;
+use App\Models\Question;
 
 /**
  * @OA\Server(
@@ -99,59 +101,89 @@ class CourseController extends Controller
         $this->authorize('create', Course::class);
 
         $validator = Validator::make($request->all(), [
+            // Course validation
             'title'       => 'required|string|max:255',
             'description' => 'required|string',
-            'thumbnail'   => 'nullable|url', // Allow URL or will be uploaded via pre-signed URL
+            'thumbnail'   => ['nullable', function($attribute, $value, $fail) {
+                if ($value !== null && $value !== 'UPLOAD_REQUESTED' && !filter_var($value, FILTER_VALIDATE_URL)) {
+                    $fail('The thumbnail must be a valid URL or "UPLOAD_REQUESTED" for file upload.');
+                }
+            }],
             'level'       => 'in:BEGINNER,INTERMEDIATE,ADVANCED,EXPERT',
             'price'       => 'nullable|numeric|min:0',
             'duration'    => 'nullable|integer|min:1',
             'passing_score' => 'integer|min:0|max:100',
-
+            'long_description' => 'nullable|string',
+            'curriculum' => 'nullable|string',
+            'category' => 'nullable|string',
+            'language' => 'nullable|string',
+            'discount' => 'nullable|numeric|min:0',
             'tags'          => 'nullable|array',
-            'tags.*'        => 'string|exists:tags,id'
+            'tags.*'        => 'string|exists:tags,id',
+
+            // Modules validation (optional)
+            'modules' => 'nullable|array',
+            'modules.*.title' => 'required|string|max:255',
+            'modules.*.description' => 'nullable|string',
+            'modules.*.order_index' => 'required|integer|min:0',
+
+            // Lessons validation
+            'modules.*.lessons' => 'nullable|array',
+            'modules.*.lessons.*.title' => 'required|string|max:255',
+            'modules.*.lessons.*.content_type' => 'required|in:VIDEO',
+            'modules.*.lessons.*.content_url' => 'nullable|string', // Made nullable since video will be uploaded
+            'modules.*.lessons.*.duration' => 'nullable|integer|min:1',
+            'modules.*.lessons.*.order_index' => 'required|integer|min:0',
+            'modules.*.lessons.*.is_free' => 'required|boolean',
+
+            // Quizzes validation
+            'modules.*.quizzes' => 'nullable|array',
+            'modules.*.quizzes.*.title' => 'required|string|max:255',
+            'modules.*.quizzes.*.description' => 'nullable|string',
+            'modules.*.quizzes.*.quiz_type' => 'required|in:PRACTICE,GRADED,FINAL',
+            'modules.*.quizzes.*.time_limit' => 'nullable|integer|min:1',
+            'modules.*.quizzes.*.passing_score' => 'required|integer|min:0|max:100',
+            'modules.*.quizzes.*.max_attempts' => 'nullable|integer|min:1',
+            'modules.*.quizzes.*.order_index' => 'required|integer|min:0',
+            'modules.*.quizzes.*.is_active' => 'required|boolean',
+
+            // Questions validation
+            'modules.*.quizzes.*.questions' => 'nullable|array',
+            'modules.*.quizzes.*.questions.*.question_text' => 'required|string',
+            'modules.*.quizzes.*.questions.*.question_type' => 'required|in:MULTIPLE_CHOICE,CHECKBOX,SHORT_ANSWER',
+            'modules.*.quizzes.*.questions.*.points' => 'required|integer|min:1',
+            'modules.*.quizzes.*.questions.*.order_index' => 'required|integer|min:0',
+            'modules.*.quizzes.*.questions.*.options' => 'nullable|array',
+            'modules.*.quizzes.*.questions.*.correct_answer' => 'required|string',
+            'modules.*.quizzes.*.questions.*.explanation' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
 
-        $data = $validator->validated();
+        try {
+            $data = $validator->validated();
+            $data['teacher_id'] = Auth::id();
 
-        $tagIds = $data['tags'] ?? [];
-        unset($data['tags']);
+            $result = $this->courseService->createCourseWithModules($data);
 
-        $data['id'] = Str::uuid();
-        $data['slug'] = Str::slug($data['title']).'-'.Str::random(5);
-        $data['teacher_id'] = Auth::id();
-        $data['status'] = 'DRAFT';
+            return response()->json([
+                'message' => 'Course created successfully',
+                'course' => $result['course'],
+                'thumbnail_upload_url' => $result['thumbnail_upload_url'],
+                'video_upload_urls' => $result['video_upload_urls']
+            ], 201);
 
-        // Generate thumbnail URL if not provided
-        $thumbnailUploadUrl = null;
-        if (empty($data['thumbnail'])) {
-            $thumbnailPath = 'courses/thumbnails/' . $data['id'] . '.jpg';
-            $awsEndpoint = env('AWS_ENDPOINT');
-            $awsBucket = env('AWS_BUCKET');
-            $data['thumbnail'] = $awsEndpoint . '/' . $awsBucket . '/' . $thumbnailPath;
-            $thumbnailUploadUrl = Storage::disk('s3')->temporaryUrl(
-                $thumbnailPath,
-                now()->addMinutes(30), // URL valid for 30 minutes
-                ['ContentType' => 'image/jpeg']
-            );
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to create course',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $course = Course::create($data);
-
-        if (!empty($tagIds)) {
-            $course->tags()->attach($tagIds);
-        }
-
-        return response()->json([
-            'message' => 'Course created successfully',
-            'course' => $course,
-            'course' => $course->load('tags'),
-            'thumbnail_upload_url' => $thumbnailUploadUrl
-        ]);
     }
+
+
 
     /**
      * @OA\Get(
@@ -288,7 +320,11 @@ class CourseController extends Controller
         $validator = Validator::make($request->all(), [
             'title'       => 'sometimes|string|max:255',
             'description' => 'sometimes|string',
-            'thumbnail'   => 'nullable|url',
+            'thumbnail'   => ['nullable', function($attribute, $value, $fail) {
+                if ($value !== null && $value !== 'UPLOAD_REQUESTED' && !filter_var($value, FILTER_VALIDATE_URL)) {
+                    $fail('The thumbnail must be a valid URL or "UPLOAD_REQUESTED" for file upload.');
+                }
+            }],
             'status'      => 'in:DRAFT,PENDING,PUBLISHED,ARCHIVED',
             'level'       => 'in:BEGINNER,INTERMEDIATE,ADVANCED,EXPERT',
             'price'       => 'nullable|numeric|min:0',
@@ -565,5 +601,99 @@ class CourseController extends Controller
         $students = $this->courseService->getEnrolledStudents($id);
 
         return response()->json($students);
+    }
+
+    /**
+     * Notify backend that video upload is complete and start HLS processing
+     */
+    public function notifyVideoUploadComplete(Request $request, $lessonId)
+    {
+        $validator = Validator::make($request->all(), [
+            'original_video_path' => 'required|string',
+            'hls_base_path' => 'required|string',
+            'video_size' => 'nullable|integer',
+            'video_duration' => 'nullable|integer'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        try {
+            $originalVideoPath = $request->original_video_path;
+            $hlsBasePath = $request->hls_base_path;
+            
+            $metadata = [];
+            if ($request->has('video_size')) {
+                $metadata['video_size'] = $request->video_size;
+            }
+            if ($request->has('video_duration')) {
+                $metadata['video_duration'] = $request->video_duration;
+            }
+            
+            // Use the service method to handle the upload completion
+            $result = $this->courseService->handleVideoUploadComplete(
+                $lessonId,
+                $originalVideoPath,
+                $hlsBasePath,
+                $metadata
+            );
+
+            return response()->json([
+                'message' => $result['message'],
+                'lesson_id' => $result['lesson_id'],
+                'hls_processing_started' => true,
+                'expected_hls_url' => $result['expected_hls_url'],
+                'processing_status' => $result['processing_status']
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to process video upload notification',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Check HLS processing status for a lesson
+     */
+    public function checkHlsProcessingStatus(Request $request, $lessonId)
+    {
+        try {
+            // Get lesson to check if HLS URL is available
+            $lesson = Lesson::findOrFail($lessonId);
+            
+            if (!$lesson->content_url) {
+                return response()->json([
+                    'status' => 'pending',
+                    'message' => 'Video processing is still in progress'
+                ]);
+            }
+
+            // Check if the HLS master playlist exists
+            $hlsPath = str_replace(env('AWS_ENDPOINT') . '/' . env('AWS_BUCKET') . '/', '', $lesson->content_url);
+            $exists = \Illuminate\Support\Facades\Storage::disk('s3')->exists($hlsPath);
+
+            if ($exists) {
+                return response()->json([
+                    'status' => 'completed',
+                    'message' => 'Video processing completed successfully',
+                    'hls_url' => $lesson->content_url
+                ]);
+            } else {
+                return response()->json([
+                    'status' => 'processing',
+                    'message' => 'Video is being processed into adaptive streaming format'
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to check processing status',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('questions', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->text('question_text');
-            $table->enum('question_type', ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER', 'ESSAY']);
+            $table->enum('question_type', ['MULTIPLE_CHOICE', 'CHECKBOX', 'TRUE_FALSE', 'SHORT_ANSWER', 'ESSAY']);
             $table->integer('points')->default(1);
             $table->integer('order_index');
             
