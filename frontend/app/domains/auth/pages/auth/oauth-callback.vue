@@ -8,41 +8,58 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+definePageMeta({
+  layout: 'auth'
+})
+
 const route = useRoute()
-const router = useRouter()
+const { $toast } = useNuxtApp() as any
 const error = ref('')
 
 onMounted(async () => {
   try {
-    const { token, access_token, user } = route.query
+    const { token, access_token, user, error: errorParam } = route.query
+    
+    if (errorParam) {
+      error.value = String(errorParam)
+      $toast.error(error.value)
+      setTimeout(() => {
+        navigateTo('/auth/login')
+      }, 2000)
+      return
+    }
     
     // Backend trả về 'token', không phải 'access_token'
     const authToken = token || access_token
     
-    if (authToken) {
-      // Store token in localStorage
-      localStorage.setItem('auth_token', authToken)
+    if (authToken && user) {
+      // Store token in cookie
+      const tokenCookie = useCookie('auth_token')
+      tokenCookie.value = String(authToken)
       
       // Parse and store user data
-      if (user) {
-        const userData = JSON.parse(decodeURIComponent(user))
-        localStorage.setItem('user', JSON.stringify(userData))
-      }
+      const userData = JSON.parse(decodeURIComponent(String(user)))
+      const userCookie = useCookie('user_data')
+      userCookie.value = JSON.stringify(userData)
       
-      // Redirect to dashboard or home
-      await router.push('/')
+      $toast.success(`Welcome back, ${userData.first_name}!`)
+      
+      // Redirect to user profile
+      await navigateTo(`/s/${userData.username}`)
     } else {
-      error.value = 'Authentication failed. No token received.'
+      error.value = 'Authentication failed. No token or user data received.'
+      $toast.error(error.value)
       setTimeout(() => {
-        router.push('/auth/login')
+        navigateTo('/auth/login')
       }, 2000)
     }
   } catch (e) {
     error.value = 'Authentication failed. Please try again.'
     console.error('OAuth callback error:', e)
+    $toast.error(error.value)
     setTimeout(() => {
-      router.push('/auth/login')
+      navigateTo('/auth/signin')
     }, 2000)
   }
 })

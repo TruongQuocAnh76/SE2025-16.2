@@ -1,4 +1,4 @@
-import type { Course, CreateCourseData, Review, CreateReviewData, CreateCourseResponse, CourseDetailsResponse, AddReviewResponse, Tag } from '../types/course'
+import type { Course, CreateCourseData, Review, CreateReviewData, CreateCourseResponse, CourseDetailsResponse, AddReviewResponse, Tag, CreateCourseWithModulesData } from '../types/course'
 
 export const useCourses = () => {
   const config = useRuntimeConfig()
@@ -15,7 +15,7 @@ export const useCourses = () => {
   }
 
 
-  const createCourse = async (courseData: CreateCourseData): Promise<{ course: Course; thumbnailUploadUrl?: string } | null> => {
+  const createCourse = async (courseData: CreateCourseData | CreateCourseWithModulesData): Promise<CreateCourseResponse | null> => {
     try {
       const data = await $fetch<CreateCourseResponse>('/api/courses', {
         baseURL: config.public.backendUrl as string,
@@ -26,10 +26,7 @@ export const useCourses = () => {
         },
         body: courseData
       })
-      return {
-        course: data.course,
-        thumbnailUploadUrl: data.thumbnail_upload_url
-      }
+      return data
     } catch (error) {
       console.error('Failed to create course:', error)
       throw error
@@ -210,35 +207,85 @@ export const useCourses = () => {
     }
   }
 
-  const createTag = async (tagName: string): Promise<Tag | null> => {
+  const uploadLessonVideo = async (lessonId: string, uploadUrl: string, videoFile: File, originalVideoPath?: string, hlsBasePath?: string): Promise<boolean> => {
     try {
-      const data = await $fetch<{ message: string; tag: Tag }>('/api/tags', {
+      // Step 1: Upload video to S3 using pre-signed URL
+      const response = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: videoFile,
+        headers: { 'Content-Type': videoFile.type }
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Upload failed with status: ${response.status}`)
+      }
+      
+      // Step 2: Notify backend that upload is complete
+      const notificationSuccess = await notifyVideoUploadComplete(lessonId, originalVideoPath!, hlsBasePath!, videoFile)
+      
+      return notificationSuccess
+    } catch (error) {
+      console.error('Failed to upload lesson video:', error)
+      return false
+    }
+  }
+
+  const notifyVideoUploadComplete = async (lessonId: string, originalVideoPath: string, hlsBasePath: string, videoFile: File): Promise<boolean> => {
+    try {
+      const data = await $fetch(`/api/courses/videos/${lessonId}/upload-complete`, {
         baseURL: config.public.backendUrl as string,
         method: 'POST',
         headers: {
           ...getAuthHeaders(),
           'Content-Type': 'application/json'
         },
-        body: { name: tagName }
+        body: {
+          original_video_path: originalVideoPath,
+          hls_base_path: hlsBasePath,
+          video_size: videoFile.size,
+          video_duration: null // We don't have duration info from the file object
+        }
       })
-      return data.tag
+      
+      console.log('Video upload notification sent successfully:', data)
+      return true
     } catch (error) {
-      console.error('Failed to create tag:', error)
-      throw error
+      console.error('Failed to notify video upload completion:', error)
+      return false
     }
   }
 
-  const getRecommendations = async (): Promise<Course[]> => {
+  const checkHlsProcessingStatus = async (lessonId: string): Promise<{ status: string; message: string; hls_url?: string }> => {
     try {
-      const response = await $fetch<{ success: boolean; data: Course[] }>('/api/recommendations', {
+      const data = await $fetch<{ status: string; message: string; hls_url?: string }>(`/api/courses/lesson/${lessonId}/hls-status`, {
         baseURL: config.public.backendUrl as string,
         method: 'GET',
-        headers: getAuthHeaders()
+        headers: {
+          ...getAuthHeaders(),
+          'Accept': 'application/json'
+        }
       })
-      return response.data || []
+      return data
     } catch (error) {
-      console.error('Failed to fetch recommendations:', error)
-      return []
+      console.error('Failed to check HLS processing status:', error)
+      return { status: 'error', message: 'Failed to check processing status' }
+    }
+  }
+
+  const enrollInCourse = async (courseId: string): Promise<{ success: boolean; message: string; enrollment?: any }> => {
+    try {
+      const data = await $fetch<{ success: boolean; message: string; enrollment?: any }>(`/api/courses/${courseId}/enroll`, {
+        baseURL: config.public.backendUrl as string,
+        method: 'POST',
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json'
+        }
+      })
+      return data
+    } catch (error: any) {
+      console.error('Failed to enroll in course:', error)
+      throw error
     }
   }
 
@@ -256,5 +303,9 @@ export const useCourses = () => {
     getTags,
     createTag,
     getRecommendations,
+    uploadLessonVideo,
+    notifyVideoUploadComplete,
+    checkHlsProcessingStatus,
+    enrollInCourse,
   }
 }

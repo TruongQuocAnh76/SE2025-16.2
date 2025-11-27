@@ -42,12 +42,15 @@ export interface Module {
 export interface Lesson {
   id: string
   title: string
+  description?: string
+  text_content?: string
   content_type: string
   content_url?: string
   duration?: number
   order_index: number
   is_free: boolean
   module_id: string
+  completed?: boolean
   created_at?: string
   updated_at?: string
   module?: Module
@@ -96,12 +99,43 @@ export interface Quiz {
   title: string
   description?: string
   duration?: number
+  time_limit?: number
+  quiz_type: string
   passing_score: number
   max_attempts: number
+  total_questions?: number
+  total_points?: number
   is_active: boolean
   created_at?: string
   updated_at?: string
   course?: Course
+}
+
+export interface QuizAttempt {
+  id: string
+  quiz_id: string
+  student_id: string
+  started_at: string
+  submitted_at?: string
+  score?: number
+  passed?: boolean
+  time_spent?: number
+  answers?: QuizAnswer[]
+}
+
+export interface QuizAnswer {
+  id: string
+  question_id: string
+  answer_text: string
+  is_correct?: boolean
+  points_earned?: number
+}
+
+export interface QuizStats {
+  total_attempts: number
+  best_score: number
+  average_score: number
+  last_attempt?: QuizAttempt
 }
 
 export interface Progress {
@@ -133,6 +167,66 @@ export interface CreateCourseData {
   tags?: string[];
 }
 
+export interface Question {
+  id?: string
+  question_text: string
+  question_type: 'MULTIPLE_CHOICE' | 'CHECKBOX' | 'SHORT_ANSWER'
+  points: number
+  order_index: number
+  options?: string[]
+  correct_answer: string
+  explanation?: string
+  quiz_id?: string
+}
+
+export interface CreateModuleData {
+  id?: string
+  title: string
+  description?: string
+  order_index: number
+  lessons: CreateLessonData[]
+  quizzes: CreateQuizData[]
+}
+
+export interface CreateLessonData {
+  id?: string
+  title: string
+  content_type: 'VIDEO'
+  content_url?: string
+  video_file?: File
+  duration?: number
+  order_index: number
+  is_free: boolean
+}
+
+export interface CreateQuizData {
+  id?: string
+  title: string
+  description?: string
+  quiz_type: 'PRACTICE' | 'GRADED' | 'FINAL'
+  time_limit?: number
+  passing_score: number
+  max_attempts?: number
+  order_index: number
+  is_active: boolean
+  questions: CreateQuestionData[]
+}
+
+export interface CreateQuestionData {
+  id?: string
+  question_text: string
+  question_type: 'MULTIPLE_CHOICE' | 'CHECKBOX' | 'SHORT_ANSWER'
+  points: number
+  order_index: number
+  options?: string[]
+  correct_answer: string
+  explanation?: string
+}
+
+export interface CreateCourseWithModulesData extends CreateCourseData {
+  modules: CreateModuleData[]
+}
+
 export interface CreateReviewData {
   rating: number
   comment?: string
@@ -142,6 +236,14 @@ export interface CreateCourseResponse {
   message: string
   course: Course
   thumbnail_upload_url?: string
+  video_upload_urls?: {
+    [key: string]: {
+      upload_url: string
+      lesson_id: string
+      original_video_path: string
+      hls_base_path: string
+    }
+  }
 }
 
 export interface CourseDetailsResponse {

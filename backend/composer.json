@@ -18,7 +18,9 @@
         "paypal/paypal-checkout-sdk": "^1.0",
         "paypal/paypal-server-sdk": "^1.1",
         "paypal/rest-api-sdk-php": "^1.6",
-        "stripe/stripe-php": "*"
+        "php-amqplib/php-amqplib": "^2.8",
+        "stripe/stripe-php": "*",
+        "pbmedia/laravel-ffmpeg": "^8.7"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

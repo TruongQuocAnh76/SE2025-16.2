@@ -68,8 +68,8 @@ class LearningController extends Controller
                     'lessons.order_index',
                     'lessons.content_type',
                     'lessons.duration',
-                    DB::raw('IFNULL(progress.is_completed, 0) as is_completed'),
-                    DB::raw('IFNULL(progress.time_spent, 0) as time_spent')
+                    DB::raw('COALESCE(progress.is_completed, false) as is_completed'),
+                    DB::raw('COALESCE(progress.time_spent, 0) as time_spent')
                 )
                 ->orderBy('lessons.order_index');
             }])
@@ -244,16 +244,23 @@ class LearningController extends Controller
             return response()->json(['error' => 'Not enrolled in this course'], 403);
         }
 
-        $progress = Progress::updateOrCreate(
-            [
+        $progress = Progress::where('student_id', $studentId)
+            ->where('lesson_id', $lessonId)
+            ->first();
+
+        if ($progress) {
+            // Update existing progress - increment time_spent
+            $progress->increment('time_spent', $validated['time_spent']);
+            $progress->update(['last_accessed_at' => now()]);
+        } else {
+            // Create new progress record
+            $progress = Progress::create([
                 'student_id' => $studentId,
                 'lesson_id' => $lessonId,
-            ],
-            [
-                'time_spent' => DB::raw("time_spent + {$validated['time_spent']}"),
+                'time_spent' => $validated['time_spent'],
                 'last_accessed_at' => now(),
-            ]
-        );
+            ]);
+        }
 
         return response()->json(['message' => 'Progress time updated', 'progress' => $progress]);
     }
