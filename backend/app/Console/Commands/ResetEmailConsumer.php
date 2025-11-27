@@ -53,7 +53,6 @@ class ResetEmailConsumer extends Command
 
         $channel->basic_consume($queue, '', false, false, false, false, $callback);
 
-        // CHUẨN PHẢI LÀ CÁI NÀY
         while (count($channel->callbacks)) {
             $channel->wait();
         }
