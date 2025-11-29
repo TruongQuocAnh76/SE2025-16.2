@@ -244,6 +244,8 @@ class CourseService {
 
         // Existing user: return content-based recommendations
         return $this->courseRepository->getContentBasedRecommendations($user);
+    }
+
     public function updateLessonVideo($lessonId, $videoUrl) {
         return $this->lessonRepository->update($lessonId, ['content_url' => $videoUrl]);
     }

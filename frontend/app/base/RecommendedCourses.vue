@@ -42,11 +42,34 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
-import { useRecommendedCourses } from '../domains/courses/composables/useRecommendedCourses'
+import { computed, watch, ref } from 'vue'
+import { useCourses } from '../domains/courses/composables/useCourses'
 import CourseCard from '../domains/courses/components/ui/CourseCard.vue'
 
-const { data, pending, error } = useRecommendedCourses()
+const { getRecommendations } = useCourses()
+
+// Reactive state
+const data = ref<any>(null)
+const pending = ref(false)
+const error = ref<any>(null)
+
+// Fetch recommendations
+const fetchRecommendations = async () => {
+  pending.value = true
+  error.value = null
+  try {
+    const recommendations = await getRecommendations()
+    data.value = { success: true, data: recommendations }
+  } catch (err) {
+    error.value = err
+    console.error('Failed to fetch recommendations:', err)
+  } finally {
+    pending.value = false
+  }
+}
+
+// Fetch on mount
+fetchRecommendations()
 
 // Debug logging
 watch(() => data.value, (newData) => {

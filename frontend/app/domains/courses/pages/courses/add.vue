@@ -767,8 +767,7 @@
         <div v-if="successMessage" class="mt-4 text-center text-green-600">
           {{ successMessage }}
         </div>
-
-      </form>
+      </div>
 
       <!-- Create Tag Modal -->
       <div v-if="showCreateTagModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showCreateTagModal = false">
@@ -822,7 +821,7 @@ const config = useRuntimeConfig()
 
 const LEVELS = ['BEGINNER' , 'INTERMEDIATE' , 'ADVANCED' , 'EXPERT'] as const
 
-const { createCourse, uploadCourseThumbnail, updateCourseThumbnail, getTags, uploadLessonVideo, notifyVideoUploadComplete, checkHlsProcessingStatus } = useCourses()
+const { createCourse, uploadCourseThumbnail, updateCourseThumbnail, getTags, createTag, uploadLessonVideo, notifyVideoUploadComplete, checkHlsProcessingStatus } = useCourses()
 const router = useRouter()
 
 // Multi-step form state
