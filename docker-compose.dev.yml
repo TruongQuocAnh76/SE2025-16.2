@@ -32,16 +32,15 @@ services:
       - AWS_USE_PATH_STYLE_ENDPOINT=true
       - AWS_BUCKET=certchain-dev
       - QUEUE_CONNECTION=redis
+      - QUEUE_FAILED_DRIVER=redis
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - BLOCKCHAIN_SERVICE_URL=http://blockchain:3001
     depends_on:
       - db
       - redis
       - localstack
       - rabbitmq
-    dns:
-      - 8.8.8.8
-      - 1.1.1.1
     networks:
       - app_network
 
@@ -60,15 +59,81 @@ services:
       - AWS_USE_PATH_STYLE_ENDPOINT=true
       - AWS_BUCKET=certchain-dev
       - QUEUE_CONNECTION=redis
+      - QUEUE_FAILED_DRIVER=redis
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - BLOCKCHAIN_SERVICE_URL=http://blockchain:3001
     command: php artisan queue:work redis --tries=3 --timeout=3600 --sleep=3
     depends_on:
       - backend
       - redis
+      - blockchain
     networks:
       - app_network
     restart: unless-stopped
+
+  blockchain:
+    build:
+      context: ./blockchain
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3001:3001"
+      - "8545:8545" # Hardhat node port
+    volumes:
+      - ./blockchain:/app
+      - /app/node_modules
+      - blockchain_data:/app/blockchain-data
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - BLOCKCHAIN_NETWORK=localhost
+      - HARDHAT_RPC_URL=http://127.0.0.1:8545
+      - POLYGON_RPC_URL=https://polygon-rpc.com
+      - POLYGON_MUMBAI_RPC_URL=https://rpc-mumbai.maticvigil.com
+      - PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+      - CERTIFICATE_CONTRACT_ADDRESS_HARDHAT=0x5FbDB2315678afecb367f032d93F642f64180aa3
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000
+      - LOG_LEVEL=debug
+    working_dir: /app/blockchain
+    command: >
+      sh -c "
+        echo 'Setting up blockchain data directories...' &&
+        mkdir -p /app/blockchain-data/cache /app/blockchain-data/artifacts /app/blockchain-data/ignition-deployments /app/blockchain-data/types &&
+        rm -rf /app/cache /app/artifacts /app/ignition/deployments /app/types &&
+        ln -sf /app/blockchain-data/cache /app/cache &&
+        ln -sf /app/blockchain-data/artifacts /app/artifacts &&
+        ln -sf /app/blockchain-data/types /app/types &&
+        mkdir -p /app/ignition &&
+        ln -sf /app/blockchain-data/ignition-deployments /app/ignition/deployments &&
+        chown -R blockchain:nodejs /app/blockchain-data &&
+        export HOME=/home/blockchain &&
+        sudo -E -u blockchain -H sh -c '
+          echo \"Starting Hardhat node...\" &&
+          pnpm run hardhat:node &
+          HARDHAT_PID=$$! &&
+          echo \"Waiting for Hardhat node to be ready...\" &&
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if curl -s http://127.0.0.1:8545 > /dev/null 2>&1; then
+              echo \"Hardhat node is ready!\";
+              break;
+            fi;
+            echo \"Waiting for Hardhat node... (attempt $$i/12)\";
+            sleep 5;
+          done &&
+          echo \"Deploying contracts...\" &&
+          pnpm run deploy:local &&
+          echo \"Starting blockchain service...\" &&
+          pnpm run dev
+        '
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/v1/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - app_network
 
   db:
     image: postgres:15-alpine
@@ -103,20 +168,26 @@ services:
       RABBITMQ_DEFAULT_PASS: guest
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - app_network
 
   rabbitmq-worker:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    command: php artisan rabbitmq:consume-reset-email
+    command: >
+      sh -c "
+        echo 'Waiting for RabbitMQ to be ready...' &&
+        sleep 10 &&
+        php artisan rabbitmq:consume-reset-email
+      "
     depends_on:
       - backend
       - rabbitmq
     volumes:
       - ./backend:/var/www
-    dns:
-      - 8.8.8.8
-      - 1.1.1.1
+    networks:
+      - app_network
 
   localstack:
     image: localstack/localstack:latest
@@ -179,6 +250,7 @@ volumes:
   redis_data:
   localstack_data:
   rabbitmq_data:
+  blockchain_data:
 version: '3'
 
 networks:

@@ -47,4 +47,9 @@ return [
         'redirect' => env('FACEBOOK_REDIRECT_URI', env('APP_URL').'/api/auth/facebook/callback'),
     ],
 
+    'blockchain' => [
+        'url' => env('BLOCKCHAIN_SERVICE_URL', 'http://blockchain:3001'),
+        'network' => env('BLOCKCHAIN_NETWORK', 'polygon'),
+    ],
+
 ];

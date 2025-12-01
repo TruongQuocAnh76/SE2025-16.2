@@ -10,6 +10,7 @@ use App\Http\Controllers\GradingController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\SystemController;
 
 /*
@@ -156,6 +157,17 @@ Route::middleware('auth:sanctum')->prefix('certificates')->group(function () {
     Route::get('/{certificateId}', [CertificateController::class, 'show']); // Get cert details
     Route::post('/{certificateId}/revoke', [CertificateController::class, 'revoke']); // Revoke (Teacher/Admin)
     Route::post('/{certificateId}/attach-blockchain', [CertificateController::class, 'attachBlockchainData']); // Attach blockchain
+});
+
+// Public certificate verification routes (no auth required)
+Route::prefix('certificates')->group(function () {
+    Route::post('/verify', [CertificateVerificationController::class, 'verify']); // Blockchain verify
+});
+
+// Authenticated certificate verification routes
+Route::middleware('auth:sanctum')->prefix('certificates')->group(function () {
+    Route::get('/{certificate_number}/blockchain-status', [CertificateVerificationController::class, 'getBlockchainStatus']);
+    Route::post('/{certificate_number}/retry-blockchain', [CertificateVerificationController::class, 'retryBlockchainIssuance']);
 });
 
 /* ========================
