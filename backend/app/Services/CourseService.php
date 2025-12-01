@@ -6,6 +6,7 @@ use App\Repositories\LessonRepository;
 use App\Repositories\QuizRepository;
 use App\Repositories\QuestionRepository;
 use App\Models\Review;
+use App\Models\User;
 use App\Services\HlsVideoService;
 use App\Helpers\AwsUrlHelper;
 use Illuminate\Support\Str;
@@ -225,6 +226,24 @@ class CourseService {
 
     public function getEnrolledStudents($courseId) {
         return $this->enrollmentRepository->getByCourseId($courseId);
+    }
+
+    /**
+     * Get course recommendations for a user.
+     *
+     * @param User $user
+     * @return \Illuminate\Database\Eloquent\Collection|array
+     */
+    public function getRecommendations(User $user)
+    {
+        // Check if user has any enrollments
+        if ($user->enrollments->isEmpty()) {
+            // New user: return popular courses
+            return $this->courseRepository->getPopularCourses();
+        }
+
+        // Existing user: return content-based recommendations
+        return $this->courseRepository->getContentBasedRecommendations($user);
     }
 
     public function updateLessonVideo($lessonId, $videoUrl) {

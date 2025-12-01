@@ -207,6 +207,24 @@ export const useCourses = () => {
     }
   }
 
+  const createTag = async (tagName: string): Promise<Tag | null> => {
+    try {
+      const data = await $fetch<{ message: string; tag: Tag }>('/api/tags', {
+        baseURL: config.public.backendUrl as string,
+        method: 'POST',
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: { name: tagName }
+      })
+      return data.tag
+    } catch (error) {
+      console.error('Failed to create tag:', error)
+      throw error
+    }
+  }
+
   const uploadLessonVideo = async (lessonId: string, uploadUrl: string, videoFile: File, originalVideoPath?: string, hlsBasePath?: string): Promise<boolean> => {
     try {
       // Step 1: Upload video to S3 using pre-signed URL
@@ -289,6 +307,20 @@ export const useCourses = () => {
     }
   }
 
+  const getRecommendations = async (): Promise<Course[]> => {
+    try {
+      const response = await $fetch<{ success: boolean; data: Course[] }>('/api/recommendations', {
+        baseURL: config.public.backendUrl as string,
+        method: 'GET',
+        headers: getAuthHeaders()
+      })
+      return response.data || []
+    } catch (error) {
+      console.error('Failed to fetch recommendations:', error)
+      return []
+    }
+  }
+
 
   return {
     createCourse,
@@ -301,6 +333,8 @@ export const useCourses = () => {
     updateCourseThumbnail,
     addReview,
     getTags,
+    createTag,
+    getRecommendations,
     uploadLessonVideo,
     notifyVideoUploadComplete,
     checkHlsProcessingStatus,

@@ -11,7 +11,6 @@ use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\SystemController;
-use App\Http\Controllers\PaymentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -179,6 +178,11 @@ Route::middleware('auth:sanctum')->prefix('system')->group(function () {
  * ======================== */
 Route::prefix('tags')->group(function () {
     Route::get('/', [\App\Http\Controllers\TagController::class, 'index']); // Lấy tất cả tags
+    
+    // Route tạo tag mới (cần authentication)
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/', [\App\Http\Controllers\TagController::class, 'store']); // Tạo tag mới
+    });
 });
 
 /* ========================

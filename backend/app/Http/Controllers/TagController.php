@@ -16,4 +16,27 @@ class TagController extends Controller
         $tags = Tag::select('id', 'name')->orderBy('name')->get();
         return response()->json($tags);
     }
+
+    /**
+     * Tạo tag mới.
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:50|unique:tags,name'
+        ]);
+
+        $name = trim($request->name);
+        $slug = \Illuminate\Support\Str::slug($name);
+
+        $tag = Tag::create([
+            'name' => $name,
+            'slug' => $slug
+        ]);
+
+        return response()->json([
+            'message' => 'Tag created successfully',
+            'tag' => $tag
+        ], 201);
+    }
 }

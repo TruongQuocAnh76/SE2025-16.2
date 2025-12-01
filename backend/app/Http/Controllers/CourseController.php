@@ -15,6 +15,7 @@ use App\Models\Enrollment;
 use App\Models\Review;
 use App\Models\User;
 use App\Services\CourseService;
+use Illuminate\Support\Facades\Log;
 use App\Helpers\AwsUrlHelper;
 use App\Models\Question;
 
@@ -27,11 +28,12 @@ use App\Models\Question;
 class CourseController extends Controller
 {
     protected $courseService;
-    
+
     public function __construct(CourseService $courseService)
     {
         $this->courseService = $courseService;
     }
+
     /**
      * @OA\Get(
      *     path="/courses",
@@ -49,6 +51,12 @@ class CourseController extends Controller
      *         in="query",
      *         required=false,
      *         @OA\Schema(type="string", enum={"beginner", "intermediate", "advanced"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="keyword",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="string")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -96,6 +104,8 @@ class CourseController extends Controller
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
+
+
     public function store(Request $request)
     {
         $this->authorize('create', Course::class);
@@ -232,6 +242,41 @@ class CourseController extends Controller
         $result = $this->courseService->searchCourses($query, $limit);
 
         return response()->json($result);
+    }
+
+    /**
+     * Get recommendations for the authenticated user.
+     */
+    public function getRecommendations(Request $request)
+    {
+        try {
+            $user = Auth::user();
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthenticated.'
+                ], 401);
+            }
+
+            $recommendations = $this->courseService->getRecommendations($user);
+
+            return response()->json([
+                'success' => true,
+                'data' => $recommendations
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Recommendation Error: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching recommendations',
+                'error' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
     }
 
     /**
