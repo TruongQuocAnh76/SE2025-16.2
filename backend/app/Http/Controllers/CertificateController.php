@@ -149,6 +149,7 @@ class CertificateController extends Controller
             'final_score' => $finalAttempt->score,
             'pdf_url' => $pdfData['pdf_url'],
             'pdf_hash' => $pdfData['pdf_hash'],
+            'pdf_path' => $pdfData['pdf_path'],
             'issued_at' => now(),
         ]);
 
@@ -310,9 +311,16 @@ class CertificateController extends Controller
             return response()->json(['valid' => false, 'message' => 'Chứng chỉ không còn hiệu lực.']);
         }
 
-        // Kiểm tra hash
-        $localPdf = file_get_contents(storage_path('app/public/' . str_replace(Storage::disk('public')->url(''), '', $certificate->pdf_url)));
-        $isValid = Hash::check($localPdf, $certificate->pdf_hash);
+        // Verify PDF hash from S3
+        try {
+            // Extract S3 path from PDF URL or use stored path
+            $s3Path = $certificate->pdf_path ?? "certificates/{$certificate->certificate_number}.pdf";
+            $pdfContent = Storage::disk('s3')->get($s3Path);
+            $currentHash = hash('sha256', $pdfContent);
+            $isValid = ($currentHash === $certificate->pdf_hash);
+        } catch (\Exception $e) {
+            return response()->json(['valid' => false, 'message' => 'Không thể xác minh tệp PDF.']);
+        }
 
         return response()->json([
             'valid' => $isValid,

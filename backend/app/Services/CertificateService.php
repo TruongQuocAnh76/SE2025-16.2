@@ -35,15 +35,17 @@ class CertificateService {
         $pdf = Pdf::loadView('certificates.template', $pdfData);
         $pdf->setPaper('A4', 'landscape');
         
-        // Save PDF to storage
-        $pdfPath = "certificates/{$certificateNumber}.pdf";
-        Storage::disk('public')->put($pdfPath, $pdf->output());
+        // Get PDF content
+        $pdfContent = $pdf->output();
         
-        // Get PDF URL
-        $pdfUrl = Storage::disk('public')->url($pdfPath);
+        // Save PDF to S3
+        $pdfPath = "certificates/{$certificateNumber}.pdf";
+        Storage::disk('s3')->put($pdfPath, $pdfContent, 'public');
+        
+        // Get PDF URL from S3
+        $pdfUrl = Storage::disk('s3')->url($pdfPath);
         
         // Generate hash for blockchain verification
-        $pdfContent = file_get_contents(storage_path("app/public/{$pdfPath}"));
         $pdfHash = hash('sha256', $pdfContent);
         
         return [
