@@ -11,7 +11,8 @@ use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\QuizAttempt;
 use App\Models\BlockchainTransaction;
-use PDF; // nếu bạn dùng barryvdh/laravel-dompdf để tạo PDF
+use App\Services\CertificateService;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 /**
  * @OA\Server(
@@ -21,6 +22,12 @@ use PDF; // nếu bạn dùng barryvdh/laravel-dompdf để tạo PDF
  */
 class CertificateController extends Controller
 {
+    protected $certificateService;
+
+    public function __construct(CertificateService $certificateService)
+    {
+        $this->certificateService = $certificateService;
+    }
     /**
      * @OA\Get(
      *     path="/api/certificates/mine",
@@ -124,21 +131,15 @@ class CertificateController extends Controller
         // Tạo certificate_number ngắn gọn (ví dụ: CERT-2025-ABCDE)
         $certNumber = 'CERT-' . now()->format('Y') . '-' . strtoupper(Str::random(6));
 
-        // Tạo PDF (tùy bạn triển khai — đây là ví dụ)
-        $pdfPath = "certificates/{$certNumber}.pdf";
-        $pdf = PDF::loadView('certificates.template', [
-            'student' => Auth::user()->name,
-            'course' => $course->title,
-            'score' => $finalAttempt->score,
-            'issue_date' => now()->format('d/m/Y'),
-            'certificate_number' => $certNumber
-        ]);
+        // Generate certificate PDF using service
+        $pdfData = $this->certificateService->generatePdfCertificate(
+            Auth::user(), 
+            $course, 
+            $finalAttempt->score, 
+            $certNumber
+        );
 
-        Storage::disk('public')->put($pdfPath, $pdf->output());
-        $pdfUrl = Storage::disk('public')->url($pdfPath);
-        $pdfHash = Hash::make(file_get_contents(storage_path("app/public/{$pdfPath}")));
-
-        // Lưu vào DB
+        // Save certificate to database
         $certificate = Certificate::create([
             'id' => Str::uuid(),
             'certificate_number' => $certNumber,
@@ -146,8 +147,8 @@ class CertificateController extends Controller
             'course_id' => $courseId,
             'status' => 'ISSUED',
             'final_score' => $finalAttempt->score,
-            'pdf_url' => $pdfUrl,
-            'pdf_hash' => $pdfHash,
+            'pdf_url' => $pdfData['pdf_url'],
+            'pdf_hash' => $pdfData['pdf_hash'],
             'issued_at' => now(),
         ]);
 
