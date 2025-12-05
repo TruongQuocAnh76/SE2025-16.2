@@ -1,3 +1,60 @@
-node_modules
-node_modules
+# ----------------------------------------------------------------------
+# General / OS / IDE
+# ----------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+tmp/
+temp/
+
+# ----------------------------------------------------------------------
+# Backend (Laravel + PHP)
+# ----------------------------------------------------------------------
+backend/vendor/
+backend/node_modules/
+backend/public/hot
+backend/public/storage
+backend/storage/*.key
+backend/.env
+backend/.env.backup
+backend/.env.production
+backend/.phpunit.result.cache
+backend/Homestead.json
+backend/Homestead.yaml
+backend/npm-debug.log
+backend/yarn-error.log
+backend/auth.json
+
+# ----------------------------------------------------------------------
+# Frontend (Nuxt + Vue)
+# ----------------------------------------------------------------------
+frontend/node_modules/
+frontend/.output/
+frontend/.nuxt/
+frontend/.data/
+frontend/dist/
+frontend/.env
 frontend/.pnpm-store/
+frontend/.eslintcache
+
+# ----------------------------------------------------------------------
+# Blockchain (Hardhat)
+# ----------------------------------------------------------------------
+blockchain/node_modules/
+blockchain/artifacts/
+blockchain/cache/
+blockchain/typechain-types/
+blockchain/coverage/
+blockchain/coverage.json
+blockchain/.env
+
+# ----------------------------------------------------------------------
+# AWS / Deployment / Local Scripts
+# ----------------------------------------------------------------------
+# Ignore temporary task definitions generated during deployment
+backend-task-def.json
+frontend-task-def.json
+# Ignore temp env files
+env.tmp
