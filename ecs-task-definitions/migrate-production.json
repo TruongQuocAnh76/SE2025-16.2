@@ -1,0 +1,50 @@
+{
+    "family": "certchain-migrate-prod",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "256",
+    "memory": "512",
+    "executionRoleArn": "arn:aws:iam::794961776543:role/ecsTaskExecutionRole",
+    "containerDefinitions": [
+        {
+            "name": "migrate",
+            "image": "794961776543.dkr.ecr.ap-southeast-1.amazonaws.com/certchain-backend:latest",
+            "command": [
+                "php",
+                "artisan",
+                "migrate",
+                "--force"
+            ],
+            "environment": [
+                {
+                    "name": "APP_ENV",
+                    "value": "production"
+                },
+                {
+                    "name": "DB_HOST",
+                    "value": "YOUR_PROD_RDS_ENDPOINT"
+                }
+            ],
+            "secrets": [
+                {
+                    "name": "APP_KEY",
+                    "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:794961776543:secret:certchain/prod/app-key"
+                },
+                {
+                    "name": "DB_PASSWORD",
+                    "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:794961776543:secret:certchain/prod/db-password"
+                }
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/certchain-migrate-prod",
+                    "awslogs-region": "ap-southeast-1",
+                    "awslogs-stream-prefix": "migrate"
+                }
+            }
+        }
+    ]
+}

@@ -1,0 +1,41 @@
+{
+  "family": "certchain-frontend-staging",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::794961776543:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "certchain-frontend",
+      "image": "794961776543.dkr.ecr.ap-southeast-1.amazonaws.com/certchain-frontend:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "staging"
+        },
+        {
+          "name": "NUXT_PUBLIC_API_BASE",
+          "value": "https://staging-api.certchain.com"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/certchain-frontend-staging",
+          "awslogs-region": "ap-southeast-1",
+          "awslogs-stream-prefix": "frontend"
+        }
+      }
+    }
+  ]
+}

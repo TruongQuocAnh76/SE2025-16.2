@@ -1,0 +1,106 @@
+{
+  "family": "certchain-backend-prod",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::794961776543:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::794961776543:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "certchain-backend",
+      "image": "794961776543.dkr.ecr.ap-southeast-1.amazonaws.com/certchain-backend:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "APP_ENV",
+          "value": "production"
+        },
+        {
+          "name": "APP_DEBUG",
+          "value": "false"
+        },
+        {
+          "name": "DB_CONNECTION",
+          "value": "pgsql"
+        },
+        {
+          "name": "DB_HOST",
+          "value": "YOUR_RDS_ENDPOINT.ap-southeast-1.rds.amazonaws.com"
+        },
+        {
+          "name": "DB_PORT",
+          "value": "5432"
+        },
+        {
+          "name": "DB_DATABASE",
+          "value": "certchain"
+        },
+        {
+          "name": "DB_USERNAME",
+          "value": "certchain_admin"
+        },
+        {
+          "name": "REDIS_HOST",
+          "value": "YOUR_ELASTICACHE_ENDPOINT"
+        },
+        {
+          "name": "REDIS_PORT",
+          "value": "6379"
+        },
+        {
+          "name": "QUEUE_CONNECTION",
+          "value": "redis"
+        },
+        {
+          "name": "CACHE_DRIVER",
+          "value": "redis"
+        },
+        {
+          "name": "SESSION_DRIVER",
+          "value": "redis"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "APP_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:794961776543:secret:certchain/prod/app-key"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:794961776543:secret:certchain/prod/db-password"
+        },
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:794961776543:secret:certchain/prod/jwt-secret"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/certchain-backend-prod",
+          "awslogs-region": "ap-southeast-1",
+          "awslogs-stream-prefix": "backend"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:8000/api/health || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}

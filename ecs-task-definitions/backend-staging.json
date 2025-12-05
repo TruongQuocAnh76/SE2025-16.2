@@ -1,0 +1,76 @@
+{
+  "family": "certchain-backend-staging",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::794961776543:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::794961776543:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "certchain-backend",
+      "image": "794961776543.dkr.ecr.ap-southeast-1.amazonaws.com/certchain-backend:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "APP_ENV",
+          "value": "staging"
+        },
+        {
+          "name": "APP_DEBUG",
+          "value": "true"
+        },
+        {
+          "name": "DB_CONNECTION",
+          "value": "pgsql"
+        },
+        {
+          "name": "DB_HOST",
+          "value": "certchain-staging-db.c70wu2gekvim.ap-southeast-1.rds.amazonaws.com"
+        },
+        {
+          "name": "DB_PORT",
+          "value": "5432"
+        },
+        {
+          "name": "DB_DATABASE",
+          "value": "certchain"
+        },
+        {
+          "name": "DB_USERNAME",
+          "value": "certchain_admin"
+        },
+        {
+          "name": "REDIS_HOST",
+          "value": "certchain-staging-redis.vbjfnr.0001.apse1.cache.amazonaws.com"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "APP_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:794961776543:secret:certchain/staging/app-key"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:794961776543:secret:certchain/staging/db-password"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/certchain-backend-staging",
+          "awslogs-region": "ap-southeast-1",
+          "awslogs-stream-prefix": "backend"
+        }
+      }
+    }
+  ]
+}
