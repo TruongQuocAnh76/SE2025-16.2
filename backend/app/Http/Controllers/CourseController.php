@@ -124,7 +124,6 @@ class CourseController extends Controller
             'duration'    => 'nullable|integer|min:1',
             'passing_score' => 'integer|min:0|max:100',
             'long_description' => 'nullable|string',
-            'curriculum' => 'nullable|string',
             'category' => 'nullable|string',
             'language' => 'nullable|string',
             'discount' => 'nullable|numeric|min:0',

@@ -22,6 +22,11 @@ use App\Http\Controllers\SystemController;
 Route::get('/', fn() => response()->json(['message' => 'CertChain API v1 is running']));
 
 /* ========================
+ * PREVIEW ENDPOINTS (for development/testing)
+ * ======================== */
+Route::get('/_preview/certificates', [CertificateController::class, 'preview']);
+
+/* ========================
  * AUTHENTICATION
  * ======================== */
 Route::prefix('auth')->group(function () {
