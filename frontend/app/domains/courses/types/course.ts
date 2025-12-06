@@ -8,7 +8,6 @@ export interface Course {
   title: string
   slug: string
   description: string
-  curriculum?: string
   thumbnail?: string
   level: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT'
   price?: number
@@ -160,7 +159,6 @@ export interface CreateCourseData {
   passing_score: number
 
   long_description?: string
-  curriculum?: string
   category?: string
   language?: string
   discount?: number

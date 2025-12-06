@@ -18,7 +18,6 @@
             height: 700px;
             font-family: "Times New Roman", serif;
             overflow: hidden;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             border: 3px solid #dee2e6;
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
         }
@@ -116,7 +115,7 @@
 </head>
 
 <body>
-    <div class="page">
+    <div class="page" style="background: url('{{ $bg_image }}') no-repeat center center; background-size: cover;">
         <div class="content">
             <div class="title">CERTIFICATE OF COMPLETION</div>
             <div class="subtitle">This certificate is awarded to</div>
@@ -132,8 +131,7 @@
             </div>
 
             <div class="signature">
-                <div style="margin-bottom: 5px;">CertChain Platform</div>
-                <div style="font-weight: bold;">Digital Learning Authority</div>
+                <img src="{{ $logo_image }}" alt="CertChain Logo" style="width: 101px; height: 41.5px;">
             </div>
 
             <div class="logo">
@@ -142,8 +140,7 @@
             </div>
 
             <div class="badge">
-                VERIFIED<br>
-                CERTIFICATE
+                <img src="{{ $badge_image }}" alt="Award Badge" style="width: 80px; height: 80px;">
             </div>
         </div>
     </div>

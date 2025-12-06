@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\QuizAttempt;
@@ -131,32 +132,52 @@ class CertificateController extends Controller
         // Tạo certificate_number ngắn gọn (ví dụ: CERT-2025-ABCDE)
         $certNumber = 'CERT-' . now()->format('Y') . '-' . strtoupper(Str::random(6));
 
-        // Generate certificate PDF using service
-        $pdfData = $this->certificateService->generatePdfCertificate(
-            Auth::user(), 
-            $course, 
-            $finalAttempt->score, 
-            $certNumber
-        );
+        try {
+            // Generate certificate PDF using service FIRST
+            $pdfData = $this->certificateService->generatePdfCertificate(
+                Auth::user(), 
+                $course, 
+                $finalAttempt->score, 
+                $certNumber
+            );
 
-        // Save certificate to database
-        $certificate = Certificate::create([
-            'id' => Str::uuid(),
-            'certificate_number' => $certNumber,
-            'student_id' => $studentId,
-            'course_id' => $courseId,
-            'status' => 'ISSUED',
-            'final_score' => $finalAttempt->score,
-            'pdf_url' => $pdfData['pdf_url'],
-            'pdf_hash' => $pdfData['pdf_hash'],
-            'pdf_path' => $pdfData['pdf_path'],
-            'issued_at' => now(),
-        ]);
+            // Only create certificate in database if PDF generation succeeds
+            $certificate = Certificate::create([
+                'id' => Str::uuid(),
+                'certificate_number' => $certNumber,
+                'student_id' => $studentId,
+                'course_id' => $courseId,
+                'status' => 'ISSUED',
+                'final_score' => $finalAttempt->score,
+                'pdf_url' => $pdfData['pdf_url'],
+                'pdf_hash' => $pdfData['pdf_hash'],
+                'issued_at' => now(),
+            ]);
 
-        return response()->json([
-            'message' => 'Chứng chỉ đã được cấp thành công.',
-            'certificate' => $certificate
-        ], 201);
+            Log::info("Certificate created successfully", [
+                'certificate_id' => $certificate->id,
+                'certificate_number' => $certNumber,
+                'pdf_url' => $pdfData['pdf_url'],
+                'student_id' => $studentId
+            ]);
+
+            return response()->json([
+                'message' => 'Chứng chỉ đã được cấp thành công.',
+                'certificate' => $certificate
+            ], 201);
+            
+        } catch (\Exception $e) {
+            Log::error("Certificate issuance failed", [
+                'error' => $e->getMessage(),
+                'student_id' => $studentId,
+                'course_id' => $courseId,
+                'certificate_number' => $certNumber
+            ]);
+            
+            return response()->json([
+                'error' => 'Không thể tạo chứng chỉ: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -326,6 +347,74 @@ class CertificateController extends Controller
             'valid' => $isValid,
             'certificate' => $certificate
         ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/_preview/certificates",
+     *     summary="Preview certificate template with dummy data",
+     *     description="Generate and display a sample certificate PDF for preview purposes",
+     *     operationId="previewCertificate",
+     *     tags={"Certificates"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Certificate PDF preview",
+     *         @OA\MediaType(
+     *             mediaType="application/pdf",
+     *             @OA\Schema(type="string", format="binary")
+     *         )
+     *     )
+     * )
+     */
+    public function preview()
+    {
+        try {
+            // Check if asset files exist
+            $bgPath = public_path('cert_assets/certificate_bg.png');
+            $logoPath = public_path('cert_assets/certchain_logo.svg');
+            $badgePath = public_path('cert_assets/award_badge.png');
+            
+            if (!file_exists($bgPath)) {
+                throw new \Exception("Background image not found: {$bgPath}");
+            }
+            if (!file_exists($logoPath)) {
+                throw new \Exception("Logo image not found: {$logoPath}");
+            }
+            if (!file_exists($badgePath)) {
+                throw new \Exception("Badge image not found: {$badgePath}");
+            }
+            
+            // Read and encode images as base64
+            $bgBase64 = base64_encode(file_get_contents($bgPath));
+            $logoBase64 = base64_encode(file_get_contents($logoPath));
+            $badgeBase64 = base64_encode(file_get_contents($badgePath));
+            
+            // Create dummy data for preview
+            $dummyData = [
+                'student' => 'John Doe Sample',
+                'course' => 'Introduction to Web Development',
+                'score' => 95,
+                'issue_date' => now()->format('F d, Y'),
+                'certificate_number' => 'CERT-2025-PREVIEW',
+                'bg_image' => 'data:image/png;base64,' . $bgBase64,
+                'logo_image' => 'data:image/svg+xml;base64,' . $logoBase64,
+                'badge_image' => 'data:image/png;base64,' . $badgeBase64
+            ];
+            
+            // Generate PDF directly without saving
+            $pdf = Pdf::loadView('certificates.template', $dummyData);
+            $pdf->setPaper('A4', 'landscape');
+            
+            // Return PDF for preview
+            return $pdf->stream('certificate-preview.pdf');
+            
+        } catch (\Exception $e) {
+            Log::error("Certificate preview failed: " . $e->getMessage());
+            
+            return response()->json([
+                'error' => 'Unable to generate certificate preview: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

@@ -46,22 +46,44 @@
       <div class="col-span-2 bg-white p-6 rounded-lg shadow-lg">
         <h3 class="text-xl font-semibold mb-4">Acquired Certificate</h3>
         <div class="space-y-4">
-          <CertificateCard
-            v-for="cert in recentCertificates"
-            :key="cert.courseName"
-            :courseName="cert.courseName"
-            :dateIssued="cert.dateIssued"
-          />
+          <template v-if="recentCertificates.length > 0">
+            <CertificateCard
+              v-for="cert in recentCertificates"
+              :key="cert.id"
+              :courseName="cert.courseName"
+              :dateIssued="cert.dateIssued"
+              :certificateId="cert.id"
+              :pdfUrl="cert.pdfUrl"
+              @click="openCertificateModal(cert.id)"
+            />
+          </template>
+          <template v-else>
+            <div class="text-center py-8 text-gray-500">
+              <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+              </svg>
+              <p class="text-sm">No certificates yet</p>
+              <p class="text-xs text-gray-400">Complete courses to earn certificates</p>
+            </div>
+          </template>
         </div>
       </div>
     </div>
+
+    <!-- Certificate Modal -->
+    <CertificateModal
+      :isOpen="certificateModalOpen"
+      :certificateId="selectedCertificateId || undefined"
+      @close="closeCertificateModal"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import CourseInfoCard from '../components/ui/CourseInfoCard.vue'
-import RecentCourseCard from '../components/ui/RecentCourseCard.vue'
-import CertificateCard from '../components/ui/CertificateCard.vue'
+import CourseInfoCard from '../../components/ui/CourseInfoCard.vue'
+import RecentCourseCard from '../../components/ui/RecentCourseCard.vue'
+import CertificateCard from '../../components/ui/CertificateCard.vue'
+import CertificateModal from '../../components/ui/CertificateModal.vue'
 import { useUserStats } from '../../composables/useUserStats'
 
 const route = useRoute()
@@ -91,8 +113,10 @@ const continueLearningCourses = ref<Array<{
 const coursesProgress = ref<Array<any>>([])
 
 const recentCertificates = ref<Array<{
+  id: string
   courseName: string
   dateIssued: string
+  pdfUrl?: string
 }>>([])
 
 const recommendedCourses = ref<Array<{
@@ -103,6 +127,10 @@ const recommendedCourses = ref<Array<{
   studentsCount: number
 }>>([])
 
+// Certificate modal state
+const certificateModalOpen = ref(false)
+const selectedCertificateId = ref<string | null>(null)
+
 const loading = reactive({
   enrollments: true,
   certificates: true,
@@ -111,6 +139,17 @@ const loading = reactive({
   continueLearning: true,
   quizAttempts: true
 })
+
+// Certificate modal functions
+const openCertificateModal = (certificateId: string) => {
+  selectedCertificateId.value = certificateId
+  certificateModalOpen.value = true
+}
+
+const closeCertificateModal = () => {
+  certificateModalOpen.value = false
+  selectedCertificateId.value = null
+}
 
 // TODO: Replace mock data with actual API calls
 onMounted(async () => {
@@ -198,7 +237,13 @@ onMounted(async () => {
 
   // Fetch recent certificates
   try {
-    recentCertificates.value = await getRecentCertificates()
+    console.log('Fetching recent certificates...')
+    const certificates = await getRecentCertificates()
+    console.log('Fetched certificates:', certificates)
+    recentCertificates.value = certificates
+    if (certificates.length === 0) {
+      console.log('No certificates found')
+    }
   } catch (error) {
     console.error('Failed to load recent certificates:', error)
   }
