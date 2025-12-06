@@ -65,8 +65,8 @@ class BlockchainService
     {
         try {
             $response = Http::timeout(30)->post("{$this->blockchainApiUrl}/v1/certs/verify", [
-                'certificate_number' => $certificateNumber,
-                'pdf_hash' => $pdfHash
+                'certificateNumber' => $certificateNumber,
+                'pdfHash' => $pdfHash
             ]);
 
             if ($response->successful()) {
@@ -134,7 +134,8 @@ class BlockchainService
     {
         try {
             $response = Http::timeout(30)->post("{$this->blockchainApiUrl}/v1/certs/revoke", [
-                'certificate_number' => $certificateNumber
+                'certificateNumber' => $certificateNumber,
+                'reason' => 'Retry issuance'
             ]);
 
             if ($response->successful()) {
