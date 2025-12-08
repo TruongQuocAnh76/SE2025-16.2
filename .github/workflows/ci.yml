@@ -13,6 +13,21 @@ jobs:
       run:
         working-directory: ./backend
 
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: certchain_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
     - uses: actions/checkout@v4
 
@@ -20,7 +35,7 @@ jobs:
       uses: shivammathur/setup-php@v2
       with:
         php-version: '8.2'
-        extensions: mbstring, xml, bcmath, curl
+        extensions: mbstring, xml, bcmath, curl, pdo, pdo_pgsql
         coverage: none
 
     - name: Copy .env
@@ -35,15 +50,14 @@ jobs:
     - name: Directory Permissions
       run: chmod -R 777 storage bootstrap/cache
 
-    - name: Create Database
-      run: |
-        mkdir -p database
-        touch database/database.sqlite
-
     - name: Execute Tests
       env:
-        DB_CONNECTION: sqlite
-        DB_DATABASE: database/database.sqlite
+        DB_CONNECTION: pgsql
+        DB_HOST: 127.0.0.1
+        DB_PORT: 5432
+        DB_DATABASE: certchain_test
+        DB_USERNAME: postgres
+        DB_PASSWORD: password
       run: php artisan test
 
   frontend-build:
@@ -71,149 +85,49 @@ jobs:
     - name: Build
       run: pnpm run build
 
-  build-images:
+  deploy:
     needs: [backend-test, frontend-build]
+    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build, tag, and push Backend image
-        id: build-backend
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: certchain-backend
-          IMAGE_TAG: ${{ github.sha }}
+      - name: Create .env file from Secrets
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./backend
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "${{ secrets.ENV_FILE }}" > ./backend/.env
 
-      - name: Build, tag, and push Frontend image
-        id: build-frontend
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: certchain-frontend
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./frontend
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-
-    outputs:
-      backend-image: ${{ steps.build-backend.outputs.image }}
-      frontend-image: ${{ steps.build-frontend.outputs.image }}
-
-  deploy-staging:
-    needs: build-images
-    if: github.ref == 'refs/heads/dev'
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Copy files to server
+        uses: appleboy/scp-action@master
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: 22
+          source: "."
+          target: "/home/${{ secrets.USERNAME }}/app"
 
-      - name: Fill in the new Backend image ID in the Amazon ECS task definition
-        id: task-def-backend
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
+      - name: Execute deployment commands
+        uses: appleboy/ssh-action@master
         with:
-          task-definition: ecs-task-definitions/backend-staging.json
-          container-name: certchain-backend
-          image: ${{ needs.build-images.outputs.backend-image }}
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: 22
+          script: |
+            cd /home/${{ secrets.USERNAME }}/app
+            
+            # Check for Docker (Basic Check)
+            if ! command -v docker &> /dev/null; then
+                echo "Docker not found. Pipeline stopping."
+                exit 1
+            fi
 
-      - name: Deploy Backend to Amazon ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.task-def-backend.outputs.task-definition }}
-          service: certchain-backend-staging
-          cluster: certchain-cluster-staging
-          wait-for-service-stability: true
-
-      - name: Fill in the new Frontend image ID in the Amazon ECS task definition
-        id: task-def-frontend
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: ecs-task-definitions/frontend-staging.json
-          container-name: certchain-frontend
-          image: ${{ needs.build-images.outputs.frontend-image }}
-
-      - name: Deploy Frontend to Amazon ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.task-def-frontend.outputs.task-definition }}
-          service: certchain-frontend-staging
-          cluster: certchain-cluster-staging
-          wait-for-service-stability: true
-
-  deploy-production:
-    needs: build-images
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Fill in the new Backend image ID in the Amazon ECS task definition
-        id: task-def-backend
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: ecs-task-definitions/backend-production.json
-          container-name: certchain-backend
-          image: ${{ needs.build-images.outputs.backend-image }}
-
-      - name: Deploy Backend to Amazon ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.task-def-backend.outputs.task-definition }}
-          service: certchain-backend-production
-          cluster: certchain-cluster-production
-          wait-for-service-stability: true
-
-      - name: Fill in the new Frontend image ID in the Amazon ECS task definition
-        id: task-def-frontend
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: ecs-task-definitions/frontend-production.json
-          container-name: certchain-frontend
-          image: ${{ needs.build-images.outputs.frontend-image }}
-
-      - name: Deploy Frontend to Amazon ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.task-def-frontend.outputs.task-definition }}
-          service: certchain-frontend-production
-          cluster: certchain-cluster-production
-          wait-for-service-stability: true
+            # Deploy
+            docker-compose -f docker-compose.dev.yml up -d --build --remove-orphans
+            
+            # Install Dependencies
+            docker-compose -f docker-compose.dev.yml exec -T backend composer update
+            
+            # Run Migrations (Optional)
+            # docker-compose -f docker-compose.dev.yml exec -T backend php artisan migrate --force
