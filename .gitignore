@@ -58,9 +58,3 @@ backend-task-def.json
 frontend-task-def.json
 # Ignore temp env files
 env.tmp
-
-# Keys and Secrets
-server/
-install_docker.sh
-manual_install_unsafe.sh
-repair_and_install.sh
