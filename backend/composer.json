@@ -3,7 +3,10 @@
     "name": "laravel/laravel",
     "type": "project",
     "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "keywords": [
+        "laravel",
+        "framework"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.2",
@@ -19,6 +22,7 @@
         "paypal/paypal-server-sdk": "^1.1",
         "paypal/rest-api-sdk-php": "^1.6",
         "php-amqplib/php-amqplib": "^2.8",
+        "spatie/laravel-google-cloud-storage": "^2.2",
         "stripe/stripe-php": "*"
     },
     "require-dev": {

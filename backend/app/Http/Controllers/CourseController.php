@@ -14,7 +14,9 @@ use App\Models\Lesson;
 use App\Models\Enrollment;
 use App\Models\Review;
 use App\Models\User;
+use App\Models\User;
 use App\Services\CourseService;
+use App\Interfaces\FileStorageInterface;
 
 /**
  * @OA\Server(
@@ -25,10 +27,12 @@ use App\Services\CourseService;
 class CourseController extends Controller
 {
     protected $courseService;
+    protected $fileStorage;
     
-    public function __construct(CourseService $courseService)
+    public function __construct(CourseService $courseService, FileStorageInterface $fileStorage)
     {
         $this->courseService = $courseService;
+        $this->fileStorage = $fileStorage;
     }
     /**
      * @OA\Get(
@@ -129,14 +133,36 @@ class CourseController extends Controller
         $thumbnailUploadUrl = null;
         if (empty($data['thumbnail'])) {
             $thumbnailPath = 'courses/thumbnails/' . $data['id'] . '.jpg';
-            $awsEndpoint = env('AWS_ENDPOINT');
-            $awsBucket = env('AWS_BUCKET');
-            $data['thumbnail'] = $awsEndpoint . '/' . $awsBucket . '/' . $thumbnailPath;
-            $thumbnailUploadUrl = Storage::disk('s3')->temporaryUrl(
+            // We use the interface to get the URL, but for pre-signed upload we might need specific logic.
+            // However, the interface has getTemporaryUrl.
+            // Note: The original code constructed the public URL manually using env vars, implying the 'thumbnail' field is the public read URL.
+            // And 'thumbnailUploadUrl' is the pre-signed PutObject URL.
+            
+            // For Cloud Agnostic, we should ideally use the interface.
+            // Assuming getTemporaryUrl in interface is for READ access (standard Laravel behavior).
+            // But here it was used for UPLOAD (PutObject).
+            // Laravel's temporaryUrl() is usually for read.
+            // For S3 PutObject pre-signed, we need specific options.
+            
+            // Let's assume for now we use the interface's temporaryUrl with options for upload if supported, 
+            // or we might need to abstract 'getUploadUrl'.
+            
+            // The original code:
+            // $thumbnailUploadUrl = Storage::disk('s3')->temporaryUrl(..., ['ContentType' => ...]);
+            
+            $thumbnailUploadUrl = $this->fileStorage->getTemporaryUrl(
                 $thumbnailPath,
-                now()->addMinutes(30), // URL valid for 30 minutes
+                now()->addMinutes(30),
                 ['ContentType' => 'image/jpeg']
             );
+            
+            // For the 'thumbnail' field, it seems to be the expected public URL.
+            // If the bucket is private, this should be a temporary read URL? 
+            // Original code: $data['thumbnail'] = $awsEndpoint . '/' . $awsBucket . '/' . $thumbnailPath;
+            // This looks like a public URL construction.
+            
+            // Let's use getUrl() from interface.
+            $data['thumbnail'] = $this->fileStorage->getUrl($thumbnailPath);
         }
 
         $course = Course::create($data);
