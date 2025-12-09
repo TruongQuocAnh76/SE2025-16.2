@@ -8,8 +8,12 @@ export interface Course {
   title: string
   slug: string
   description: string
+  long_description?: string
   curriculum?: string
   thumbnail?: string
+  category?: string
+  language?: string
+  discount?: number
   level: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT'
   price?: number
   originalPrice?: number
@@ -17,6 +21,7 @@ export interface Course {
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
   teacher_id: string
   passing_score: number
+  tags?: Tag[]
   created_at?: string
   updated_at?: string
   teacher?: User

@@ -198,17 +198,17 @@ Route::prefix('tags')->group(function () {
 });
 
 /* ========================
- * PAYMENTS
+ * PAYMENTS (Commented out until PaymentController is implemented)
  * ======================== */
-Route::middleware('auth:sanctum')->prefix('payments')->group(function () {
-    Route::post('/create', [PaymentController::class, 'createPayment']); // Create payment intent
-    Route::get('/', [PaymentController::class, 'index']); // Get payment history
-    Route::get('/{id}', [PaymentController::class, 'show']); // Get payment details
-    
-    // Stripe routes
-    Route::post('/{id}/stripe/create-intent', [PaymentController::class, 'createStripeIntent']); // Create Stripe payment intent
-    Route::post('/{id}/stripe/complete', [PaymentController::class, 'completeStripePayment']); // Complete Stripe payment
-});
+// Route::middleware('auth:sanctum')->prefix('payments')->group(function () {
+//     Route::post('/create', [PaymentController::class, 'createPayment']); // Create payment intent
+//     Route::get('/', [PaymentController::class, 'index']); // Get payment history
+//     Route::get('/{id}', [PaymentController::class, 'show']); // Get payment details
+//     
+//     // Stripe routes
+//     Route::post('/{id}/stripe/create-intent', [PaymentController::class, 'createStripeIntent']); // Create Stripe payment intent
+//     Route::post('/{id}/stripe/complete', [PaymentController::class, 'completeStripePayment']); // Complete Stripe payment
+// });
 
 // Stripe Webhook (no auth needed)
-Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook']);
+// Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook']);

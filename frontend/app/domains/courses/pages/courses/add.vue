@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="min-h-screen bg-background">
     <div class="max-w-7xl mx-auto px-4 py-12">
       <div class="mb-8">
@@ -1076,10 +1076,14 @@ const handleCreateTag = async () => {
     }
   } catch (error: any) {
     console.error('Failed to create tag:', error)
-    if (error.data?.errors?.name) {
+    if (error.statusCode === 401 || error.status === 401) {
+      createTagError.value = 'You must be logged in to create tags.'
+    } else if (error.data?.errors?.name) {
       createTagError.value = error.data.errors.name[0]
     } else if (error.data?.message) {
       createTagError.value = error.data.message
+    } else if (error.message) {
+      createTagError.value = error.message
     } else {
       createTagError.value = 'Failed to create tag. Please try again.'
     }
