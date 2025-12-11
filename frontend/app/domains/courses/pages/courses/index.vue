@@ -183,7 +183,12 @@
             See All
           </button>
         </div>
-        <div v-if="courses.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Loading State -->
+        <div v-if="loadingRecommendations" class="flex justify-center py-12">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
+        </div>
+        <!-- Recommended Courses Grid -->
+        <div v-else-if="recommendedCourses.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <NuxtLink
             v-for="course in recommendedCourses"
             :key="`rec-${course.id}`"
@@ -192,8 +197,9 @@
             <CourseCard :course="mapCourseForCard(course)" />
           </NuxtLink>
         </div>
-        <div v-else class="text-center text-white">
-          <p>Loading recommendations...</p>
+        <!-- Empty State -->
+        <div v-else class="text-center py-12">
+          <p class="text-gray-600">No recommendations available at the moment.</p>
         </div>
       </div>
     </section>
@@ -282,7 +288,7 @@ import type { Course } from '../../types/course'
 // import CourseCard from '../../components/ui/CourseCard.vue'
 import { ref } from 'vue'
 
-const { getCourses, searchCourses } = useCourses()
+const { getCourses, searchCourses, getRecommendedCourses } = useCourses()
 const config = useRuntimeConfig()
 
 // State
@@ -291,8 +297,9 @@ const loading = ref(false)
 const searchQuery = ref('')
 const hasNextPage = ref(false)
 
-// TODO: ADD ACTUAL RECOMMENDATION LOGIC
-const recommendedCourses = computed(() => courses.value.slice(0, 4))
+// Recommended courses state
+const recommendedCourses = ref<Course[]>([])
+const loadingRecommendations = ref(false)
 
 // User role check
 const { user } = useAuth()
@@ -368,6 +375,20 @@ const loadMore = async () => {
   console.log('Load more courses...')
 }
 
+// Fetch recommended courses
+const fetchRecommendedCourses = async () => {
+  loadingRecommendations.value = true
+  try {
+    const result = await getRecommendedCourses(4)
+    recommendedCourses.value = result || []
+  } catch (error) {
+    console.error('Failed to fetch recommended courses:', error)
+    recommendedCourses.value = []
+  } finally {
+    loadingRecommendations.value = false
+  }
+}
+
 // Map course data for CourseCard component
 const mapCourseForCard = (course: Course) => {
   let thumbnailUrl = 'placeholder-course.jpg'
@@ -423,6 +444,7 @@ const otherTestimonials = ref([
 // Initial load
 onMounted(() => {
   fetchCourses()
+  fetchRecommendedCourses()
 })
 
 // Page meta

@@ -210,6 +210,19 @@ export const useCourses = () => {
     }
   }
 
+  const getRecommendedCourses = async (limit: number = 4): Promise<Course[]> => {
+    try {
+      const data = await $fetch<Course[]>(`/api/courses/recommended?limit=${limit}`, {
+        baseURL: config.public.backendUrl as string,
+        headers: { 'Accept': 'application/json' }
+      })
+      return data || []
+    } catch (error) {
+      console.error('Failed to fetch recommended courses:', error)
+      return []
+    }
+  }
+
 
   return {
     createCourse,
@@ -222,5 +235,6 @@ export const useCourses = () => {
     updateCourseThumbnail,
     addReview,
     getTags,
+    getRecommendedCourses,
   }
 }

@@ -102,4 +102,23 @@ class CourseRepository
             ->orderBy('order_index')
             ->get();
     }
+
+    /**
+     * Get recommended courses based on popularity and ratings
+     * Algorithm: Mix of highly rated courses and popular courses (by enrollment count)
+     * @param int $limit Maximum number of courses to return
+     * @return \Illuminate\Support\Collection
+     */
+    public function getRecommendedCourses($limit = 4)
+    {
+        return $this->model
+            ->with(['teacher:id,first_name,last_name', 'tags:id,name,slug'])
+            ->where('status', 'PUBLISHED')
+            ->withCount('enrollments')
+            ->orderByRaw('(average_rating * 0.6 + (enrollments_count / 10) * 0.4) DESC')
+            ->orderBy('average_rating', 'DESC')
+            ->orderBy('review_count', 'DESC')
+            ->limit($limit)
+            ->get();
+    }
 }

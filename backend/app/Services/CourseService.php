@@ -76,4 +76,13 @@ class CourseService {
     public function getEnrolledStudents($courseId) {
         return $this->enrollmentRepository->getByCourseId($courseId);
     }
+
+    /**
+     * Get recommended courses based on popularity and ratings
+     * @param int $limit Maximum number of courses to return
+     * @return \Illuminate\Support\Collection
+     */
+    public function getRecommendedCourses($limit = 4) {
+        return $this->courseRepository->getRecommendedCourses($limit);
+    }
 }

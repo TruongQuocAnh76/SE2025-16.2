@@ -53,6 +53,7 @@ Route::middleware('auth:sanctum')->prefix('users')->group(function () {
 Route::prefix('courses')->group(function () {
     Route::get('/', [CourseController::class, 'index']); // List all courses
     Route::get('/search', [CourseController::class, 'search']); // Search courses by name
+    Route::get('/recommended', [CourseController::class, 'recommended']); // Get recommended courses
     Route::get('/{id}', [CourseController::class, 'show']); // Get course details
 });
 // --- NHÓM RIÊNG TƯ (PRIVATE) ---

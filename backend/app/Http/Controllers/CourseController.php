@@ -204,6 +204,34 @@ class CourseController extends Controller
 
     /**
      * @OA\Get(
+     *     path="/courses/recommended",
+     *     summary="Get recommended courses",
+     *     tags={"Courses"},
+     *     @OA\Parameter(
+     *         name="limit",
+     *         in="query",
+     *         description="Maximum number of recommended courses to return",
+     *         @OA\Schema(type="integer", default=4, maximum=20)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of recommended courses",
+     *         @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/Course"))
+     *     )
+     * )
+     */
+    public function recommended(Request $request)
+    {
+        $limit = $request->input('limit', 4);
+        $limit = min(max($limit, 1), 20); // Ensure limit is between 1 and 20
+
+        $courses = $this->courseService->getRecommendedCourses($limit);
+
+        return response()->json($courses);
+    }
+
+    /**
+     * @OA\Get(
      *     path="/courses/{id}",
      *     summary="Get course details",
      *     tags={"Courses"},
