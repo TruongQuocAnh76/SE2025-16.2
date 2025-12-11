@@ -8,8 +8,6 @@ export interface Course {
   title: string
   slug: string
   description: string
-  long_description?: string
-  curriculum?: string
   thumbnail?: string
   category?: string
   language?: string
@@ -37,11 +35,13 @@ export interface Course {
 export interface Module {
   id: string
   title: string
+  description?: string
   order_index: number
   course_id: string
   created_at?: string
   updated_at?: string
   lessons?: Lesson[]
+  quizzes?: Quiz[]
   course?: Course
 }
 
@@ -109,12 +109,14 @@ export interface Quiz {
   quiz_type: string
   passing_score: number
   max_attempts: number
+  order_index?: number
   total_questions?: number
   total_points?: number
   is_active: boolean
   created_at?: string
   updated_at?: string
   course?: Course
+  questions?: Question[]
 }
 
 export interface QuizAttempt {
@@ -165,7 +167,6 @@ export interface CreateCourseData {
   passing_score: number
 
   long_description?: string
-  curriculum?: string
   category?: string
   language?: string
   discount?: number

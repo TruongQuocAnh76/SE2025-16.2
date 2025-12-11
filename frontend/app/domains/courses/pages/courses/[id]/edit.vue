@@ -1,10 +1,12 @@
-<template>
+﻿<template>
   <div class="min-h-screen bg-background">
     <div class="max-w-7xl mx-auto px-4 py-12">
+      <!-- Loading State -->
       <div v-if="loading" class="flex justify-center items-center min-h-[60vh]">
         <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-brand-primary"></div>
       </div>
 
+      <!-- Error State -->
       <div v-else-if="loadError" class="text-center py-20">
         <h2 class="text-2xl font-bold text-red-600 mb-4">Unable to load course</h2>
         <p class="text-text-muted">{{ loadError }}</p>
@@ -13,12 +15,50 @@
         </NuxtLink>
       </div>
 
-      <div v-else class="mb-8">
+      <!-- Main Content -->
+      <template v-else>
+      <div class="mb-8">
         <h1 class="text-3xl font-bold text-text-dark mb-2">Edit Course</h1>
-        <p class="text-text-muted">Update course information</p>
+        
+        <!-- Step Progress Indicator -->
+        <div class="mt-6">
+          <nav aria-label="Progress">
+            <ol role="list" class="space-y-4 md:flex md:space-y-0 md:space-x-8">
+              <li class="md:flex-1">
+                <div :class="[
+                  'group flex flex-col border-l-4 py-2 pl-4 md:border-l-0 md:border-t-4 md:pb-0 md:pl-0 md:pt-4',
+                  currentStep === 1 ? 'border-teal-600' : 'border-gray-200'
+                ]">
+                  <span :class="[
+                    'text-sm font-medium',
+                    currentStep === 1 ? 'text-teal-600' : 'text-gray-500'
+                  ]">Step 1</span>
+                  <span class="text-sm font-medium">Course Details</span>
+                </div>
+              </li>
+              <li class="md:flex-1">
+                <div :class="[
+                  'group flex flex-col border-l-4 py-2 pl-4 md:border-l-0 md:border-t-4 md:pb-0 md:pl-0 md:pt-4',
+                  currentStep === 2 ? 'border-teal-600' : 'border-gray-200'
+                ]">
+                  <span :class="[
+                    'text-sm font-medium',
+                    currentStep === 2 ? 'text-teal-600' : 'text-gray-500'
+                  ]">Step 2</span>
+                  <span :class="[
+                    'text-sm font-medium',
+                    currentStep === 2 ? 'text-gray-900' : 'text-gray-500'
+                  ]">Modules & Content</span>
+                </div>
+              </li>
+            </ol>
+          </nav>
+        </div>
       </div>
 
-      <form v-if="!loading && !loadError" @submit.prevent="handleSubmit">
+      <!-- Step 1: Course Details -->
+      <div v-if="currentStep === 1">
+        <form @submit.prevent="nextStep">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
           <div class="lg:col-span-2 space-y-6">
@@ -68,18 +108,18 @@
               ></textarea>
             </div>
 
-            <div>
+            <!-- <div>
               <label for="curriculum" class="block text-sm font-medium text-text-dark mb-2">
                 Curriculum
               </label>
-              <textarea
+              <input
                 id="curriculum"
                 v-model="form.curriculum"
-                rows="12"
+                type="text"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-                placeholder="Enter detailed curriculum"
-              ></textarea>
-            </div>
+                placeholder="E.g. B = 8 hours"
+              />
+            </div> -->
 
             <div>
               <label for="duration" class="block text-sm font-medium text-text-dark mb-2">
@@ -160,7 +200,14 @@
                 </option>
               </select>
               
-              <p class="mt-1 text-sm text-gray-500">Tip: hold Ctrl/Cmd to multi-select</p>
+              <div class="mt-2 flex items-center gap-2">
+                <button type="button" @click="showCreateTagModal = true" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                  + Create New Tag
+                </button>
+                <p class="text-sm text-gray-500">Can't find a tag? Create a new one!</p>
+              </div>
+              
+              <p class="mt-1 text-sm text-gray-500">Tip: hold Ctrl/Cmd to multi-select, or use the search box above.</p>
             </div>
 
             <div>
@@ -235,7 +282,7 @@
 
           <div class="lg:col-span-1">
             <label class="block text-sm font-medium text-text-dark mb-2">
-              Course Thumbnail
+              Upload Course Image
             </label>
             
             <div 
@@ -246,36 +293,14 @@
                 isDragging ? 'border-brand-primary bg-blue-50' : 'border-gray-300'
               ]"
             >
-              <img v-if="thumbnailPreview" :src="thumbnailPreview" @load="onThumbnailPreviewLoad" @error="onThumbnailPreviewError" class="absolute inset-0 w-full h-full object-cover rounded-lg" />
+              <img v-if="thumbnailPreview" :src="thumbnailPreview" class="absolute inset-0 w-full h-full object-cover rounded-lg" />
               
               <div :class="['relative z-10', { 'bg-white/70 p-4 rounded-lg': thumbnailPreview }]">
-                <div class="flex items-center justify-center space-x-3 mb-3">
-                  <label class="inline-flex items-center">
-                    <input type="radio" class="form-radio" value="upload" v-model="thumbnailType" />
-                    <span class="ml-2">Upload</span>
-                  </label>
-                  <label class="inline-flex items-center">
-                    <input type="radio" class="form-radio" value="url" v-model="thumbnailType" />
-                    <span class="ml-2">External URL</span>
-                  </label>
-                </div>
-
-                <div v-if="thumbnailType === 'url'" class="mb-3 w-full">
-                  <input
-                    v-model="thumbnailUrl"
-                    type="url"
-                    placeholder="https://example.com/image.jpg"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    @input="onThumbnailUrlInput"
-                  />
-                  <p v-if="thumbnailUrl && !isValidUrl(thumbnailUrl)" class="text-sm text-red-600 mt-1">Please enter a valid image URL</p>
-                </div>
-
                 <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
                   <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
                 <p class="mt-2 text-sm text-gray-600">
-                  Change course thumbnail
+                  Browse and chose the image you want to upload from your computer
                 </p>
                 
                 <button
@@ -299,26 +324,474 @@
             <p v-if="selectedThumbnailFile" class="mt-2 text-sm text-brand-primary font-medium">
               Selected: {{ selectedThumbnailFile.name }}
             </p>
-            <p v-if="thumbnailType === 'url' && thumbnailUrl" class="mt-2 text-sm text-brand-primary font-medium">
-              External thumbnail URL set
-            </p>
-            <p v-if="thumbnailLoading" class="mt-2 text-sm text-gray-600">Loading thumbnail preview...</p>
-            <p v-if="thumbnailLoadError" class="mt-2 text-sm text-red-600">{{ thumbnailLoadError }}</p>
+          </div> </div> 
+          <div class="mt-12">
+            <button
+              type="submit"
+              class="w-full py-4 bg-teal-500 text-white rounded-lg font-semibold text-lg hover:bg-teal-600 transition-colors"
+            >
+              Next: Edit Modules & Content
+            </button>
           </div>
-        </div>
-        
-        <div class="mt-12 flex gap-4">
+          
+          <div v-if="errors.general" class="mt-4 text-center text-red-600">
+            {{ errors.general }}
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 2: Modules & Content -->
+      <div v-if="currentStep === 2" class="space-y-8">
+        <div class="flex justify-between items-center">
+          <h2 class="text-2xl font-bold text-text-dark">Modules & Content</h2>
           <button
             type="button"
-            @click="router.back()"
-            class="px-6 py-3 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+            @click="addModule"
+            class="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors"
           >
-            Cancel
+            + Add Module
           </button>
+        </div>
+
+        <div v-if="modules.length === 0" class="text-center py-12 text-gray-500">
+          <p>No modules added yet. Click "Add Module" to get started.</p>
+        </div>
+
+        <div v-else class="space-y-6">
+          <div 
+            v-for="(module, moduleIndex) in modules" 
+            :key="module.id || moduleIndex"
+            class="border border-gray-300 rounded-lg p-6"
+          >
+            <div class="flex justify-between items-start mb-4">
+              <h3 class="text-lg font-semibold">Module {{ moduleIndex + 1 }}</h3>
+              <button
+                type="button"
+                @click="removeModule(moduleIndex)"
+                class="text-red-500 hover:text-red-700"
+              >
+                Remove
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label class="block text-sm font-medium text-text-dark mb-2">
+                  Module Title <span class="text-red-500">*</span>
+                </label>
+                <input
+                  v-model="module.title"
+                  type="text"
+                  required
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                  placeholder="Enter module title"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-text-dark mb-2">
+                  Description (Optional)
+                </label>
+                <textarea
+                  v-model="module.description"
+                  rows="2"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                  placeholder="Enter module description"
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="mb-6">
+              <div class="flex justify-between items-center mb-4">
+                <h4 class="text-md font-medium text-text-dark">Lessons</h4>
+                <button
+                  type="button"
+                  @click="addLesson(moduleIndex)"
+                  class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+                >
+                  + Add Lesson
+                </button>
+              </div>
+
+              <div v-if="module.lessons.length === 0" class="text-gray-500 text-sm">
+                No lessons added yet.
+              </div>
+
+              <div v-else class="space-y-3">
+                <div 
+                  v-for="(lesson, lessonIndex) in module.lessons" 
+                  :key="lesson.id || lessonIndex"
+                  class="bg-gray-50 rounded-lg p-4"
+                >
+                  <div class="flex justify-between items-start mb-3">
+                    <h5 class="font-medium">Lesson {{ lessonIndex + 1 }}</h5>
+                    <button
+                      type="button"
+                      @click="removeLesson(moduleIndex, lessonIndex)"
+                      class="text-red-500 hover:text-red-700 text-sm"
+                    >
+                      Remove
+                    </button>
+                  </div>
+
+                  <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                    <div>
+                      <label class="block text-sm font-medium text-text-dark mb-1">
+                        Lesson Title <span class="text-red-500">*</span>
+                      </label>
+                      <input
+                        v-model="lesson.title"
+                        type="text"
+                        required
+                        class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm"
+                        placeholder="Enter lesson title"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-text-dark mb-1">
+                        Video File (MP4)
+                        <span v-if="!lesson.id && !lesson.content_url" class="text-red-500">*</span>
+                      </label>
+                      <input
+                        :ref="`videoFileInput_${moduleIndex}_${lessonIndex}`"
+                        type="file"
+                        accept="video/mp4"
+                        @change="handleVideoFileSelect($event, moduleIndex, lessonIndex)"
+                        class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm"
+                      />
+                      
+                      <p v-if="lesson.video_file" class="mt-1 text-xs text-green-600">
+                        Selected: {{ lesson.video_file.name }} ({{ formatFileSize(lesson.video_file.size) }})
+                      </p>
+                      <p v-else-if="lesson.content_url" class="mt-1 text-xs text-gray-600 truncate">
+                        Current: {{ lesson.content_url.split('/').pop() }}
+                      </p>
+                    </div>
+                    <div class="flex items-end space-x-2">
+                      <div class="flex-1">
+                        <label class="block text-sm font-medium text-text-dark mb-1">
+                          Duration (min)
+                        </label>
+                        <input
+                          v-model.number="lesson.duration"
+                          type="number"
+                          min="1"
+                          class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm"
+                          placeholder="15"
+                        />
+                      </div>
+                      <div class="flex items-center">
+                        <label class="flex items-center text-sm">
+                          <input
+                            v-model="lesson.is_free"
+                            type="checkbox"
+                            class="mr-2"
+                          />
+                          Free
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between items-center mb-4">
+                <h4 class="text-md font-medium text-text-dark">Quizzes</h4>
+                <button
+                  type="button"
+                  @click="addQuiz(moduleIndex)"
+                  class="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm"
+                >
+                  + Add Quiz
+                </button>
+              </div>
+
+              <div v-if="module.quizzes.length === 0" class="text-gray-500 text-sm">
+                No quizzes added yet.
+              </div>
+
+              <div v-else class="space-y-4">
+                <div 
+                  v-for="(quiz, quizIndex) in module.quizzes" 
+                  :key="quiz.id || quizIndex"
+                  class="bg-purple-50 rounded-lg p-4"
+                >
+                  <div class="flex justify-between items-start mb-3">
+                    <h5 class="font-medium">Quiz {{ quizIndex + 1 }}</h5>
+                    <button
+                      type="button"
+                      @click="removeQuiz(moduleIndex, quizIndex)"
+                      class="text-red-500 hover:text-red-700 text-sm"
+                    >
+                      Remove
+                    </button>
+                  </div>
+
+                  <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
+                    <div>
+                      <label class="block text-sm font-medium text-text-dark mb-1">
+                        Quiz Title <span class="text-red-500">*</span>
+                      </label>
+                      <input
+                        v-model="quiz.title"
+                        type="text"
+                        required
+                        class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm"
+                        placeholder="Enter quiz title"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-text-dark mb-1">
+                        Quiz Type
+                      </label>
+                      <select
+                        v-model="quiz.quiz_type"
+                        class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm"
+                      >
+                        <option value="PRACTICE">Practice</option>
+                        <option value="GRADED">Graded</option>
+                        <option value="FINAL">Final</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-text-dark mb-1">
+                        Time Limit (min)
+                      </label>
+                      <input
+                        v-model.number="quiz.time_limit"
+                        type="number"
+                        min="1"
+                        class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm"
+                        placeholder="30"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
+                    <div>
+                      <label class="block text-sm font-medium text-text-dark mb-1">
+                        Passing Score (%)
+                      </label>
+                      <input
+                        v-model.number="quiz.passing_score"
+                        type="number"
+                        min="0"
+                        max="100"
+                        class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm"
+                        placeholder="70"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-text-dark mb-1">
+                        Max Attempts
+                      </label>
+                      <input
+                        v-model.number="quiz.max_attempts"
+                        type="number"
+                        min="1"
+                        class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm"
+                        placeholder="3"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="mb-4">
+                    <label class="block text-sm font-medium text-text-dark mb-1">
+                      Description (Optional)
+                    </label>
+                    <textarea
+                      v-model="quiz.description"
+                      rows="2"
+                      class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm"
+                      placeholder="Enter quiz description"
+                    ></textarea>
+                  </div>
+
+                  <div class="mb-4">
+                    <div class="flex justify-between items-center mb-3">
+                      <h6 class="text-sm font-medium text-text-dark">Questions</h6>
+                      <button
+                        type="button"
+                        @click="addQuestion(moduleIndex, quizIndex)"
+                        class="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
+                      >
+                        + Add Question
+                      </button>
+                    </div>
+
+                    <div v-if="quiz.questions.length === 0" class="text-gray-500 text-xs">
+                      No questions added yet.
+                    </div>
+
+                    <div v-else class="space-y-3">
+                      <div 
+                        v-for="(question, questionIndex) in quiz.questions" 
+                        :key="question.id || questionIndex"
+                        class="bg-white rounded border p-3"
+                      >
+                        <div class="flex justify-between items-start mb-2">
+                          <span class="text-sm font-medium">Question {{ questionIndex + 1 }}</span>
+                          <button
+                            type="button"
+                            @click="removeQuestion(moduleIndex, quizIndex, questionIndex)"
+                            class="text-red-500 hover:text-red-700 text-xs"
+                          >
+                            Remove
+                          </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-3">
+                          <div>
+                            <label class="block text-xs font-medium text-text-dark mb-1">
+                              Question Text <span class="text-red-500">*</span>
+                            </label>
+                            <textarea
+                              v-model="question.question_text"
+                              rows="2"
+                              required
+                              class="w-full px-2 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm"
+                              placeholder="Enter your question"
+                            ></textarea>
+                          </div>
+
+                          <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
+                            <div>
+                              <label class="block text-xs font-medium text-text-dark mb-1">
+                                Question Type
+                              </label>
+                              <select
+                                v-model="question.question_type"
+                                @change="handleQuestionTypeChange(question)"
+                                class="w-full px-2 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm"
+                              >
+                                <option value="MULTIPLE_CHOICE">Multiple Choice</option>
+                                <option value="CHECKBOX">Multiple Select</option>
+                                <option value="SHORT_ANSWER">Short Answer</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label class="block text-xs font-medium text-text-dark mb-1">
+                                Points
+                              </label>
+                              <input
+                                v-model.number="question.points"
+                                type="number"
+                                min="1"
+                                class="w-full px-2 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm"
+                                placeholder="1"
+                              />
+                            </div>
+                          </div>
+
+                          <div v-if="question.question_type === 'MULTIPLE_CHOICE' || question.question_type === 'CHECKBOX'">
+                            <div class="flex justify-between items-center mb-2">
+                              <label class="text-xs font-medium text-text-dark">
+                                Options <span class="text-red-500">*</span>
+                              </label>
+                              <button
+                                type="button"
+                                @click="addOption(question)"
+                                class="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+                              >
+                                + Add Option
+                              </button>
+                            </div>
+                            <div class="space-y-2">
+                              <div 
+                                v-for="(option, optionIndex) in question.options" 
+                                :key="optionIndex"
+                                class="flex items-center space-x-2"
+                              >
+                                <input
+                                  v-model="question.options![optionIndex]"
+                                  type="text"
+                                  class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                                  placeholder="Enter option text"
+                                />
+                                <button
+                                  type="button"
+                                  @click="removeOption(question, optionIndex)"
+                                  class="text-red-500 hover:text-red-700 text-xs"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label class="block text-xs font-medium text-text-dark mb-1">
+                              Correct Answer <span class="text-red-500">*</span>
+                            </label>
+                            <div v-if="question.question_type === 'MULTIPLE_CHOICE'">
+                              <select
+                                v-model="question.correct_answer"
+                                class="w-full px-2 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm"
+                              >
+                                <option value="">Select correct option</option>
+                                <option 
+                                  v-for="(option, index) in question.options" 
+                                  :key="index"
+                                  :value="option"
+                                >
+                                  {{ option }}
+                                </option>
+                              </select>
+                            </div>
+                            <div v-else-if="question.question_type === 'CHECKBOX'">
+                              <input
+                                v-model="question.correct_answer"
+                                type="text"
+                                class="w-full px-2 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm"
+                                placeholder="Enter correct options separated by commas"
+                              />
+                            </div>
+                            <div v-else>
+                              <input
+                                v-model="question.correct_answer"
+                                type="text"
+                                class="w-full px-2 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm"
+                                placeholder="Enter correct answer"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label class="block text-xs font-medium text-text-dark mb-1">
+                              Explanation (Optional)
+                            </label>
+                            <textarea
+                              v-model="question.explanation"
+                              rows="2"
+                              class="w-full px-2 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm"
+                              placeholder="Explain why this is the correct answer"
+                            ></textarea>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-between mt-12">
           <button
-            type="submit"
+            type="button"
+            @click="previousStep"
+            class="py-3 px-6 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+          >
+            Previous: Course Details
+          </button>
+          
+          <button
+            type="button"
+            @click="handleSubmit"
             :disabled="isSubmitting"
-            class="flex-1 py-3 bg-teal-500 text-white rounded-lg font-semibold hover:bg-teal-600 transition-colors disabled:opacity-50"
+            class="py-3 px-6 bg-teal-500 text-white rounded-lg font-semibold hover:bg-teal-600 transition-colors disabled:opacity-50"
           >
             <span v-if="isSubmitting">Updating Course...</span>
             <span v-else>Update Course</span>
@@ -331,46 +804,268 @@
         <div v-if="successMessage" class="mt-4 text-center text-green-600">
           {{ successMessage }}
         </div>
-      </form>
+      </div>
+
+      <!-- Create Tag Modal -->
+      <div v-if="showCreateTagModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showCreateTagModal = false">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <h3 class="text-xl font-bold text-gray-900 mb-4">Create New Tag</h3>
+          
+          <div class="mb-4">
+            <label for="newTagName" class="block text-sm font-medium text-gray-700 mb-2">Tag Name</label>
+            <input
+              id="newTagName"
+              v-model="newTagName"
+              type="text"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+              placeholder="Enter tag name (e.g., React, Node.js)"
+              @keyup.enter="handleCreateTag"
+            />
+          </div>
+          
+          <div v-if="createTagError" class="mb-4 text-sm text-red-600">
+            {{ createTagError }}
+          </div>
+          
+          <div class="flex gap-3">
+            <button
+              type="button"
+              @click="handleCreateTag"
+              :disabled="!newTagName.trim() || isCreatingTag"
+              class="flex-1 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span v-if="isCreatingTag">Creating...</span>
+              <span v-else>Create Tag</span>
+            </button>
+            <button
+              type="button"
+              @click="showCreateTagModal = false; newTagName = ''; createTagError = ''"
+              class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+      </template>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import type { CreateCourseData, Tag, Course } from '../../../types/course'
-
-const LEVELS = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT'] as const
-
-const { getCourseById, updateCourse, uploadCourseThumbnail, updateCourseThumbnail, getTags } = useCourses()
-const router = useRouter()
-const route = useRoute()
+import type { CreateCourseData, Tag, CreateModuleData, CreateLessonData, CreateQuizData, CreateQuestionData, CreateCourseWithModulesData, Course } from '../../../types/course'
 const config = useRuntimeConfig()
 
+const LEVELS = ['BEGINNER' , 'INTERMEDIATE' , 'ADVANCED' , 'EXPERT'] as const
+
+const { getCourseById, updateCourse, uploadCourseThumbnail, updateCourseThumbnail, getTags, createTag, uploadLessonVideo, notifyVideoUploadComplete, checkHlsProcessingStatus } = useCourses()
+const router = useRouter()
+const route = useRoute()
 const courseId = route.params.id as string
+
+// Multi-step form state
+const currentStep = ref(1)
 
 // Loading states
 const loading = ref(true)
 const loadError = ref('')
 
-// State for dropzone
+// Modules state
+const modules = ref<CreateModuleData[]>([])
+
+// Module management functions
+const addModule = () => {
+  const newModule: CreateModuleData = {
+    title: '',
+    description: '',
+    order_index: modules.value.length,
+    lessons: [],
+    quizzes: []
+  }
+  modules.value.push(newModule)
+}
+
+const removeModule = (moduleIndex: number) => {
+  modules.value.splice(moduleIndex, 1)
+  // Update order indexes
+  modules.value.forEach((module, index) => {
+    module.order_index = index
+  })
+}
+
+// Lesson management functions  
+const addLesson = (moduleIndex: number) => {
+  const module = modules.value[moduleIndex]
+  if (!module) return
+  
+  const newLesson: CreateLessonData = {
+    title: '',
+    content_type: 'VIDEO',
+    content_url: '',
+    duration: undefined,
+    order_index: module.lessons.length,
+    is_free: false
+  }
+  module.lessons.push(newLesson)
+}
+
+const removeLesson = (moduleIndex: number, lessonIndex: number) => {
+  const module = modules.value[moduleIndex]
+  if (!module) return
+  
+  module.lessons.splice(lessonIndex, 1)
+  // Update order indexes
+  module.lessons.forEach((lesson, index) => {
+    lesson.order_index = index
+  })
+}
+
+// Quiz management functions
+const addQuiz = (moduleIndex: number) => {
+  const module = modules.value[moduleIndex]
+  if (!module) return
+  
+  const newQuiz: CreateQuizData = {
+    title: '',
+    description: '',
+    quiz_type: 'PRACTICE',
+    time_limit: undefined,
+    passing_score: 70,
+    max_attempts: undefined,
+    order_index: module.quizzes.length,
+    is_active: true,
+    questions: []
+  }
+  module.quizzes.push(newQuiz)
+}
+
+const removeQuiz = (moduleIndex: number, quizIndex: number) => {
+  const module = modules.value[moduleIndex]
+  if (!module) return
+  
+  module.quizzes.splice(quizIndex, 1)
+  // Update order indexes
+  module.quizzes.forEach((quiz, index) => {
+    quiz.order_index = index
+  })
+}
+
+// Question management functions
+const addQuestion = (moduleIndex: number, quizIndex: number) => {
+  const module = modules.value[moduleIndex]
+  if (!module) return
+  
+  const quiz = module.quizzes[quizIndex]
+  if (!quiz) return
+  
+  const newQuestion: CreateQuestionData = {
+    question_text: '',
+    question_type: 'MULTIPLE_CHOICE',
+    points: 1,
+    order_index: quiz.questions.length,
+    options: ['', ''],
+    correct_answer: '',
+    explanation: ''
+  }
+  quiz.questions.push(newQuestion)
+}
+
+const removeQuestion = (moduleIndex: number, quizIndex: number, questionIndex: number) => {
+  const module = modules.value[moduleIndex]
+  if (!module) return
+  
+  const quiz = module.quizzes[quizIndex]
+  if (!quiz) return
+  
+  quiz.questions.splice(questionIndex, 1)
+  // Update order indexes
+  quiz.questions.forEach((question, index) => {
+    question.order_index = index
+  })
+}
+
+const handleQuestionTypeChange = (question: CreateQuestionData) => {
+  if (question.question_type === 'MULTIPLE_CHOICE' || question.question_type === 'CHECKBOX') {
+    if (!question.options || question.options.length === 0) {
+      question.options = ['', '']
+    }
+  } else {
+    question.options = undefined
+  }
+  question.correct_answer = ''
+}
+
+// Option management functions
+const addOption = (question: CreateQuestionData) => {
+  if (!question.options) {
+    question.options = []
+  }
+  question.options.push('')
+}
+
+const removeOption = (question: CreateQuestionData, optionIndex: number) => {
+  if (question.options) {
+    question.options.splice(optionIndex, 1)
+  }
+}
+
+// Video file management - modified for edit mode
+const handleVideoFileSelect = (event: Event, moduleIndex: number, lessonIndex: number) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  
+  if (file) {
+    // Validate file type
+    if (file.type !== 'video/mp4') {
+      errors.value.general = 'Only MP4 video files are allowed.'
+      target.value = ''
+      return
+    }
+    
+    const lesson = modules.value[moduleIndex]?.lessons[lessonIndex]
+    if (lesson) {
+      lesson.video_file = file
+      // Clear content_url since we're uploading new video
+      lesson.content_url = undefined
+      // Clear any previous errors
+      delete errors.value.general
+    }
+  }
+}
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+// Step navigation functions
+const nextStep = () => {
+  if (validateForm()) {
+    currentStep.value = 2
+  }
+}
+
+const previousStep = () => {
+  currentStep.value = 1
+}
+
+// State cho Dropzone
 const isDragging = ref(false)
 const thumbnailPreview = ref<string | null>(null)
 
 // Thumbnail handling
-const thumbnailType = ref<'url' | 'upload'>('url')
+const thumbnailType = ref<'url' | 'upload'>('upload')
 const selectedThumbnailFile = ref<File | null>(null)
 const thumbnailFileInput = ref<HTMLInputElement | null>(null)
-const thumbnailUrl = ref<string>('')
-const thumbnailLoading = ref<boolean>(false)
-const thumbnailLoadError = ref<string | null>(null)
 
 // Form data
 const form = ref<CreateCourseData & { status?: string }>({
   title: '',
   description: '',
-  long_description: '',
-  curriculum: '',
   category: '',
   language: '',
   discount: undefined,
@@ -384,13 +1079,16 @@ const form = ref<CreateCourseData & { status?: string }>({
 
 const allTags = ref<Tag[]>([])
 const tagSearch = ref('')
+const showCreateTagModal = ref(false)
+const newTagName = ref('')
+const isCreatingTag = ref(false)
+const createTagError = ref('')
 
 const filteredTags = computed(() => {
   if (!tagSearch.value.trim()) return allTags.value
   const search = tagSearch.value.toLowerCase()
   return allTags.value.filter(tag => tag.name.toLowerCase().includes(search))
 })
-
 const selectedTags = computed(() => {
   const tags = form.value.tags || []
   return allTags.value.filter(tag => tags.includes(tag.id))
@@ -401,29 +1099,59 @@ const removeTag = (tagId: string) => {
   form.value.tags = form.value.tags.filter(id => id !== tagId)
 }
 
-// Form state
-const errors = ref<Record<string, string>>({})
-const isSubmitting = ref(false)
-const successMessage = ref('')
+const handleCreateTag = async () => {
+  if (!newTagName.value.trim()) return
+  
+  isCreatingTag.value = true
+  createTagError.value = ''
+  
+  try {
+    const newTag = await createTag(newTagName.value.trim())
+    if (newTag) {
+      // Add new tag to the list
+      allTags.value.push(newTag)
+      // Auto-select the new tag
+      if (!form.value.tags) form.value.tags = []
+      form.value.tags.push(newTag.id)
+      // Close modal and reset
+      showCreateTagModal.value = false
+      newTagName.value = ''
+    }
+  } catch (error: any) {
+    console.error('Failed to create tag:', error)
+    if (error.statusCode === 401 || error.status === 401) {
+      createTagError.value = 'You must be logged in to create tags.'
+    } else if (error.data?.errors?.name) {
+      createTagError.value = error.data.errors.name[0]
+    } else if (error.data?.message) {
+      createTagError.value = error.data.message
+    } else if (error.message) {
+      createTagError.value = error.message
+    } else {
+      createTagError.value = 'Failed to create tag. Please try again.'
+    }
+  } finally {
+    isCreatingTag.value = false
+  }
+}
 
-// Load course data
+// Load course data on mount
 onMounted(async () => {
   loading.value = true
   loadError.value = ''
   
   try {
-    // Load tags
+    // Load tags first
     allTags.value = await getTags()
     
     // Load course data
     const course = await getCourseById(courseId)
     
     if (course) {
+      // Load course basic info
       form.value = {
         title: course.title || '',
         description: course.description || '',
-        long_description: course.long_description || '',
-        curriculum: course.curriculum || '',
         category: course.category || '',
         language: course.language || '',
         discount: course.discount ?? undefined,
@@ -432,14 +1160,52 @@ onMounted(async () => {
         duration: course.duration ?? undefined,
         passing_score: course.passing_score ?? 70,
         tags: course.tags?.map(t => t.id) || [],
-        status: course.status || 'DRAFT'
+        status: (course as Course).status || 'DRAFT'
       }
       
-      // Set thumbnail preview if exists
+      // Load thumbnail
       if (course.thumbnail) {
         thumbnailPreview.value = course.thumbnail
-        thumbnailUrl.value = course.thumbnail
-        thumbnailType.value = 'url'
+      }
+      
+      // Load modules with lessons and quizzes
+      if (course.modules && course.modules.length > 0) {
+        modules.value = course.modules.map(m => ({
+          id: m.id,
+          title: m.title || '',
+          description: m.description || '',
+          order_index: m.order_index || 0,
+          lessons: m.lessons?.map(l => ({
+            id: l.id,
+            title: l.title || '',
+            content_type: 'VIDEO',
+            content_url: l.content_url || '',
+            duration: l.duration,
+            order_index: l.order_index || 0,
+            is_free: l.is_free || false
+          })) || [],
+          quizzes: m.quizzes?.map(q => ({
+            id: q.id,
+            title: q.title || '',
+            description: q.description || '',
+            quiz_type: (q.quiz_type || 'PRACTICE') as 'PRACTICE' | 'GRADED' | 'FINAL',
+            time_limit: q.time_limit,
+            passing_score: q.passing_score || 70,
+            max_attempts: q.max_attempts,
+            order_index: q.order_index || 0,
+            is_active: q.is_active ?? true,
+            questions: q.questions?.map(qu => ({
+              id: qu.id,
+              question_text: qu.question_text || '',
+              question_type: (qu.question_type || 'MULTIPLE_CHOICE') as 'MULTIPLE_CHOICE' | 'CHECKBOX' | 'SHORT_ANSWER',
+              points: qu.points || 1,
+              order_index: qu.order_index || 0,
+              options: qu.options || ['', ''],
+              correct_answer: qu.correct_answer || '',
+              explanation: qu.explanation || ''
+            })) || []
+          })) || []
+        }))
       }
     }
   } catch (error: any) {
@@ -449,6 +1215,11 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+// Form state
+const errors = ref<Record<string, string>>({})
+const isSubmitting = ref(false)
+const successMessage = ref('')
 
 // Thumbnail file selection handler
 const handleThumbnailFileSelect = (event: Event) => {
@@ -460,7 +1231,6 @@ const handleThumbnailFileSelect = (event: Event) => {
 }
 
 const triggerFileInput = () => {
-  thumbnailType.value = 'upload'
   thumbnailFileInput.value?.click()
 }
 
@@ -475,69 +1245,12 @@ const onDrop = (event: DragEvent) => {
 }
 
 const setFile = (file: File) => {
-  thumbnailType.value = 'upload'
-  thumbnailLoadError.value = null
-  thumbnailLoading.value = false
   selectedThumbnailFile.value = file
   const reader = new FileReader()
   reader.onload = (e) => {
     thumbnailPreview.value = e.target?.result as string
   }
   reader.readAsDataURL(file)
-}
-
-const isValidUrl = (val: string) => {
-  try {
-    const u = new URL(val)
-    return ['http:', 'https:'].includes(u.protocol)
-  } catch (e) {
-    return false
-  }
-}
-
-const tryNormalizeUrl = (val: string) => {
-  if (!val) return ''
-  try {
-    new URL(val)
-    return val
-  } catch (e) {
-    if (/^[^\s]+\.[^\s]+/.test(val)) {
-      return 'https://' + val
-    }
-    return val
-  }
-}
-
-const onThumbnailPreviewLoad = () => {
-  thumbnailLoading.value = false
-  thumbnailLoadError.value = null
-}
-
-const onThumbnailPreviewError = () => {
-  thumbnailLoading.value = false
-  thumbnailLoadError.value = 'Failed to load image. Please check the URL or try another image.'
-  thumbnailPreview.value = null
-}
-
-const onThumbnailUrlInput = () => {
-  thumbnailLoadError.value = null
-  if (!thumbnailUrl.value) {
-    thumbnailPreview.value = null
-    return
-  }
-
-  const normalized = tryNormalizeUrl(thumbnailUrl.value.trim())
-  if (normalized !== thumbnailUrl.value) {
-    thumbnailUrl.value = normalized
-  }
-
-  if (isValidUrl(thumbnailUrl.value)) {
-    thumbnailLoading.value = true
-    selectedThumbnailFile.value = null
-    thumbnailPreview.value = thumbnailUrl.value
-  } else {
-    thumbnailPreview.value = null
-  }
 }
 
 // Form validation
@@ -555,18 +1268,85 @@ const validateForm = (): boolean => {
   if (form.value.passing_score < 0 || form.value.passing_score > 100) {
     errors.value.passing_score = 'Passing score must be between 0 and 100'
   }
-  if (thumbnailType.value === 'url' && thumbnailUrl.value) {
-    if (!isValidUrl(thumbnailUrl.value) || thumbnailLoadError.value) {
-      errors.value.thumbnail = 'Please provide a valid thumbnail URL or switch to upload.'
-    }
-  }
   return Object.keys(errors.value).length === 0
 }
 
-// Submit handler
+// Validation for modules
+const validateModules = (): boolean => {
+  errors.value = {}
+  
+  if (modules.value.length === 0) {
+    errors.value.general = 'Please add at least one module to the course.'
+    return false
+  }
+
+  for (let i = 0; i < modules.value.length; i++) {
+    const module = modules.value[i]
+    if (!module || !module.title.trim()) {
+      errors.value.general = `Module ${i + 1} title is required.`
+      return false
+    }
+    
+    for (let j = 0; j < module.lessons.length; j++) {
+      const lesson = module.lessons[j]
+      if (!lesson || !lesson.title.trim()) {
+        errors.value.general = `Lesson ${j + 1} in Module ${i + 1} title is required.`
+        return false
+      }
+      // In edit mode, video is optional if content_url exists (keep existing video)
+      // Only require video_file if it's a new lesson (no id) or if user cleared the existing video
+      if (!lesson.video_file && !lesson.content_url?.trim() && !lesson.id) {
+        errors.value.general = `Lesson ${j + 1} in Module ${i + 1} video file is required.`
+        return false
+      }
+    }
+    
+    for (let j = 0; j < module.quizzes.length; j++) {
+      const quiz = module.quizzes[j]
+      if (!quiz || !quiz.title.trim()) {
+        errors.value.general = `Quiz ${j + 1} in Module ${i + 1} title is required.`
+        return false
+      }
+      
+      if (quiz.questions.length === 0) {
+        errors.value.general = `Quiz ${j + 1} in Module ${i + 1} must have at least one question.`
+        return false
+      }
+      
+      for (let k = 0; k < quiz.questions.length; k++) {
+        const question = quiz.questions[k]
+        if (!question || !question.question_text.trim()) {
+          errors.value.general = `Question ${k + 1} in Quiz ${j + 1} (Module ${i + 1}) text is required.`
+          return false
+        }
+        
+        if ((question.question_type === 'MULTIPLE_CHOICE' || question.question_type === 'CHECKBOX') && (!question.options || question.options.length < 2)) {
+          errors.value.general = `Question ${k + 1} in Quiz ${j + 1} (Module ${i + 1}) must have at least 2 options.`
+          return false
+        }
+        
+        if (!question.correct_answer.trim()) {
+          errors.value.general = `Question ${k + 1} in Quiz ${j + 1} (Module ${i + 1}) must have a correct answer.`
+          return false
+        }
+      }
+    }
+  }
+  
+  return true
+}
+
+// Submit handler - modified for update
 const handleSubmit = async () => {
-  if (!validateForm()) {
-    return
+  // Only validate basic form for step 1, both for step 2
+  if (currentStep.value === 1) {
+    if (!validateForm()) {
+      return
+    }
+  } else {
+    if (!validateForm() || !validateModules()) {
+      return
+    }
   }
 
   isSubmitting.value = true
@@ -574,28 +1354,83 @@ const handleSubmit = async () => {
   successMessage.value = ''
 
   try {
-    const courseData: any = { ...form.value }
-    
-    // Handle thumbnail
-    if (thumbnailType.value === 'url' && thumbnailUrl.value && isValidUrl(thumbnailUrl.value)) {
-      courseData.thumbnail = thumbnailUrl.value
-    } else if (selectedThumbnailFile.value) {
-      courseData.thumbnail = 'UPLOAD_REQUESTED'
+    const courseData: CreateCourseWithModulesData = { 
+      ...form.value,
+      modules: modules.value 
     }
-    
     if (courseData.price === undefined) delete courseData.price
     if (courseData.duration === undefined) delete courseData.duration
 
+    // Only request thumbnail upload if a NEW file is selected
+    if (selectedThumbnailFile.value) {
+      courseData.thumbnail = 'UPLOAD_REQUESTED'
+    }
+
+    // Use updateCourse instead of createCourse
     const result = await updateCourse(courseId, courseData)
 
     if (result) {
-      // Upload thumbnail if file selected
+      // Upload thumbnail if provided
       if (selectedThumbnailFile.value && result.thumbnail_upload_url) {
         await uploadCourseThumbnail(result.thumbnail_upload_url, selectedThumbnailFile.value)
       }
 
-      successMessage.value = 'Course updated successfully! Redirecting...'
-      
+      // Upload lesson videos if provided (only for NEW videos)
+      if (result.video_upload_urls) {
+        successMessage.value = 'Course updated! Uploading new videos...'
+        
+        const videoUploads = Object.entries(result.video_upload_urls)
+        let uploadedCount = 0
+        let failedCount = 0
+        
+        for (const [key, uploadInfo] of videoUploads) {
+          const uploadData = uploadInfo as any
+          const keyParts = key.split('_')
+          const moduleIndexStr = keyParts[1]
+          const lessonIndexStr = keyParts[3]
+          
+          if (moduleIndexStr && lessonIndexStr) {
+            const moduleIndex = parseInt(moduleIndexStr)
+            const lessonIndex = parseInt(lessonIndexStr)
+            
+            const lesson = modules.value[moduleIndex]?.lessons[lessonIndex]
+            if (lesson?.video_file) {
+              try {
+                successMessage.value = `Uploading video ${uploadedCount + 1} of ${videoUploads.length}...`
+                const uploadSuccess = await uploadLessonVideo(
+                  uploadData.lesson_id,
+                  uploadData.upload_url,
+                  lesson.video_file,
+                  uploadData.original_video_path,
+                  uploadData.original_video_path.replace('.mp4', '')
+                )
+                if (uploadSuccess) {
+                  uploadedCount++
+                  successMessage.value = `Video ${uploadedCount} of ${videoUploads.length} uploaded!`
+                } else {
+                  failedCount++
+                  console.warn(`Failed to upload video for lesson ${lesson.title}`)
+                }
+              } catch (error) {
+                failedCount++
+                console.warn(`Failed to upload video for lesson ${lesson.title}:`, error)
+              }
+            }
+          }
+        }
+        
+        if (failedCount === 0 && uploadedCount > 0) {
+          successMessage.value = `Course updated! All ${uploadedCount} new videos uploaded successfully.`
+        } else if (uploadedCount > 0) {
+          successMessage.value = `Course updated! ${uploadedCount} videos uploaded, ${failedCount} failed.`
+        } else {
+          successMessage.value = 'Course updated successfully!'
+        }
+      } else {
+        successMessage.value = 'Course updated successfully!'
+      }
+
+      // Redirect to course detail page
       setTimeout(() => {
         router.push(`/courses/${courseId}`)
       }, 1500)
