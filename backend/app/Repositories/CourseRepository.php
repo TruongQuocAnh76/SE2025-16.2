@@ -111,11 +111,18 @@ class CourseRepository
      */
     public function getRecommendedCourses($limit = 4)
     {
+        // Weight constants for recommendation algorithm
+        $ratingWeight = 0.6;
+        $popularityWeight = 0.4;
+        
         return $this->model
             ->with(['teacher:id,first_name,last_name', 'tags:id,name,slug'])
             ->where('status', 'PUBLISHED')
             ->withCount('enrollments')
-            ->orderByRaw('(average_rating * 0.6 + (enrollments_count / 10) * 0.4) DESC')
+            ->orderByRaw(
+                '(COALESCE(average_rating, 0) * ? + LEAST(enrollments_count / 10.0, 5) * ?) DESC',
+                [$ratingWeight, $popularityWeight]
+            )
             ->orderBy('average_rating', 'DESC')
             ->orderBy('review_count', 'DESC')
             ->limit($limit)
