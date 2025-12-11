@@ -147,5 +147,8 @@ jobs:
             # Start services
             docker-compose -f docker-compose.prod.yml up -d --remove-orphans
             
+            # Run backend migrations
+            docker-compose -f docker-compose.prod.yml exec -T backend php artisan migrate --force
+            
             # Clean up
             docker image prune -a -f
