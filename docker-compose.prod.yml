@@ -184,6 +184,7 @@ services:
     entrypoint: ["/bin/sh", "/scripts/init-minio.sh"]
     networks:
       - app_network
+    restart: "no"
 
   mailpit:
     image: axllent/mailpit:latest
