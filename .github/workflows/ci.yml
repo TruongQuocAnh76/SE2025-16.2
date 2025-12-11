@@ -92,6 +92,60 @@ jobs:
         STORAGE_USE_PATH_STYLE_ENDPOINT: true
       run: php artisan test
 
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-build] # Ensure tests and build pass before deploying
+    if: github.ref == 'refs/heads/main' # Only deploy from main branch
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Copy files to server
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.KEY }}
+        port: 22
+        source: "docker-compose.prod.yml,init-minio.sh,backend/nginx.conf"
+        target: "/home/${{ secrets.USERNAME }}/app"
+
+    - name: Execute deployment commands
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.KEY }}
+        port: 22
+        envs: GITHUB_TOKEN
+        script: |
+          export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          cd /home/${{ secrets.USERNAME }}/app
+          
+          # Move nginx config to root if needed
+          if [ -f backend/nginx.conf ]; then
+              mv backend/nginx.conf ./nginx.conf
+              rm -rf backend
+          fi
+
+          # Login to GHCR
+          echo $GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          
+          # Pull new images
+          docker-compose -f docker-compose.prod.yml pull
+          
+          # Create .env file from Secrets if needed (Assume present or simplified)
+          echo "${{ secrets.ENV_FILE }}" > .env
+          
+          # Deploy
+          docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+          
+          # Prune old images to save space
+          docker image prune -a -f
+
   frontend-build:
     runs-on: ubuntu-latest
     defaults:
