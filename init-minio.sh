@@ -11,10 +11,16 @@ done
 echo "MinIO is ready. Configuring..."
 
 # Configure mc alias
-# Using default variables from docker-compose if not set
+# WARNING: The default values 'minioadmin' for USER and PASSWORD are insecure for production use.
 USER=${MINIO_ROOT_USER:-minioadmin}
 PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
 
+# Check for insecure default credentials
+if [ "$USER" = "minioadmin" ] && [ "$PASSWORD" = "minioadmin" ]; then
+    echo "ERROR: Default MinIO credentials ('minioadmin') are insecure and MUST be overridden in production."
+    echo "Set MINIO_ROOT_USER and MINIO_ROOT_PASSWORD environment variables to secure values."
+    exit 1
+fi
 mc alias set myminio http://minio:9000 "$USER" "$PASSWORD"
 
 # Create bucket
