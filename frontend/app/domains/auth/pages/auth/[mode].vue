@@ -17,14 +17,14 @@
         <div class="relative bg-brand-primary/50 rounded-full p-4">
           <div class="flex">
             <button
-              @click="mode = 'login'"
+              @click="navigateTo('/auth/login')"
               class="flex-1 py-2 px-4 rounded-full text-sm font-medium transition-colors duration-200"
               :class="mode === 'login' ? 'bg-brand-primary text-white' : 'bg-transparent text-brand-primary'"
             >
               Sign In
             </button>
             <button
-              @click="mode = 'register'"
+              @click="navigateTo('/auth/signup')"
               class="flex-1 py-2 px-4 rounded-full text-sm font-medium transition-colors duration-200"
               :class="mode === 'register' ? 'bg-brand-primary text-white' : 'bg-transparent text-brand-primary'"
             >
@@ -40,15 +40,38 @@
 
         <!-- Login Form -->
         <form v-if="mode === 'login'" @submit.prevent="handleLogin" class="space-y-6">
+          <!-- General Error Alert -->
+          <div v-if="auth.error.value" class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-red-700">
+                  {{ auth.error.value }}
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div>
-            <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+            <label for="username" class="block text-sm font-medium text-gray-700">Username or Email</label>
             <input
               id="username"
               v-model="loginForm.username"
               type="text"
-              required
-              class="mt-1 block w-full px-3 py-2 border border-brand-primary rounded-3xl shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              :class="[
+                'mt-1 block w-full px-3 py-2 border rounded-3xl shadow-sm focus:outline-none focus:ring-2',
+                auth.validationErrors.value.login 
+                  ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                  : 'border-brand-primary focus:ring-blue-500 focus:border-blue-500'
+              ]"
             />
+            <p v-if="auth.validationErrors.value.login" class="mt-1 text-sm text-red-600">
+              {{ auth.validationErrors.value.login }}
+            </p>
           </div>
           <div>
             <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
@@ -57,8 +80,12 @@
                 id="password"
                 v-model="loginForm.password"
                 :type="showPassword ? 'text' : 'password'"
-                required
-                class="mt-1 block w-full px-3 py-2 pr-10 border border-brand-primary rounded-3xl shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                :class="[
+                  'mt-1 block w-full px-3 py-2 pr-10 border rounded-3xl shadow-sm focus:outline-none focus:ring-2',
+                  auth.validationErrors.value.password 
+                    ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                    : 'border-brand-primary focus:ring-blue-500 focus:border-blue-500'
+                ]"
               />
               <button
                 type="button"
@@ -74,31 +101,82 @@
                 </svg>
               </button>
             </div>
+            <p v-if="auth.validationErrors.value.password" class="mt-1 text-sm text-red-600">
+              {{ auth.validationErrors.value.password }}
+            </p>
           </div>
           <div class="flex items-center justify-between">
-            <NuxtLink to="/forgot-password" class="text-sm text-blue-600 hover:text-blue-500">
+            <button type="button" class="text-sm text-blue-600 hover:underline" @click="goToForgotPassword">
               Forgot Password?
-            </NuxtLink>
+            </button>
           </div>
           <button
             type="submit"
-            class="w-full flex justify-center py-2 px-4 border bg-brand-primary rounded-3xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            :disabled="auth.isLoading.value"
+            class="w-full flex justify-center py-2 px-4 border bg-brand-primary rounded-3xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Sign In
+            <span v-if="auth.isLoading.value">Signing in...</span>
+            <span v-else>Sign In</span>
           </button>
+          
+          <!-- Social Auth Buttons -->
+          <SocialAuthButtons button-text="Login" />
         </form>
 
         <!-- Register Form -->
         <form v-else @submit.prevent="handleRegister" class="space-y-6">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="firstName" class="block text-sm font-medium text-gray-700">First Name</label>
+              <input
+                id="firstName"
+                v-model="registerForm.firstName"
+                type="text"
+                :class="[
+                  'mt-1 block w-full px-3 py-2 border rounded-3xl shadow-sm focus:outline-none focus:ring-2',
+                  auth.validationErrors.value.firstName 
+                    ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                    : 'border-brand-primary focus:ring-blue-500 focus:border-blue-500'
+                ]"
+              />
+              <p v-if="auth.validationErrors.value.firstName" class="mt-1 text-sm text-red-600">
+                {{ auth.validationErrors.value.firstName }}
+              </p>
+            </div>
+            <div>
+              <label for="lastName" class="block text-sm font-medium text-gray-700">Last Name</label>
+              <input
+                id="lastName"
+                v-model="registerForm.lastName"
+                type="text"
+                :class="[
+                  'mt-1 block w-full px-3 py-2 border rounded-3xl shadow-sm focus:outline-none focus:ring-2',
+                  auth.validationErrors.value.lastName 
+                    ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                    : 'border-brand-primary focus:ring-blue-500 focus:border-blue-500'
+                ]"
+              />
+              <p v-if="auth.validationErrors.value.lastName" class="mt-1 text-sm text-red-600">
+                {{ auth.validationErrors.value.lastName }}
+              </p>
+            </div>
+          </div>
           <div>
             <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
             <input
               id="email"
               v-model="registerForm.email"
               type="email"
-              required
-              class="mt-1 block w-full px-3 py-2 border border-brand-primary rounded-3xl shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              :class="[
+                'mt-1 block w-full px-3 py-2 border rounded-3xl shadow-sm focus:outline-none focus:ring-2',
+                auth.validationErrors.value.email 
+                  ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                  : 'border-brand-primary focus:ring-blue-500 focus:border-blue-500'
+              ]"
             />
+            <p v-if="auth.validationErrors.value.email" class="mt-1 text-sm text-red-600">
+              {{ auth.validationErrors.value.email }}
+            </p>
           </div>
           <div>
             <label for="reg-username" class="block text-sm font-medium text-gray-700">Username</label>
@@ -106,9 +184,16 @@
               id="reg-username"
               v-model="registerForm.username"
               type="text"
-              required
-              class="mt-1 block w-full px-3 py-2 border border-brand-primary rounded-3xl shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              :class="[
+                'mt-1 block w-full px-3 py-2 border rounded-3xl shadow-sm focus:outline-none focus:ring-2',
+                auth.validationErrors.value.username 
+                  ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                  : 'border-brand-primary focus:ring-blue-500 focus:border-blue-500'
+              ]"
             />
+            <p v-if="auth.validationErrors.value.username" class="mt-1 text-sm text-red-600">
+              {{ auth.validationErrors.value.username }}
+            </p>
           </div>
           <div>
             <label for="reg-password" class="block text-sm font-medium text-gray-700">Password</label>
@@ -117,8 +202,12 @@
                 id="reg-password"
                 v-model="registerForm.password"
                 :type="showPassword ? 'text' : 'password'"
-                required
-                class="mt-1 block w-full px-3 py-2 pr-10 border border-brand-primary rounded-3xl shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                :class="[
+                  'mt-1 block w-full px-3 py-2 pr-10 border rounded-3xl shadow-sm focus:outline-none focus:ring-2',
+                  auth.validationErrors.value.password 
+                    ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                    : 'border-brand-primary focus:ring-blue-500 focus:border-blue-500'
+                ]"
               />
               <button
                 type="button"
@@ -134,13 +223,40 @@
                 </svg>
               </button>
             </div>
+            <p v-if="auth.validationErrors.value.password" class="mt-1 text-sm text-red-600">
+              {{ auth.validationErrors.value.password }}
+            </p>
+          </div>
+          <div>
+            <label for="reg-confirm-password" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+            <div class="relative">
+              <input
+                id="reg-confirm-password"
+                v-model="registerForm.confirmPassword"
+                :type="showPassword ? 'text' : 'password'"
+                :class="[
+                  'mt-1 block w-full px-3 py-2 pr-10 border rounded-3xl shadow-sm focus:outline-none focus:ring-2',
+                  auth.validationErrors.value.confirmPassword 
+                    ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                    : 'border-brand-primary focus:ring-blue-500 focus:border-blue-500'
+                ]"
+              />
+              <p v-if="auth.validationErrors.value.confirmPassword" class="mt-1 text-sm text-red-600">
+                {{ auth.validationErrors.value.confirmPassword }}
+              </p>
+            </div>
           </div>
           <button
             type="submit"
-            class="w-full flex justify-center py-2 px-4 border bg-brand-primary rounded-3xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            :disabled="auth.isLoading.value"
+            class="w-full flex justify-center py-2 px-4 border bg-brand-primary rounded-3xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Sign Up
+            <span v-if="auth.isLoading.value">Creating account...</span>
+            <span v-else>Sign Up</span>
           </button>
+          
+          <!-- Social Auth Buttons -->
+          <SocialAuthButtons button-text="Sign up" />
         </form>
       </div>
     </div>
@@ -148,6 +264,11 @@
 </template>
 
 <script setup lang="ts">
+const router = useRouter()
+
+const goToForgotPassword = () => {
+  router.push('/auth/forgot-password')
+}
 definePageMeta({
   layout: 'auth'
 });
@@ -155,7 +276,7 @@ definePageMeta({
 const route = useRoute()
 const mode = ref<'login' | 'register'>(route.params.mode === 'signup' ? 'register' : 'login')
 
-watch(() => route.params.mode, (newMode) => {
+watch(() => route.params.mode, (newMode: string | string[]) => {
   mode.value = newMode === 'signup' ? 'register' : 'login'
 })
 
@@ -169,30 +290,60 @@ const loginForm = reactive({
 })
 
 const registerForm = reactive({
+  firstName: '',
+  lastName: '',
   email: '',
   username: '',
-  password: ''
+  password: '',
+  confirmPassword: ''
 })
 
 const handleLogin = async () => {
+  auth.clearErrors()
   try {
     await auth.login(loginForm.username, loginForm.password)
-    console.log('Login successful, redirecting...')
     await navigateTo(`/s/${auth.user.value?.username}`)
-    console.log('Redirection complete.')
   } catch (error) {
+    // Errors are handled in useAuth with toast notifications
     console.error('Login failed:', error)
   }
 }
 
 const handleRegister = async () => {
+  auth.clearErrors()
   try {
-    await auth.register(registerForm.email, registerForm.username, registerForm.password)
-    await navigateTo(`/s/${auth.user.value?.username}`)
+    await auth.register(
+      registerForm.email,
+      registerForm.username,
+      registerForm.password,
+      registerForm.confirmPassword,
+      registerForm.firstName,
+      registerForm.lastName
+    )
+    // Auto login after successful registration
+    const tokenCookie = useCookie<string | null>('auth_token')
+    if (auth.user.value) {
+      tokenCookie.value = 'temp_token' // Backend should return token
+      await navigateTo(`/s/${auth.user.value.username}`)
+    }
   } catch (error) {
+    // Errors are handled in useAuth with toast notifications
     console.error('Register failed:', error)
   }
 }
+
+// Clear errors when switching between login and register
+watch(mode, () => {
+  auth.clearErrors()
+  loginForm.username = ''
+  loginForm.password = ''
+  registerForm.firstName = ''
+  registerForm.lastName = ''
+  registerForm.email = ''
+  registerForm.username = ''
+  registerForm.password = ''
+  registerForm.confirmPassword = ''
+})
 </script>
 
 <style scoped>

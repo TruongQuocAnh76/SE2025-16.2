@@ -4,7 +4,7 @@
       <div class="flex justify-between items-center h-16">
         <!-- Left: Logo -->
         <div class="flex-shrink-0">
-          <NuxtLink to="/" class="flex items-center">
+          <NuxtLink :to="user?.username ? `/s/${user.username}` : '/'" class="flex items-center">
             <img src="/logo2.svg" alt="" class="h-8 w-auto" />
           </NuxtLink>
         </div>
@@ -12,14 +12,14 @@
         <!-- Middle: Navigation -->
         <nav class="hidden lg:flex lg:absolute lg:left-1/2 lg:transform lg:-translate-x-1/2 space-x-10">
           <NuxtLink
-            to="/"
+            :to="user?.username ? `/s/${user.username}` : '/'"
             class="text-white hover:text-accent-star px-4 py-2 text-sm font-medium transition-colors duration-200 relative group whitespace-nowrap cursor-pointer"
-            :class="{ 'text-accent-star': $route.path === '/' }"
+            :class="{ 'text-accent-star': $route.path === (user?.username ? `/s/${user.username}` : '/') }"
           >
             Home
             <span
               class="absolute bottom-0 left-0 w-full h-0.5 bg-accent-star transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"
-              :class="{ 'scale-x-100': $route.path === '/' }"
+              :class="{ 'scale-x-100': $route.path === (user?.username ? `/s/${user.username}` : '/') }"
             ></span>
           </NuxtLink>
           <NuxtLink
@@ -45,14 +45,14 @@
             ></span>
           </NuxtLink>
           <NuxtLink
-            to="/blog"
+            to="/verify-certificate"
             class="text-white hover:text-accent-star px-4 py-2 text-sm font-medium transition-colors duration-200 relative group whitespace-nowrap cursor-pointer"
-            :class="{ 'text-accent-star': $route.path === '/blog' }"
+            :class="{ 'text-accent-star': $route.path === '/verify-certificate' }"
           >
-            Blogs
+            Verify Certificate
             <span
               class="absolute bottom-0 left-0 w-full h-0.5 bg-accent-star transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"
-              :class="{ 'scale-x-100': $route.path === '/blog' }"
+              :class="{ 'scale-x-100': $route.path === '/verify-certificate' }"
             ></span>
           </NuxtLink>
           <NuxtLink
@@ -105,7 +105,7 @@
                     {{ user?.username }}
                   </div>
                   <button
-                    @click="logout"
+                    @click="handleLogout"
                     class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
                   >
                     Logout
@@ -117,7 +117,7 @@
           <template v-else>
             <Button
               variant="transparent"
-              @click="navigateTo('/auth/signin')"
+              @click="navigateTo('/auth/login')"
               class="bg-white hidden sm:flex text-text-dark hover:text-accent-star border-white/20 hover:border-accent-star/50 bg-background rounded-3xl cursor-pointer p-4"
             >
               Login
@@ -169,9 +169,9 @@
       >
         <div class="px-2 pt-2 pb-3 space-y-1">
           <NuxtLink
-            to="/"
+            :to="user?.username ? `/s/${user.username}` : '/'"
             class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md"
-            :class="{ 'text-accent-star bg-accent-star/10': $route.path === '/' }"
+            :class="{ 'text-accent-star bg-accent-star/10': $route.path === (user?.username ? `/s/${user.username}` : '/') }"
             @click="isMobileMenuOpen = false"
           >
             Home
@@ -193,12 +193,12 @@
             Membership
           </NuxtLink>
           <NuxtLink
-            to="/blog"
+            to="/verify-certificate"
             class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md"
-            :class="{ 'text-accent-star bg-accent-star/10': $route.path === '/blog' }"
+            :class="{ 'text-accent-star bg-accent-star/10': $route.path === '/verify-certificate' }"
             @click="isMobileMenuOpen = false"
           >
-            Blogs
+            Verify Certificate
           </NuxtLink>
           <NuxtLink
             to="/about"
@@ -215,7 +215,7 @@
               </div>
               <Button
                 size="sm"
-                @click="logout; isMobileMenuOpen = false"
+                @click="handleLogout"
                 class="w-full justify-center bg-accent-star hover:bg-accent-star/80 text-text-dark"
               >
                 Logout
@@ -262,21 +262,40 @@ const userInitials = computed(() => {
   return ''
 })
 
-function logout() {
-  authLogout()
-  isDropdownOpen.value = false
-  navigateTo('/')
+const handleLogout = async () => {
+  try {
+    await authLogout() // Use authLogout from useAuth composable
+    const token = useCookie<string | null>('auth_token')
+    token.value = null
+    const userCookie = useCookie<string | null>('user_data')
+    userCookie.value = null
+    
+    // Close mobile menu if open
+    isMobileMenuOpen.value = false
+    isDropdownOpen.value = false // Close dropdown as well
+    
+    navigateTo('/auth/login')
+  } catch (error) {
+    console.error('Logout failed:', error)
+  }
 }
 
 // Initialize user data if authenticated
 onMounted(async () => {
   // Load user data from cookie if available
-  const userCookie = useCookie('user_data')
+  const userCookie = useCookie<string | null>('user_data')
   if (userCookie.value && !user.value) {
     try {
-      user.value = JSON.parse(userCookie.value)
+      // Handle both string and object values
+      if (typeof userCookie.value === 'string') {
+        user.value = JSON.parse(userCookie.value)
+      } else if (typeof userCookie.value === 'object') {
+        user.value = userCookie.value as User
+      }
     } catch (err) {
       console.error('Failed to parse user cookie:', err)
+      // Clear invalid cookie
+      userCookie.value = null
     }
   }
 

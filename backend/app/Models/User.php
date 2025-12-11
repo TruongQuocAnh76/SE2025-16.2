@@ -15,7 +15,8 @@ class User extends Authenticatable
 
     protected $fillable = [
         'id', 'first_name', 'last_name', 'email', 'username', 'password',
-        'auth_provider', 'role', 'bio', 'avatar', 'is_active'
+        'auth_provider', 'role', 'bio', 'avatar', 'is_active',
+        'google_id', 'facebook_id'
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -44,3 +45,4 @@ class User extends Authenticatable
         return $this->role === $role;
     }
 }
+

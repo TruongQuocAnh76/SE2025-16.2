@@ -2,11 +2,31 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Models\User;
+use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+// Model PasswordReset cho chức năng quên mật khẩu 
+if (!class_exists('App\\Models\\PasswordReset')) {
+    class PasswordReset extends Model
+    {
+        protected $table = 'password_resets';
+        public $timestamps = false;
+        protected $primaryKey = 'email';
+        public $incrementing = false;
+        protected $keyType = 'string';
+        protected $fillable = [
+            'email',
+            'token',
+            'created_at',
+        ];
+    }
+}
 
 /**
  * @OA\Info(
@@ -213,6 +233,125 @@ use App\Models\User;
 class AuthController extends Controller
 {
     /**
+     * Forgot Password: Nhận email, tạo token, lưu DB, gửi message RabbitMQ (giả lập)
+     */
+    /**
+     * @OA\Post(
+     *     path="/auth/forgot-password",
+     *     summary="Yêu cầu reset mật khẩu qua email",
+     *     tags={"Auth"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"email"},
+     *             @OA\Property(property="email", type="string", format="email", example="user@example.com")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Email xác nhận đã được gửi",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Reset email sent")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Email không tồn tại"
+     *     )
+     * )
+     */
+    public function forgotPassword(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            return response()->json(['message' => 'Email not found'], 404);
+        }
+        $token = Str::random(64);
+        PasswordReset::updateOrCreate(
+            ['email' => $request->email],
+            [
+                'token' => $token,
+                'created_at' => now(),
+            ]
+        );
+    // Try to send message to RabbitMQ; fallback to direct email if it fails
+    try {
+        \App\Services\RabbitMQService::sendResetEmail($request->email, $token);
+        Log::info('Send reset password email via RabbitMQ', ['email' => $request->email, 'token' => $token]);
+    } catch (\Throwable $e) {
+        Log::error('RabbitMQ send failed, falling back to direct mail', ['error' => $e->getMessage()]);
+        // Fallback: send email directly
+        $frontend = env('FRONTEND_URL', 'http://localhost:3000');
+        $link = rtrim($frontend, '/') . '/auth/reset-password?token=' . $token;
+        $body = "Click the link to reset your password: $link";
+        try {
+            Mail::raw($body, function ($message) use ($request) {
+                $message->to($request->email)
+                    ->subject('Reset your password');
+            });
+            Log::info('Sent reset email directly', ['email' => $request->email]);
+        } catch (\Throwable $mailErr) {
+            Log::error('Direct mail send failed', ['error' => $mailErr->getMessage()]);
+            return response()->json(['message' => 'Failed to send reset email'], 500);
+        }
+    }
+    
+    // If we reach here, either RabbitMQ or direct mail succeeded
+    
+    return response()->json(['message' => 'Reset link sent to email']);
+    }
+
+    /**
+     * Reset Password: Nhận token và password mới, xác thực token, đổi mật khẩu
+     */
+    /**
+     * @OA\Post(
+     *     path="/auth/reset-password",
+     *     summary="Đặt lại mật khẩu bằng token",
+     *     tags={"Auth"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"token", "password"},
+     *             @OA\Property(property="token", type="string", example="abcdef123456"),
+     *             @OA\Property(property="password", type="string", format="password", example="newpassword123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Mật khẩu đã được đặt lại thành công",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Password reset successful")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Token không hợp lệ hoặc đã hết hạn"
+     *     )
+     * )
+     */
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token' => 'required',
+            'password' => 'required|min:6',
+        ]);
+        $reset = PasswordReset::where('token', $request->token)->first();
+        if (!$reset) {
+            return response()->json(['message' => 'Invalid token'], 400);
+        }
+        $user = User::where('email', $reset->email)->first();
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+        $user->password = Hash::make($request->password);
+        $user->save();
+        // Xóa token sau khi dùng
+        $reset->delete();
+        return response()->json(['message' => 'Password reset successful']);
+    }
+    /**
      * @OA\Post(
      *     path="/auth/register",
      *     summary="Register a new user",
@@ -241,21 +380,66 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
-        $request->validate([
-            'username' => 'required|string|unique:users,username',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|min:6',
-            'first_name' => 'required|string',
-            'last_name' => 'required|string',
+        $validated = $request->validate([
+            'username' => [
+                'required',
+                'string',
+                'min:3',
+                'max:20',
+                'regex:/^[a-zA-Z0-9_]+$/',
+                'unique:users,username'
+            ],
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                'unique:users,email'
+            ],
+            'password' => [
+                'required',
+                'string',
+                'min:6',
+                'max:100'
+            ],
+            'first_name' => [
+                'required',
+                'string',
+                'min:2',
+                'max:50'
+            ],
+            'last_name' => [
+                'required',
+                'string',
+                'min:2',
+                'max:50'
+            ],
+        ], [
+            'username.required' => 'Username is required',
+            'username.min' => 'Username must be at least 3 characters',
+            'username.max' => 'Username must not exceed 20 characters',
+            'username.regex' => 'Username can only contain letters, numbers, and underscores',
+            'username.unique' => 'This username is already taken',
+            'email.required' => 'Email is required',
+            'email.email' => 'Please enter a valid email address',
+            'email.unique' => 'This email is already registered',
+            'password.required' => 'Password is required',
+            'password.min' => 'Password must be at least 6 characters',
+            'password.max' => 'Password is too long',
+            'first_name.required' => 'First name is required',
+            'first_name.min' => 'First name must be at least 2 characters',
+            'first_name.max' => 'First name must not exceed 50 characters',
+            'last_name.required' => 'Last name is required',
+            'last_name.min' => 'Last name must be at least 2 characters',
+            'last_name.max' => 'Last name must not exceed 50 characters',
         ]);
 
         $user = User::create([
             'id' => Str::uuid(),
-            'username' => $request->username,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
+            'username' => $validated['username'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
             'auth_provider' => 'EMAIL',
             'role' => 'STUDENT',
         ]);
@@ -300,18 +484,46 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        $request->validate([
-            'login' => 'required',
-            'password' => 'required'
+        $validated = $request->validate([
+            'login' => [
+                'required',
+                'string'
+            ],
+            'password' => [
+                'required',
+                'string',
+                'min:6'
+            ]
+        ], [
+            'login.required' => 'Username or email is required',
+            'password.required' => 'Password is required',
+            'password.min' => 'Password must be at least 6 characters',
         ]);
 
-        $user = User::where('email', $request->login)->orWhere('username', $request->login)->first();
+        $user = User::where('email', $validated['login'])
+            ->orWhere('username', $validated['login'])
+            ->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (!$user) {
             return response()->json([
-                'message' => 'Invalid email or password.',
+                'message' => 'Invalid credentials. Please check your username/email and password.',
                 'error' => 'authentication_failed'
             ], 401);
+        }
+
+        if (!Hash::check($validated['password'], $user->password)) {
+            return response()->json([
+                'message' => 'Invalid credentials. Please check your username/email and password.',
+                'error' => 'authentication_failed'
+            ], 401);
+        }
+
+        // Check if user is active
+        if (!$user->is_active) {
+            return response()->json([
+                'message' => 'Your account has been deactivated. Please contact support.',
+                'error' => 'account_deactivated'
+            ], 403);
         }
 
         // Tạo token (Laravel Sanctum)
@@ -369,5 +581,149 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         return response()->json($request->user());
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/auth/google",
+     *     summary="Redirect to Google OAuth",
+     *     tags={"Authentication"},
+     *     @OA\Response(
+     *         response=302,
+     *         description="Redirect to Google OAuth"
+     *     )
+     * )
+     */
+    public function redirectToGoogle()
+    {
+        return Socialite::driver('google')->redirect();
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/auth/google/callback",
+     *     summary="Handle Google OAuth callback",
+     *     tags={"Authentication"},
+     *     @OA\Response(
+     *         response=302,
+     *         description="Redirect to frontend with token"
+     *     )
+     * )
+     */
+    public function handleGoogleCallback()
+    {
+        try {
+            $socialiteUser = Socialite::driver('google')->user();
+
+            $user = User::firstOrCreate(
+                ['email' => $socialiteUser->email],
+                [
+                    'id' => Str::uuid(),
+                    'google_id' => $socialiteUser->id,
+                    'first_name' => $socialiteUser->user['given_name'] ?? $socialiteUser->name,
+                    'last_name' => $socialiteUser->user['family_name'] ?? '',
+                    'username' => $socialiteUser->email,
+                    'avatar' => $socialiteUser->avatar,
+                    'auth_provider' => 'GOOGLE',
+                    'is_email_verified' => true,
+                    'role' => 'STUDENT',
+                ]
+            );
+
+            // Update google_id if user exists but doesn't have it
+            if (!$user->google_id) {
+                $user->google_id = $socialiteUser->id;
+                $user->avatar = $socialiteUser->avatar;
+                $user->save();
+            }
+
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/oauth-callback?token=' . $token . '&user=' . urlencode(json_encode([
+                'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'username' => $user->username,
+                'avatar' => $user->avatar,
+                'role' => $user->role,
+                'auth_provider' => $user->auth_provider,
+            ])));
+        } catch (\Exception $e) {
+            Log::error('Google OAuth error: ' . $e->getMessage());
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/login?error=' . urlencode('Google authentication failed'));
+        }
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/auth/facebook",
+     *     summary="Redirect to Facebook OAuth",
+     *     tags={"Authentication"},
+     *     @OA\Response(
+     *         response=302,
+     *         description="Redirect to Facebook OAuth"
+     *     )
+     * )
+     */
+    public function redirectToFacebook()
+    {
+        return Socialite::driver('facebook')->redirect();
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/auth/facebook/callback",
+     *     summary="Handle Facebook OAuth callback",
+     *     tags={"Authentication"},
+     *     @OA\Response(
+     *         response=302,
+     *         description="Redirect to frontend with token"
+     *     )
+     * )
+     */
+    public function handleFacebookCallback()
+    {
+        try {
+            $socialiteUser = Socialite::driver('facebook')->user();
+
+            $user = User::firstOrCreate(
+                ['email' => $socialiteUser->email],
+                [
+                    'id' => Str::uuid(),
+                    'facebook_id' => $socialiteUser->id,
+                    'first_name' => explode(' ', $socialiteUser->name)[0] ?? $socialiteUser->name,
+                    'last_name' => explode(' ', $socialiteUser->name, 2)[1] ?? '',
+                    'username' => $socialiteUser->email,
+                    'avatar' => $socialiteUser->avatar,
+                    'auth_provider' => 'FACEBOOK',
+                    'is_email_verified' => true,
+                    'role' => 'STUDENT',
+                ]
+            );
+
+            // Update facebook_id if user exists but doesn't have it
+            if (!$user->facebook_id) {
+                $user->facebook_id = $socialiteUser->id;
+                $user->avatar = $socialiteUser->avatar;
+                $user->save();
+            }
+
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/oauth-callback?token=' . $token . '&user=' . urlencode(json_encode([
+                'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'username' => $user->username,
+                'avatar' => $user->avatar,
+                'role' => $user->role,
+                'auth_provider' => $user->auth_provider,
+            ])));
+        } catch (\Exception $e) {
+            Log::error('Facebook OAuth error: ' . $e->getMessage());
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/login?error=' . urlencode('Facebook authentication failed'));
+        }
     }
 }

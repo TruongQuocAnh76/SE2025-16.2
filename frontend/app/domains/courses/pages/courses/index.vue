@@ -10,16 +10,16 @@
     <div class="max-w-7xl mx-auto px-4 py-12 mb-16">
       <!-- Page Header -->
       <div class="mb-8">
-        <h1 class="text-3xl font-bold text-text-dark mb-2">
-          {{ searchQuery ? `Search Results for "${searchQuery}"` : 'All Courses' }}
+        <h1 class="text-4xl font-bold text-text-dark mb-2">
+          {{ searchQuery ? 'Search Results' : 'Browse Courses' }}
         </h1>
         <p class="text-text-muted">
-          {{ searchQuery ? `${courses.length} courses found` : 'Discover courses to advance your career' }}
+          {{ searchQuery ? `${courses?.length || 0} courses found` : 'Discover courses to advance your career' }}
         </p>
       </div>
 
       <!-- Filters and Controls -->
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      <div v-if="filters" class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <!-- Filters -->
         <div class="flex flex-wrap gap-4">
           <select
@@ -61,7 +61,7 @@
       </div>
 
       <!-- Courses Grid -->
-      <div v-else-if="courses.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+      <div v-else-if="courses && courses.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
         <NuxtLink
           v-for="course in courses"
           :key="course.id"
@@ -175,28 +175,7 @@
     </section>
 
         <!-- Recommended for You Section -->
-    <section class="bg-accent-blue bg-opacity-20 py-12 mt-16">
-      <div class="max-w-7xl mx-auto px-4">
-        <div class="flex justify-between items-center mb-8">
-          <h2 class="text-2xl font-bold text-dark">Recommended for You</h2>
-          <button class="px-6 py-2 text-brand-secondary font-semibold rounded-lg hover:bg-gray-100 transition-colors">
-            See All
-          </button>
-        </div>
-        <div v-if="courses.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <NuxtLink
-            v-for="course in recommendedCourses"
-            :key="`rec-${course.id}`"
-            :to="`/courses/${course.id}`"
-          >
-            <CourseCard :course="mapCourseForCard(course)" />
-          </NuxtLink>
-        </div>
-        <div v-else class="text-center text-white">
-          <p>Loading recommendations...</p>
-        </div>
-      </div>
-    </section>
+    <RecommendedCourses />
 
     <!-- what our students have to say-->
      <section class="py-20 bg-white">
@@ -279,6 +258,7 @@
 
 <script setup lang="ts">
 import type { Course } from '../../types/course'
+import RecommendedCourses from '../../../../base/RecommendedCourses.vue'
 // import CourseCard from '../../components/ui/CourseCard.vue'
 import { ref } from 'vue'
 
@@ -290,9 +270,6 @@ const courses = ref<Course[]>([])
 const loading = ref(false)
 const searchQuery = ref('')
 const hasNextPage = ref(false)
-
-// TODO: ADD ACTUAL RECOMMENDATION LOGIC
-const recommendedCourses = computed(() => courses.value.slice(0, 4))
 
 // User role check
 const { user } = useAuth()
@@ -346,8 +323,8 @@ const fetchCourses = async () => {
     } else {
       // Use regular courses API for browsing
       const coursesResult: any = await getCourses({
-        status: filters.value.status || undefined,
-        level: filters.value.level || undefined
+        status: filters.value?.status || undefined,
+        level: filters.value?.level || undefined
       })
       result = Array.isArray(coursesResult) ? coursesResult : coursesResult?.data || []
     }

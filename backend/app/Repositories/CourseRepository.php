@@ -15,19 +15,28 @@ class CourseRepository
     }
 
     /**
-     * === ĐÃ CẬP NHẬT ===
-     * Thêm 'with('tags')' và logic lọc 'whereHas('tags')'
+     * Get all courses with filters and pagination.
+     * Eager loads relationships and counts for performance.
      */
     public function getAll($filters = [], $perPage = 12)
     {
-        // 1. Tải kèm (eager load) 'tags'
-        $query = $this->model->with(['teacher:id,first_name,last_name', 'tags:id,name,slug']);
+        $query = $this->model->with([
+            'teacher:id,first_name,last_name',
+            'tags:id,name,slug'
+        ])
+        ->withCount('enrollments')
+        ->withAvg('reviews', 'rating');
 
-        if (isset($filters['status'])) $query->where('status', $filters['status']);
-        if (isset($filters['level'])) $query->where('level', $filters['level']);
-        if (isset($filters['keyword'])) $query->where('title', 'like', "%{$filters['keyword']}%");
-
-        // 2. Thêm logic lọc theo Tag (dùng cho dropdown)
+        if (isset($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        if (isset($filters['level'])) {
+            $query->where('level', $filters['level']);
+        }
+        if (isset($filters['keyword'])) {
+            $query->where('title', 'like', "%{$filters['keyword']}%");
+        }
+        
         if (!empty($filters['tag'])) {
             $query->whereHas('tags', function ($tagQuery) use ($filters) {
                 $tagQuery->where('slug', $filters['tag']);
@@ -38,17 +47,25 @@ class CourseRepository
     }
 
     /**
-     * === ĐÃ CẬP NHẬT ===
-     * Thêm 'with('tags')' để trang chi tiết có thể hiển thị
+     * Get a single course by its ID with detailed relationships.
      */
     public function getById($id)
     {
         return $this->model->with([
             'teacher:id,first_name,last_name,email',
-            'modules.lessons:id,title,order_index,module_id,is_free',
+            'modules' => function ($query) {
+                $query->orderBy('order_index');
+            },
+            'modules.lessons' => function ($query) {
+                $query->select('id', 'title', 'order_index', 'module_id', 'is_free')
+                      ->orderBy('order_index');
+            },
             'reviews.student:id,first_name,last_name',
-            'tags:id,name,slug' // <-- ĐÃ THÊM
-        ])->findOrFail($id);
+            'tags:id,name,slug'
+        ])
+        ->withCount('enrollments')
+        ->withAvg('reviews', 'rating')
+        ->findOrFail($id);
     }
 
     public function create(array $data)
@@ -72,23 +89,13 @@ class CourseRepository
     {
         return $this->model
             ->with(['teacher:id,first_name,last_name', 'tags:id,name,slug'])
-            
-            // 2. Cập nhật logic tìm kiếm
             ->where(function ($q) use ($query) {
-                // Tìm trong Title
                 $q->where('title', 'like', "%{$query}%")
-                // Tìm trong Description
                   ->orWhere('description', 'like', "%{$query}%")
-                // Tìm trong TÊN CỦA TAGS
                   ->orWhereHas('tags', function ($tagQuery) use ($query) {
-                        $tagQuery->where('name', 'like', "%{$query}%");
+                      $tagQuery->where('name', 'like', "%{$query}%");
                   });
             })
-            ->orderByRaw("CASE 
-                WHEN title LIKE ? THEN 1 
-                WHEN title LIKE ? THEN 2 
-                ELSE 3 
-            END", ["{$query}%", "%{$query}%"])
             ->limit($limit)
             ->get();
     }
@@ -101,5 +108,93 @@ class CourseRepository
             }])
             ->orderBy('order_index')
             ->get();
+    }
+
+    /**
+     * Get popular courses based on enrollment count.
+     *
+     * @param int $limit
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getPopularCourses($limit = 10)
+    {
+        return $this->model
+            ->where('status', 'PUBLISHED')
+            ->with([
+                'teacher:id,first_name,last_name',
+                'tags:id,name,slug'
+            ])
+            ->withCount('enrollments')
+            ->withAvg('reviews', 'rating')
+            ->orderByDesc('enrollments_count')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get content-based recommendations for a user.
+     *
+     * @param \App\Models\User $user
+     * @param int $limit
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getContentBasedRecommendations(\App\Models\User $user, $limit = 10)
+    {
+        // Get IDs of courses the user is enrolled in
+        $enrolledCourseIds = $user->enrollments()->pluck('course_id')->toArray();
+
+        // If no enrollments, return popular courses
+        if (empty($enrolledCourseIds)) {
+            return $this->getPopularCourses($limit);
+        }
+
+        // Get tags from the user's enrolled courses
+        $tags = \App\Models\Tag::whereHas('courses', function ($query) use ($enrolledCourseIds) {
+            $query->whereIn('courses.id', $enrolledCourseIds);
+        })->pluck('id')->toArray();
+
+        // If no tags found, return popular courses
+        if (empty($tags)) {
+            return $this->getPopularCourses($limit);
+        }
+
+        // Find courses with similar tags, excluding already enrolled courses
+        $recommendedCourses = $this->model
+            ->where('status', 'PUBLISHED')
+            ->with([
+                'teacher:id,first_name,last_name',
+                'tags:id,name,slug'
+            ])
+            ->whereHas('tags', function ($query) use ($tags) {
+                $query->whereIn('tags.id', $tags);
+            })
+            ->whereNotIn('id', $enrolledCourseIds)
+            ->withCount('enrollments')
+            ->withAvg('reviews', 'rating')
+            ->orderByDesc('enrollments_count')
+            ->limit($limit)
+            ->get();
+
+        // If not enough recommendations, fill with popular courses
+        if ($recommendedCourses->count() < $limit) {
+            $remainingLimit = $limit - $recommendedCourses->count();
+            $popularCourses = $this->model
+                ->where('status', 'PUBLISHED')
+                ->with([
+                    'teacher:id,first_name,last_name',
+                    'tags:id,name,slug'
+                ])
+                ->whereNotIn('id', $enrolledCourseIds)
+                ->whereNotIn('id', $recommendedCourses->pluck('id'))
+                ->withCount('enrollments')
+                ->withAvg('reviews', 'rating')
+                ->orderByDesc('enrollments_count')
+                ->limit($remainingLimit)
+                ->get();
+            
+            return $recommendedCourses->concat($popularCourses);
+        }
+
+        return $recommendedCourses;
     }
 }

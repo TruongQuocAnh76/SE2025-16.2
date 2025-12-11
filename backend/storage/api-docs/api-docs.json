@@ -36,6 +36,111 @@
         }
     ],
     "paths": {
+        "/auth/forgot-password": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Yêu cầu reset mật khẩu qua email",
+                "operationId": "b13d5efc90e1de6d4e9900240fce9b4d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "user@example.com"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Email xác nhận đã được gửi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Reset email sent"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Email không tồn tại"
+                    }
+                }
+            }
+        },
+        "/auth/reset-password": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Đặt lại mật khẩu bằng token",
+                "operationId": "bbf02faac4cfbb998aad2b63a843b88c",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "token",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "token": {
+                                        "type": "string",
+                                        "example": "abcdef123456"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "newpassword123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Mật khẩu đã được đặt lại thành công",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Password reset successful"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Token không hợp lệ hoặc đã hết hạn"
+                    }
+                }
+            }
+        },
         "/auth/register": {
             "post": {
                 "tags": [
@@ -255,6 +360,62 @@
                         "sanctum": []
                     }
                 ]
+            }
+        },
+        "/auth/google": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Redirect to Google OAuth",
+                "operationId": "8dfa521fc4b6bed7dc29067f3c3b72b1",
+                "responses": {
+                    "302": {
+                        "description": "Redirect to Google OAuth"
+                    }
+                }
+            }
+        },
+        "/auth/google/callback": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Handle Google OAuth callback",
+                "operationId": "0da573308ea6982cdd61fa5120d9e835",
+                "responses": {
+                    "302": {
+                        "description": "Redirect to frontend with token"
+                    }
+                }
+            }
+        },
+        "/auth/facebook": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Redirect to Facebook OAuth",
+                "operationId": "d39f05ad906f422b2bd11d17817e616a",
+                "responses": {
+                    "302": {
+                        "description": "Redirect to Facebook OAuth"
+                    }
+                }
+            }
+        },
+        "/auth/facebook/callback": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Handle Facebook OAuth callback",
+                "operationId": "848b6efd93189176b0256949087a84c4",
+                "responses": {
+                    "302": {
+                        "description": "Redirect to frontend with token"
+                    }
+                }
             }
         },
         "/api/certificates/mine": {
@@ -656,6 +817,215 @@
                 ]
             }
         },
+        "/certificates/verify": {
+            "post": {
+                "tags": [
+                    "Certificate Verification"
+                ],
+                "summary": "Verify a certificate using blockchain",
+                "operationId": "da72f409e23d1a66276ec7ec3b06fe6a",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "certificate_number"
+                                ],
+                                "properties": {
+                                    "certificate_number": {
+                                        "type": "string",
+                                        "example": "CERT-WEB-2024-001"
+                                    },
+                                    "pdf_hash": {
+                                        "description": "Optional PDF hash for additional verification",
+                                        "type": "string",
+                                        "example": "sha256hashofpdf"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Certificate verification result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "is_valid": {
+                                                    "type": "boolean"
+                                                },
+                                                "is_revoked": {
+                                                    "type": "boolean"
+                                                },
+                                                "issued_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "expires_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "nullable": true
+                                                },
+                                                "certificate": {
+                                                    "properties": {
+                                                        "certificate_number": {
+                                                            "type": "string"
+                                                        },
+                                                        "student_name": {
+                                                            "type": "string"
+                                                        },
+                                                        "course_title": {
+                                                            "type": "string"
+                                                        },
+                                                        "final_score": {
+                                                            "type": "number"
+                                                        },
+                                                        "blockchain_status": {
+                                                            "type": "string"
+                                                        },
+                                                        "transaction_hash": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "404": {
+                        "description": "Certificate not found"
+                    },
+                    "503": {
+                        "description": "Blockchain service unavailable"
+                    }
+                }
+            }
+        },
+        "/certificates/{certificate_number}/blockchain-status": {
+            "get": {
+                "tags": [
+                    "Certificate Verification"
+                ],
+                "summary": "Get blockchain status of a certificate",
+                "operationId": "d4c7cfb8e3f94c596e79e2f689129a6d",
+                "parameters": [
+                    {
+                        "name": "certificate_number",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Blockchain status information",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "blockchain_status": {
+                                                    "type": "string"
+                                                },
+                                                "transaction_hash": {
+                                                    "type": "string"
+                                                },
+                                                "block_number": {
+                                                    "type": "integer"
+                                                },
+                                                "confirmations": {
+                                                    "type": "integer"
+                                                },
+                                                "gas_used": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Certificate not found"
+                    }
+                }
+            }
+        },
+        "/certificates/{certificate_number}/retry-blockchain": {
+            "post": {
+                "tags": [
+                    "Certificate Verification"
+                ],
+                "summary": "Retry failed blockchain certificate issuance",
+                "operationId": "338b20ba5006ab5e06cd41acecf597e2",
+                "parameters": [
+                    {
+                        "name": "certificate_number",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Certificate issuance job queued",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Certificate not found"
+                    },
+                    "422": {
+                        "description": "Certificate cannot be retried"
+                    }
+                }
+            }
+        },
         "/courses": {
             "get": {
                 "tags": [
@@ -788,6 +1158,63 @@
                         "sanctum": []
                     }
                 ]
+            }
+        },
+        "/courses/search": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Search courses by name",
+                "operationId": "936687b2b91ece6a3543f6eb345f8483",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Search query for course name",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "programming"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Maximum number of results to return",
+                        "schema": {
+                            "type": "integer",
+                            "default": 10,
+                            "maximum": 50
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Search results",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Course"
+                                            }
+                                        },
+                                        "total": {
+                                            "type": "integer"
+                                        },
+                                        "query": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/courses/{id}": {
@@ -1387,13 +1814,13 @@
                 ]
             }
         },
-        "/courses/{courseId}/progress": {
+        "/learning/course/{courseId}": {
             "get": {
                 "tags": [
                     "Learning"
                 ],
                 "summary": "Get course progress for student",
-                "operationId": "56b38831c4f05be4e83d348a6cf401fe",
+                "operationId": "0da6c023c44d4955f3dd973fd144570e",
                 "parameters": [
                     {
                         "name": "courseId",
@@ -1849,6 +2276,186 @@
                     },
                     "401": {
                         "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/payments/create": {
+            "post": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Create a payment intent",
+                "operationId": "eae03a2adaf43f6dcc7f664a18fe5af2",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "payment_type"
+                                ],
+                                "properties": {
+                                    "payment_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "COURSE",
+                                            "MEMBERSHIP"
+                                        ]
+                                    },
+                                    "course_id": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "nullable": true
+                                    },
+                                    "membership_plan": {
+                                        "type": "string",
+                                        "enum": [
+                                            "PREMIUM"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "payment_method": {
+                                        "type": "string",
+                                        "enum": [
+                                            "STRIPE"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Payment created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/payments/{id}/stripe/create-intent": {
+            "post": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Create Stripe Payment Intent",
+                "operationId": "376a979ca210059eecb4e40a8e7bff91",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment intent created"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/payments/{id}/stripe/complete": {
+            "post": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Complete Stripe payment",
+                "operationId": "dd9ec1728799dcb1bf02d52109cd4516",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "payment_intent_id": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Payment completed"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/payments/{id}": {
+            "get": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Get payment details",
+                "operationId": "a4207c19fecbebc99932a8348b19adf1",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment details"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/payments": {
+            "get": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Get user's payment history",
+                "operationId": "65567ad73dd4b0cc01c4856a6bb7e600",
+                "responses": {
+                    "200": {
+                        "description": "Payment history"
                     }
                 },
                 "security": [
@@ -4198,12 +4805,20 @@
     },
     "tags": [
         {
+            "name": "Certificate Verification",
+            "description": "API endpoints for certificate verification"
+        },
+        {
             "name": "Grading",
             "description": "Grading and assessment endpoints"
         },
         {
             "name": "Questions",
             "description": "Question management endpoints"
+        },
+        {
+            "name": "Auth",
+            "description": "Auth"
         },
         {
             "name": "Authentication",
@@ -4220,6 +4835,10 @@
         {
             "name": "Learning",
             "description": "Learning"
+        },
+        {
+            "name": "Payments",
+            "description": "Payments"
         },
         {
             "name": "Quizzes",

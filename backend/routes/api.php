@@ -4,11 +4,13 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CourseController;
+use App\Http\Controllers\LessonController;
 use App\Http\Controllers\LearningController;
 use App\Http\Controllers\GradingController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\SystemController;
 
 /*
@@ -20,12 +22,28 @@ use App\Http\Controllers\SystemController;
 Route::get('/', fn() => response()->json(['message' => 'CertChain API v1 is running']));
 
 /* ========================
+ * PREVIEW ENDPOINTS (for development/testing)
+ * ======================== */
+Route::get('/_preview/certificates', [CertificateController::class, 'preview']);
+
+/* ========================
  * AUTHENTICATION
  * ======================== */
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    // Forgot password & reset password (chuyển về AuthController)
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+});
+
+// OAuth Routes - Need session middleware for Socialite
+Route::middleware(['web'])->prefix('auth')->group(function () {
+    Route::get('/google', [AuthController::class, 'redirectToGoogle']);
+    Route::get('/google/callback', [AuthController::class, 'handleGoogleCallback']);
+    Route::get('/facebook', [AuthController::class, 'redirectToFacebook']);
+    Route::get('/facebook/callback', [AuthController::class, 'handleFacebookCallback']);
 });
 
 Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
@@ -55,12 +73,15 @@ Route::prefix('courses')->group(function () {
     Route::get('/search', [CourseController::class, 'search']); // Search courses by name
     Route::get('/{id}', [CourseController::class, 'show']); // Get course details
 });
-// --- NHÓM RIÊNG TƯ (PRIVATE) ---
-// Phải đăng nhập (auth:sanctum) để thực hiện các hành động này
+
+// Protected course management routes (require authentication)
 Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
-    Route::post('/', [CourseController::class, 'store']); // Teacher/Admin create
+    Route::post('/', [CourseController::class, 'store']); // Teacher/Admin create course (supports modules)
+    Route::post('/videos/{lessonId}/upload-complete', [CourseController::class, 'notifyVideoUploadComplete']); // Notify video upload completion
+    Route::get('/lesson/{lessonId}/hls-status', [CourseController::class, 'checkHlsProcessingStatus']); // Check HLS processing status
     Route::get('/{id}/modules', [CourseController::class, 'getModulesWithLessons']);
     Route::get('/{id}/students', [CourseController::class, 'getEnrolledStudents']); // Teacher only
+    Route::get('/{id}/enrollment/check', [LessonController::class, 'checkEnrollment']); // Check enrollment
     Route::put('/{id}', [CourseController::class, 'update']); // Teacher/Admin update
     Route::delete('/{id}', [CourseController::class, 'destroy']); // Teacher/Admin delete
     Route::post('/{id}/enroll', [CourseController::class, 'enroll']); // Student enroll
@@ -68,10 +89,22 @@ Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
 });
 
 /* ========================
+ * LESSONS
+ * ======================== */
+Route::middleware('auth:sanctum')->prefix('lessons')->group(function () {
+    Route::get('/{lessonId}', [LessonController::class, 'show']); // Get lesson details
+});
+
+Route::middleware('auth:sanctum')->prefix('modules')->group(function () {
+    Route::get('/{moduleId}/lessons', [LessonController::class, 'getByModule']); // Get lessons by module
+});
+
+/* ========================
  * LEARNING PROGRESS
  * ======================== */
 Route::middleware('auth:sanctum')->prefix('learning')->group(function () {
     Route::get('/course/{courseId}', [LearningController::class, 'getCourseProgress']);
+    Route::get('/lesson/{lessonId}/progress', [LessonController::class, 'getProgress']); // Get lesson progress
     Route::post('/lesson/{lessonId}/complete', [LearningController::class, 'markLessonCompleted']);
     Route::post('/lesson/{lessonId}/time', [LearningController::class, 'updateTimeSpent']);
     Route::post('/course/{courseId}/complete', [LearningController::class, 'completeCourse']);
@@ -131,6 +164,17 @@ Route::middleware('auth:sanctum')->prefix('certificates')->group(function () {
     Route::post('/{certificateId}/attach-blockchain', [CertificateController::class, 'attachBlockchainData']); // Attach blockchain
 });
 
+// Public certificate verification routes (no auth required)
+Route::prefix('certificates')->group(function () {
+    Route::post('/verify', [CertificateVerificationController::class, 'verify']); // Blockchain verify
+});
+
+// Authenticated certificate verification routes
+Route::middleware('auth:sanctum')->prefix('certificates')->group(function () {
+    Route::get('/{certificate_number}/blockchain-status', [CertificateVerificationController::class, 'getBlockchainStatus']);
+    Route::post('/{certificate_number}/retry-blockchain', [CertificateVerificationController::class, 'retryBlockchainIssuance']);
+});
+
 /* ========================
  * SYSTEM / ADMIN TOOLS
  * ======================== */
@@ -151,4 +195,25 @@ Route::middleware('auth:sanctum')->prefix('system')->group(function () {
  * ======================== */
 Route::prefix('tags')->group(function () {
     Route::get('/', [\App\Http\Controllers\TagController::class, 'index']); // Lấy tất cả tags
+    
+    // Route tạo tag mới (cần authentication)
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/', [\App\Http\Controllers\TagController::class, 'store']); // Tạo tag mới
+    });
 });
+
+/* ========================
+ * PAYMENTS
+ * ======================== */
+Route::middleware('auth:sanctum')->prefix('payments')->group(function () {
+    Route::post('/create', [PaymentController::class, 'createPayment']); // Create payment intent
+    Route::get('/', [PaymentController::class, 'index']); // Get payment history
+    Route::get('/{id}', [PaymentController::class, 'show']); // Get payment details
+    
+    // Stripe routes
+    Route::post('/{id}/stripe/create-intent', [PaymentController::class, 'createStripeIntent']); // Create Stripe payment intent
+    Route::post('/{id}/stripe/complete', [PaymentController::class, 'completeStripePayment']); // Complete Stripe payment
+});
+
+// Stripe Webhook (no auth needed)
+Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook']);

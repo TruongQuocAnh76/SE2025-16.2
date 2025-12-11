@@ -107,6 +107,16 @@ class LogApiRequests
         // Add request ID to response
         $response->headers->set('X-Request-Id', $requestId);
 
+    // Ensure basic CORS headers are present for API responses so browser requests from frontend aren't blocked.
+    // Use FRONTEND_URL from env or allow all in development if not set.
+    $allowedOrigin = env('FRONTEND_URL', '*');
+    // If FRONTEND_URL is set to a URL like http://localhost:3000, use it; else allow all origins.
+    $response->headers->set('Access-Control-Allow-Origin', $allowedOrigin ?: '*');
+    $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Request-Id');
+    // If your frontend uses credentials (cookies), set this to true and ensure allowed origin is specific (not '*').
+    $response->headers->set('Access-Control-Allow-Credentials', 'false');
+
         return $response;
     }
 

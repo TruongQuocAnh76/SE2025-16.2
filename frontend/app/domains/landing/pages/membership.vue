@@ -3,7 +3,7 @@
     <!-- Header Section -->
     <section class="bg-gradient-to-b from-cyan-50 to-white py-20">
       <div class="container mx-auto px-4">
-        <h1 class="text-5xl font-bold text-center mb-4" style="color: #4FD1C5;">
+        <h1 class="text-5xl font-bold text-center mb-4 text-[#4FD1C5]">
           Affordable pricing
         </h1>
       </div>

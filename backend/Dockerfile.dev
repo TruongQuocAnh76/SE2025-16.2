@@ -9,10 +9,29 @@ RUN apk add --no-cache \
     unzip \
     git \
     curl \
-    bash
+    bash \
+    ffmpeg \
+    ffmpeg-dev \
+    linux-headers \
+    freetype-dev \
+    libjpeg-turbo-dev \
+    libpng-dev
+
+# Install Redis extension
+RUN apk add --no-cache autoconf g++ make \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del autoconf g++ make
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo pdo_pgsql zip bcmath pcntl
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo pdo_pgsql zip bcmath pcntl sockets gd
+
+# Install Redis extension (pin a compatible PECL version and retry to avoid transient PECL errors)
+RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
+    && (pecl install redis-5.3.9 || pecl install redis || true) \
+    && if php -m | grep -qi redis; then docker-php-ext-enable redis; fi \
+    && apk del .build-deps
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -44,7 +63,7 @@ RUN chown -R www-data:www-data /var/www \
     && chmod -R 755 /var/www/bootstrap/cache
 
 # Expose port
-EXPOSE 8000
+EXPOSE 9000
 
-# Start Laravel with artisan serve (Pail đã bị xóa khỏi composer.json)
-CMD php artisan serve --host=0.0.0.0 --port=8000 2>&1
+# Start PHP-FPM
+CMD ["php-fpm"]

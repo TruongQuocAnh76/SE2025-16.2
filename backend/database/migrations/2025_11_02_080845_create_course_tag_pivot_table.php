@@ -29,6 +29,6 @@ public function up(): void
      */
     public function down(): void
     {
-        Schema::dropIfExists('course_tag_pivot');
+        Schema::dropIfExists('course_tag');
     }
 };

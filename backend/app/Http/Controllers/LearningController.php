@@ -6,12 +6,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 use App\Models\Enrollment;
 use App\Models\Lesson;
 use App\Models\Progress;
 use App\Models\Module;
 use App\Models\Course;
+use App\Jobs\IssueCertificateToBlockchain;
 
 /**
  * @OA\Server(
@@ -23,7 +25,7 @@ class LearningController extends Controller
 {
     /**
      * @OA\Get(
-     *     path="/courses/{courseId}/progress",
+     *     path="/learning/course/{courseId}",
      *     summary="Get course progress for student",
      *     tags={"Learning"},
      *     security={{"sanctum":{}}},
@@ -68,8 +70,8 @@ class LearningController extends Controller
                     'lessons.order_index',
                     'lessons.content_type',
                     'lessons.duration',
-                    DB::raw('IFNULL(progress.is_completed, 0) as is_completed'),
-                    DB::raw('IFNULL(progress.time_spent, 0) as time_spent')
+                    DB::raw('COALESCE(progress.is_completed, false) as is_completed'),
+                    DB::raw('COALESCE(progress.time_spent, 0) as time_spent')
                 )
                 ->orderBy('lessons.order_index');
             }])
@@ -250,10 +252,12 @@ class LearningController extends Controller
                 'lesson_id' => $lessonId,
             ],
             [
-                'time_spent' => DB::raw("time_spent + {$validated['time_spent']}"),
                 'last_accessed_at' => now(),
             ]
         );
+
+        // Increment time_spent regardless of new or existing
+        $progress->increment('time_spent', $validated['time_spent']);
 
         return response()->json(['message' => 'Progress time updated', 'progress' => $progress]);
     }
@@ -275,9 +279,82 @@ class LearningController extends Controller
 
         $progressPercent = $totalLessons > 0 ? round(($completedLessons / $totalLessons) * 100) : 0;
 
-        Enrollment::where('course_id', $courseId)
+        // Update enrollment progress
+        $enrollment = Enrollment::where('course_id', $courseId)
             ->where('student_id', $studentId)
-            ->update(['progress' => $progressPercent]);
+            ->first();
+
+        if ($enrollment) {
+            $enrollment->update(['progress' => $progressPercent]);
+
+            // If course is 100% complete, dispatch certificate issuance job
+            if ($progressPercent == 100 && !$enrollment->completed_at) {
+                $enrollment->update(['completed_at' => now()]);
+                
+                // Check if certificate already exists
+                $existingCertificate = \App\Models\Certificate::where([
+                    'student_id' => $studentId,
+                    'course_id' => $courseId
+                ])->first();
+                
+                if (!$existingCertificate) {
+                    // Use the proper certificate service to create certificate with PDF
+                    $certificateService = new \App\Services\CertificateService(
+                        new \App\Repositories\CertificateRepository(new \App\Models\Certificate())
+                    );
+                    
+                    try {
+                        $certificate = $certificateService->issueCertificate($studentId, $courseId, 100.00);
+                        
+                        // Generate PDF for the certificate
+                        $course = \App\Models\Course::findOrFail($courseId);
+                        $student = \App\Models\User::findOrFail($studentId);
+                        
+                        $pdfData = $certificateService->generatePdfCertificate(
+                            $student,
+                            $course,
+                            100.00,
+                            $certificate->certificate_number
+                        );
+                        
+                        // Update certificate with PDF data
+                        $certificate->update([
+                            'pdf_url' => $pdfData['pdf_url'],
+                            'pdf_hash' => $pdfData['pdf_hash'],
+                            'status' => 'ISSUED'
+                        ]);
+                        
+                        Log::info("Certificate issued through LearningController", [
+                            'certificate_number' => $certificate->certificate_number,
+                            'student_id' => $studentId,
+                            'course_id' => $courseId,
+                            'pdf_url' => $pdfData['pdf_url']
+                        ]);
+                        
+                    } catch (\Exception $e) {
+                        Log::error("Failed to issue certificate through LearningController", [
+                            'error' => $e->getMessage(),
+                            'student_id' => $studentId,
+                            'course_id' => $courseId
+                        ]);
+                        
+                        // Fallback: create pending certificate
+                        $certificate = \App\Models\Certificate::create([
+                            'id' => Str::uuid(),
+                            'student_id' => $studentId,
+                            'course_id' => $courseId,
+                            'certificate_number' => 'CERT-' . now()->format('Y') . '-' . strtoupper(Str::random(6)),
+                            'issued_at' => now(),
+                            'status' => 'PENDING',
+                            'final_score' => 100.00
+                        ]);
+                    }
+
+                    // Dispatch job to issue certificate to blockchain
+                    IssueCertificateToBlockchain::dispatch($studentId, $courseId);
+                }
+            }
+        }
 
         return $progressPercent;
     }
