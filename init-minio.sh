@@ -23,6 +23,6 @@ mc mb myminio/$AWS_BUCKET --ignore-existing
 
 # Set policy to public (read-only for public)
 echo "Setting anonymous access for bucket: $AWS_BUCKET"
-mc anonymous set public myminio/$AWS_BUCKET
+mc anonymous set download myminio/$AWS_BUCKET
 
 echo "MinIO setup completed successfully!"
