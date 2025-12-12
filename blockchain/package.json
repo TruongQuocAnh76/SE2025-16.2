@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "nodemon --exec \"node --loader ts-node/esm\" src/index.ts",
+    "dev": "nodemon --exec tsx src/index.ts",
     "test": "npx hardhat test",
     "compile": "npx hardhat compile",
     "deploy:local": "npx hardhat ignition deploy ./ignition/modules/CertificateRegistry.ts --network localhost",
@@ -43,6 +43,7 @@
     "mocha": "^11.7.5",
     "nodemon": "^3.1.11",
     "ts-node": "^10.9.2",
+    "tsx": "^4.19.1",
     "typescript": "~5.8.3"
   },
   "dependencies": {
