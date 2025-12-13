@@ -198,9 +198,11 @@
   </div>
 </template>
 
+
 <script setup lang="ts">
 import { loadStripe } from '@stripe/stripe-js'
 import { onMounted, ref, computed } from 'vue'
+import { useAuth } from '../../auth/composables/useAuth'
 
 let elements: any = null;
 let cardElement: any = null;
@@ -208,6 +210,37 @@ let cardElement: any = null;
 const route = useRoute()
 const router = useRouter()
 const config = useRuntimeConfig()
+
+// Check authentication on page load
+const { isAuthenticated } = useAuth()
+onMounted(() => {
+  if (!isAuthenticated.value) {
+    router.replace({ path: '/auth/login', query: { redirect: route.fullPath } })
+    return
+  }
+  loadCourseData()
+  // Mount Stripe Elements nếu mặc định là VISA/MASTERCARD
+  if (!STRIPE_TEST_MODE && (selectedCardType.value === 'VISA' || selectedCardType.value === 'MASTERCARD')) {
+    nextTick().then(async () => {
+      if (!stripeInstance) {
+        stripeInstance = await loadStripe(config.public.stripePublishableKey)
+      }
+      if (stripeInstance) {
+        elements = stripeInstance.elements()
+        cardElement = elements.create('card')
+        cardElement.mount('#stripe-card-element')
+        cardElement.on('change', (event) => {
+          const errorDiv = document.getElementById('stripe-card-errors')
+          if (event.error) {
+            errorDiv.textContent = event.error.message
+          } else {
+            errorDiv.textContent = ''
+          }
+        })
+      }
+    })
+  }
+})
 
 // Test mode flag - set to false for production with real Stripe Elements
 const STRIPE_TEST_MODE = false
@@ -223,8 +256,30 @@ let stripeInstance: any = null
 
 
 // Stripe Elements chỉ mount khi chọn VISA/MASTERCARD
+
 onMounted(() => {
   loadCourseData()
+  // Mount Stripe Elements nếu mặc định là VISA/MASTERCARD
+  if (!STRIPE_TEST_MODE && (selectedCardType.value === 'VISA' || selectedCardType.value === 'MASTERCARD')) {
+    nextTick().then(async () => {
+      if (!stripeInstance) {
+        stripeInstance = await loadStripe(config.public.stripePublishableKey)
+      }
+      if (stripeInstance) {
+        elements = stripeInstance.elements()
+        cardElement = elements.create('card')
+        cardElement.mount('#stripe-card-element')
+        cardElement.on('change', (event) => {
+          const errorDiv = document.getElementById('stripe-card-errors')
+          if (event.error) {
+            errorDiv.textContent = event.error.message
+          } else {
+            errorDiv.textContent = ''
+          }
+        })
+      }
+    })
+  }
 })
 
 watch(selectedCardType, async (val, oldVal) => {
@@ -296,10 +351,16 @@ watch(() => route.query, () => {
 const handlePayment = async () => {
   loading.value = true
   try {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    // Lấy token từ cookie thay vì localStorage
+    const tokenCookie = useCookie('auth_token')
+    const token = tokenCookie.value
+    
+    console.log('Token from cookie:', token) // Debug log
+    
     if (!token) {
       alert('Please login first')
       router.push('/auth/login')
+      loading.value = false
       return
     }
 
@@ -333,13 +394,28 @@ const handlePayment = async () => {
       } else {
         paymentData.membership_plan = 'PREMIUM'
       }
+      
+      console.log('Sending payment request with token:', token)
+      
       const response = await $fetch('http://localhost:8000/api/payments/create', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: paymentData,
+        credentials: 'include',
+        onRequest({ request, options }) {
+          // Debug log
+          console.log('Request URL:', request)
+          console.log('Headers:', options.headers)
+          console.log('Token being sent:', token)
+        },
+        onResponseError({ response }) {
+          console.error('Response error:', response.status, response.statusText)
+          console.error('Response body:', response._data)
+        }
       })
       console.log('Payment created:', response.payment)
       alert('Payment thành công!')
@@ -362,7 +438,8 @@ const handlePayment = async () => {
 // Handle Stripe payment with card
 const handleStripePayment = async (paymentId: string) => {
   try {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    const tokenCookie = useCookie('auth_token')
+    const token = tokenCookie.value
 
     if (STRIPE_TEST_MODE) {
       // TEST MODE: Auto-complete payment (no real Stripe API call)
@@ -411,7 +488,8 @@ const handleStripePayment = async (paymentId: string) => {
         course_id: paymentType.value === 'COURSE' ? courseId.value : undefined,
         membership_plan: paymentType.value === 'MEMBERSHIP' ? 'PREMIUM' : undefined
       }
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+      const tokenCookie = useCookie('auth_token')
+      const token = tokenCookie.value
       const response = await $fetch('http://localhost:8000/api/payments/create', {
         method: 'POST',
         headers: {
@@ -444,7 +522,8 @@ const handleStripePayment = async (paymentId: string) => {
 // Complete Stripe payment
 const completeStripePayment = async (paymentId: string, paymentIntentId: string) => {
   try {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    const tokenCookie = useCookie('auth_token')
+    const token = tokenCookie.value
     
     const response = await $fetch(`http://localhost:8000/api/payments/${paymentId}/stripe/complete`, {
       method: 'POST',
