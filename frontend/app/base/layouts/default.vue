@@ -13,6 +13,9 @@
 
     <!-- Toast Notifications -->
     <Toast />
+
+    <!-- AI Chatbot - Always visible in bottom right corner -->
+    <AIChatbot />
   </div>
 </template>
 
@@ -21,4 +24,5 @@
 import TopBar from '../components/ui/TopBar.vue'
 import Footer from '../components/ui/Footer.vue'
 import Toast from '../components/ui/Toast.vue'
+import AIChatbot from '~/components/AIChatbot.vue'
 </script>

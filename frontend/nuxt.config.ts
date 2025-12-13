@@ -4,6 +4,7 @@ export default defineNuxtConfig({
     './app/domains/auth',
     './app/domains/courses',
     './app/domains/payment',
+    './app/domains/verification',
     './app/base'
   ],
 
@@ -23,6 +24,7 @@ export default defineNuxtConfig({
     { path: './app/domains/auth/components', pathPrefix: false },
     { path: './app/domains/courses/components', pathPrefix: false },
     { path: './app/domains/payment/components', pathPrefix: false },
+    { path: './app/domains/verification/components', pathPrefix: false },
     { path: './app/base/components', pathPrefix: false }
   ],
 

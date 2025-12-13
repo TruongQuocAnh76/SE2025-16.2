@@ -4,7 +4,7 @@
       <div class="flex justify-between items-center h-16">
         <!-- Left: Logo -->
         <div class="flex-shrink-0">
-          <NuxtLink to="/" class="flex items-center">
+          <NuxtLink :to="user?.username ? `/s/${user.username}` : '/'" class="flex items-center">
             <img src="/logo2.svg" alt="" class="h-8 w-auto" />
           </NuxtLink>
         </div>
@@ -12,14 +12,14 @@
         <!-- Middle: Navigation -->
         <nav class="hidden lg:flex lg:absolute lg:left-1/2 lg:transform lg:-translate-x-1/2 space-x-10">
           <NuxtLink
-            to="/"
+            :to="user?.username ? `/s/${user.username}` : '/'"
             class="text-white hover:text-accent-star px-4 py-2 text-sm font-medium transition-colors duration-200 relative group whitespace-nowrap cursor-pointer"
-            :class="{ 'text-accent-star': $route.path === '/' }"
+            :class="{ 'text-accent-star': $route.path === (user?.username ? `/s/${user.username}` : '/') }"
           >
             Home
             <span
               class="absolute bottom-0 left-0 w-full h-0.5 bg-accent-star transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"
-              :class="{ 'scale-x-100': $route.path === '/' }"
+              :class="{ 'scale-x-100': $route.path === (user?.username ? `/s/${user.username}` : '/') }"
             ></span>
           </NuxtLink>
           <NuxtLink
@@ -45,14 +45,14 @@
             ></span>
           </NuxtLink>
           <NuxtLink
-            to="/blog"
+            to="/verify-certificate"
             class="text-white hover:text-accent-star px-4 py-2 text-sm font-medium transition-colors duration-200 relative group whitespace-nowrap cursor-pointer"
-            :class="{ 'text-accent-star': $route.path === '/blog' }"
+            :class="{ 'text-accent-star': $route.path === '/verify-certificate' }"
           >
-            Blogs
+            Verify Certificate
             <span
               class="absolute bottom-0 left-0 w-full h-0.5 bg-accent-star transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"
-              :class="{ 'scale-x-100': $route.path === '/blog' }"
+              :class="{ 'scale-x-100': $route.path === '/verify-certificate' }"
             ></span>
           </NuxtLink>
           <NuxtLink
@@ -169,9 +169,9 @@
       >
         <div class="px-2 pt-2 pb-3 space-y-1">
           <NuxtLink
-            to="/"
+            :to="user?.username ? `/s/${user.username}` : '/'"
             class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md"
-            :class="{ 'text-accent-star bg-accent-star/10': $route.path === '/' }"
+            :class="{ 'text-accent-star bg-accent-star/10': $route.path === (user?.username ? `/s/${user.username}` : '/') }"
             @click="isMobileMenuOpen = false"
           >
             Home
@@ -193,12 +193,12 @@
             Membership
           </NuxtLink>
           <NuxtLink
-            to="/blog"
+            to="/verify-certificate"
             class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md"
-            :class="{ 'text-accent-star bg-accent-star/10': $route.path === '/blog' }"
+            :class="{ 'text-accent-star bg-accent-star/10': $route.path === '/verify-certificate' }"
             @click="isMobileMenuOpen = false"
           >
-            Blogs
+            Verify Certificate
           </NuxtLink>
           <NuxtLink
             to="/about"

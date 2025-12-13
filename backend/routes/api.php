@@ -12,6 +12,7 @@ use App\Http\Controllers\QuizController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\SystemController;
+use App\Http\Controllers\AIChatController;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,6 +21,11 @@ use App\Http\Controllers\SystemController;
 */
 
 Route::get('/', fn() => response()->json(['message' => 'CertChain API v1 is running']));
+
+/* ========================
+ * PREVIEW ENDPOINTS (for development/testing)
+ * ======================== */
+Route::get('/_preview/certificates', [CertificateController::class, 'preview']);
 
 /* ========================
  * AUTHENTICATION
@@ -212,3 +218,12 @@ Route::prefix('tags')->group(function () {
 
 // Stripe Webhook (no auth needed)
 // Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook']);
+
+/* ========================
+ * AI CHAT (Gemini)
+ * ======================== */
+Route::prefix('ai')->group(function () {
+    Route::post('/chat', [AIChatController::class, 'chat']); // Chat with AI
+    Route::get('/suggested-questions', [AIChatController::class, 'suggestedQuestions']); // Get suggested questions
+    Route::get('/status', [AIChatController::class, 'status']); // Check AI service status
+});
