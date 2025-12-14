@@ -1,5 +1,7 @@
 vendor
 storage/logs
+storage/app/private/temp
+storage/app/private/var
 bootstrap/cache
 .git
 .gitignore

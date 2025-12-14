@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use App\Contracts\StorageServiceInterface;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\QuizAttempt;
@@ -24,10 +24,15 @@ use Barryvdh\DomPDF\Facade\Pdf;
 class CertificateController extends Controller
 {
     protected $certificateService;
+    protected StorageServiceInterface $storage;
 
-    public function __construct(CertificateService $certificateService)
+    public function __construct(
+        CertificateService $certificateService,
+        StorageServiceInterface $storage
+    )
     {
         $this->certificateService = $certificateService;
+        $this->storage = $storage;
     }
     /**
      * @OA\Get(
@@ -332,11 +337,11 @@ class CertificateController extends Controller
             return response()->json(['valid' => false, 'message' => 'Chứng chỉ không còn hiệu lực.']);
         }
 
-        // Verify PDF hash from S3
+        // Verify PDF hash from storage
         try {
-            // Extract S3 path from PDF URL or use stored path
+            // Extract storage path from PDF URL or use stored path
             $s3Path = $certificate->pdf_path ?? "certificates/{$certificate->certificate_number}.pdf";
-            $pdfContent = Storage::disk('s3')->get($s3Path);
+            $pdfContent = $this->storage->get($s3Path);
             $currentHash = hash('sha256', $pdfContent);
             $isValid = ($currentHash === $certificate->pdf_hash);
         } catch (\Exception $e) {

@@ -3,19 +3,25 @@
 namespace App\Services;
 
 use App\Repositories\CertificateRepository;
+use App\Contracts\StorageServiceInterface;
+use App\Helpers\StorageUrlHelper;
 use App\Models\BlockchainTransaction;
 use App\Models\User;
 use App\Models\Course;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class CertificateService {
     protected $certificateRepository;
+    protected StorageServiceInterface $storage;
     
-    public function __construct(CertificateRepository $certificateRepository) { 
-        $this->certificateRepository = $certificateRepository; 
+    public function __construct(
+        CertificateRepository $certificateRepository,
+        StorageServiceInterface $storage
+    ) { 
+        $this->certificateRepository = $certificateRepository;
+        $this->storage = $storage;
     }
     
     public function getMyCertificates($studentId) {
@@ -56,35 +62,28 @@ class CertificateService {
             
             Log::info("PDF content generated, size: " . strlen($pdfContent) . " bytes");
             
-            // Save PDF to S3 with proper content type
+            // Save PDF to storage with proper content type
             $pdfPath = "certificates/{$certificateNumber}.pdf";
             
-            $uploaded = Storage::disk('s3')->put($pdfPath, $pdfContent, [
+            $uploaded = $this->storage->put($pdfPath, $pdfContent, [
                 'ContentType' => 'application/pdf',
                 'CacheControl' => 'max-age=31536000',
                 'visibility' => 'public'
             ]);
             
             if (!$uploaded) {
-                throw new \Exception("Failed to upload PDF to S3");
+                throw new \Exception("Failed to upload PDF to storage");
             }
             
             Log::info("PDF uploaded successfully to S3: {$pdfPath}");
             
             // Verify the upload
-            if (!Storage::disk('s3')->exists($pdfPath)) {
-                throw new \Exception("PDF file not found in S3 after upload");
+            if (!$this->storage->exists($pdfPath)) {
+                throw new \Exception("PDF file not found in storage after upload");
             }
             
-            // Generate S3 URL manually like the video service does
-            $awsEndpoint = rtrim(env('FRONTEND_AWS_ENDPOINT', env('AWS_ENDPOINT')), '/');
-            $awsBucket = env('AWS_BUCKET');
-            
-            if (!$awsEndpoint || !$awsBucket) {
-                throw new \Exception("AWS configuration is missing");
-            }
-            
-            $pdfUrl = $awsEndpoint . '/' . $awsBucket . '/' . ltrim($pdfPath, '/');
+            // Generate storage URL
+            $pdfUrl = StorageUrlHelper::buildFullUrl($pdfPath);
             
             // Generate hash for blockchain verification
             $pdfHash = hash('sha256', $pdfContent);

@@ -10,8 +10,8 @@ services:
       - /app/node_modules
     environment:
       - BACKEND_URL=http://localhost:8000
-      - AWS_ENDPOINT=http://localhost:4566
-      - AWS_BUCKET=certchain-dev
+      - STORAGE_ENDPOINT=http://localhost:9002
+      - STORAGE_BUCKET=certchain-dev
     depends_on:
       - backend
     networks:
@@ -23,23 +23,11 @@ services:
       dockerfile: Dockerfile.dev
     volumes:
       - ./backend:/var/www
-    environment:
-      - AWS_ACCESS_KEY_ID=test
-      - AWS_SECRET_ACCESS_KEY=test
-      - AWS_DEFAULT_REGION=us-east-1
-      - AWS_ENDPOINT=http://localstack:4566
-      - FRONTEND_AWS_ENDPOINT=http://localhost:4566
-      - AWS_USE_PATH_STYLE_ENDPOINT=true
-      - AWS_BUCKET=certchain-dev
-      - QUEUE_CONNECTION=redis
-      - QUEUE_FAILED_DRIVER=redis
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - BLOCKCHAIN_SERVICE_URL=http://blockchain:3001
+    env_file: ./backend/.env
     depends_on:
       - db
       - redis
-      - localstack
+      - minio
       - rabbitmq
     networks:
       - app_network
@@ -51,13 +39,18 @@ services:
     volumes:
       - ./backend:/var/www
     environment:
-      - AWS_ACCESS_KEY_ID=test
-      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
       - AWS_DEFAULT_REGION=us-east-1
-      - AWS_ENDPOINT=http://localstack:4566
-      - FRONTEND_AWS_ENDPOINT=http://localhost:4566
+      - AWS_ENDPOINT=http://nginx:9002
       - AWS_USE_PATH_STYLE_ENDPOINT=true
       - AWS_BUCKET=certchain-dev
+      - STORAGE_ACCESS_KEY=minioadmin
+      - STORAGE_SECRET_KEY=minioadmin
+      - STORAGE_ENDPOINT=http://nginx:9002
+      - FRONTEND_STORAGE_ENDPOINT=http://localhost:9002
+      - STORAGE_USE_PATH_STYLE_ENDPOINT=true
+      - STORAGE_BUCKET=certchain-dev
       - QUEUE_CONNECTION=redis
       - QUEUE_FAILED_DRIVER=redis
       - REDIS_HOST=redis
@@ -83,6 +76,7 @@ services:
       - ./blockchain:/app
       - /app/node_modules
       - blockchain_data:/app/blockchain-data
+      - blockchain_data_ignition:/app/ignition/deployments
     environment:
       - NODE_ENV=development
       - PORT=3001
@@ -95,19 +89,15 @@ services:
       - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000
       - LOG_LEVEL=debug
     working_dir: /app/blockchain
+    user: root
     command: >
       sh -c "
         echo 'Setting up blockchain data directories...' &&
-        mkdir -p /app/blockchain-data/cache /app/blockchain-data/artifacts /app/blockchain-data/ignition-deployments /app/blockchain-data/types &&
-        rm -rf /app/cache /app/artifacts /app/ignition/deployments /app/types &&
-        ln -sf /app/blockchain-data/cache /app/cache &&
-        ln -sf /app/blockchain-data/artifacts /app/artifacts &&
-        ln -sf /app/blockchain-data/types /app/types &&
-        mkdir -p /app/ignition &&
-        ln -sf /app/blockchain-data/ignition-deployments /app/ignition/deployments &&
-        chown -R blockchain:nodejs /app/blockchain-data &&
-        export HOME=/home/blockchain &&
-        sudo -E -u blockchain -H sh -c '
+        mkdir -p /app/blockchain-data/cache /app/blockchain-data/artifacts /app/blockchain-data/types &&
+        chown -R blockchain:nodejs /app/blockchain-data /app/blockchain &&
+        echo 'Switching to blockchain user...' &&
+        exec su-exec blockchain sh -c '
+          export HOME=/home/blockchain &&
           echo \"Starting Hardhat node...\" &&
           pnpm run hardhat:node &
           HARDHAT_PID=$$! &&
@@ -189,68 +179,58 @@ services:
     networks:
       - app_network
 
-  localstack:
-    image: localstack/localstack:latest
+  minio:
+    image: minio/minio:latest
+    container_name: se2025-162-minio
     ports:
-      - "4566:4566"
+      - "9000:9000"
+      - "9001:9001"
     environment:
-      - SERVICES=s3,sqs,dynamodb,ses
-      - DEBUG=1
-      - PERSISTENCE=1
-      - DATA_DIR=/var/lib/localstack/data
-      - DOCKER_HOST=unix:///var/run/docker.sock
-      - S3_SKIP_SIGNATURE_VALIDATION=1
-      - DISABLE_CORS_CHECKS=1
-      - DISABLE_CUSTOM_CORS_S3=1
-      - CORS_ALLOWED_ORIGINS=*
-      - CORS_ALLOWED_HEADERS=*
-      - CORS_ALLOWED_METHODS=*
-      - CORS_EXPOSE_HEADERS=*
-      - AWS_ACCESS_KEY_ID=test
-      - AWS_SECRET_ACCESS_KEY=test
-      - AWS_DEFAULT_REGION=us-east-1
-      - S3_HOSTNAME=localhost
-      - S3_HOST=localhost
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data --console-address ":9001"
     volumes:
-      - localstack_data:/var/lib/localstack/data
-      - /var/run/docker.sock:/var/run/docker.sock
+      - minio_data:/data
     networks:
       - app_network
 
-  localstack-init:
-    image: amazon/aws-cli:latest
-    container_name: se2025-162-localstack-init
-    hostname: localstack-init
+  minio-init:
+    image: minio/mc
+    container_name: se2025-162-minio-init
     volumes:
-      - ./init-localstack.sh:/init-localstack.sh
+      - ./init-minio.sh:/init-minio.sh:ro
     environment:
-      - AWS_ACCESS_KEY_ID=test
-      - AWS_SECRET_ACCESS_KEY=test
-      - AWS_DEFAULT_REGION=us-east-1
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+      - STORAGE_BUCKET=certchain-dev
     depends_on:
-      - localstack
-    entrypoint: ["/bin/sh", "/init-localstack.sh"]
+      minio:
+        condition: service_started
+    entrypoint: ["/bin/sh", "/init-minio.sh"]
     networks:
       - app_network
-
+  
   nginx:
     image: nginx:alpine
     ports:
-      - "8000:80"
+      - "8000:80"    # Backend
+      - "9002:9002"  # MinIO proxy
     volumes:
       - ./backend:/var/www
       - ./backend/nginx.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - backend
+      - minio
     networks:
       - app_network
 
 volumes:
   postgres_data:
   redis_data:
-  localstack_data:
+  minio_data:
   rabbitmq_data:
   blockchain_data:
+  blockchain_data_ignition:
 version: '3'
 
 networks:

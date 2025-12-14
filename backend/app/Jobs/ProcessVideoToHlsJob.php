@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Services\HlsVideoService;
 use App\Services\CourseService;
+use App\Contracts\StorageServiceInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -49,21 +50,21 @@ class ProcessVideoToHlsJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(HlsVideoService $hlsVideoService, CourseService $courseService)
+    public function handle(HlsVideoService $hlsVideoService, CourseService $courseService, StorageServiceInterface $storage)
     {
         try {
             Log::info("Starting HLS processing job for lesson: {$this->lessonId}");
 
             $localVideoPath = null;
 
-            // New flow: Video is already in S3, download it for processing
-            if ($this->originalVideoPath && Storage::disk('s3')->exists($this->originalVideoPath)) {
-                Log::info("Downloading video from S3 for processing: {$this->originalVideoPath}");
+            // New flow: Video is already in storage, download it for processing
+            if ($this->originalVideoPath && $storage->exists($this->originalVideoPath)) {
+                Log::info("Downloading video from storage for processing: {$this->originalVideoPath}");
                 
                 // Create a temporary file path for processing
                 $tempFileName = 'temp/videos/' . uniqid() . '_lesson_' . $this->lessonId . '.mp4';
                 
-                $videoContent = Storage::disk('s3')->get($this->originalVideoPath);
+                $videoContent = $storage->get($this->originalVideoPath);
                 Storage::disk('local')->put($tempFileName, $videoContent);
                 
                 $localVideoPath = Storage::disk('local')->path($tempFileName);
@@ -75,7 +76,7 @@ class ProcessVideoToHlsJob implements ShouldQueue
                 Log::info("Using temporary file for processing: {$this->tempVideoPath}");
                 
             } else {
-                throw new \Exception('No video file found for processing. Neither S3 original nor temp file exists.');
+                throw new \Exception('No video file found for processing. Neither storage original nor temp file exists.');
             }
 
             Log::info("Processing video file: {$localVideoPath}");
@@ -94,10 +95,10 @@ class ProcessVideoToHlsJob implements ShouldQueue
                 // Generate thumbnail
                 $this->generateThumbnail($hlsVideoService, $localVideoPath);
 
-                // Delete the original video from S3 after successful processing
-                if ($this->originalVideoPath && Storage::disk('s3')->exists($this->originalVideoPath)) {
-                    Storage::disk('s3')->delete($this->originalVideoPath);
-                    Log::info("Deleted original video file from S3: {$this->originalVideoPath}");
+                // Delete the original video from storage after successful processing
+                if ($this->originalVideoPath && $storage->exists($this->originalVideoPath)) {
+                    $storage->delete($this->originalVideoPath);
+                    Log::info("Deleted original video file from storage: {$this->originalVideoPath}");
                 }
 
             } else {
@@ -158,7 +159,7 @@ class ProcessVideoToHlsJob implements ShouldQueue
             Log::info("Cleaned up temporary file after failure: {$this->tempVideoPath}");
         }
         
-        // Note: We keep the original video file in S3 on failure for potential retry
+        // Note: We keep the original video file in storage on failure for potential retry
         // or manual processing later
         
         // Optionally, you could update the lesson status to indicate processing failed

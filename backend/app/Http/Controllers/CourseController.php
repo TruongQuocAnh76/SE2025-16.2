@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
-
+use App\Contracts\StorageServiceInterface;
+use App\Helpers\StorageUrlHelper;
 use App\Models\Course;
 use App\Models\Module;
 use App\Models\Lesson;
@@ -16,7 +16,6 @@ use App\Models\Review;
 use App\Models\User;
 use App\Services\CourseService;
 use Illuminate\Support\Facades\Log;
-use App\Helpers\AwsUrlHelper;
 use App\Models\Question;
 
 /**
@@ -28,10 +27,15 @@ use App\Models\Question;
 class CourseController extends Controller
 {
     protected $courseService;
+    protected StorageServiceInterface $storage;
 
-    public function __construct(CourseService $courseService)
+    public function __construct(
+        CourseService $courseService,
+        StorageServiceInterface $storage
+    )
     {
         $this->courseService = $courseService;
+        $this->storage = $storage;
     }
 
     /**
@@ -716,8 +720,8 @@ class CourseController extends Controller
             }
 
             // Check if the HLS master playlist exists
-            $hlsPath = str_replace(env('AWS_ENDPOINT') . '/' . env('AWS_BUCKET') . '/', '', $lesson->content_url);
-            $exists = \Illuminate\Support\Facades\Storage::disk('s3')->exists($hlsPath);
+            $hlsPath = str_replace(StorageUrlHelper::getStorageEndpoint() . '/' . StorageUrlHelper::getBucket() . '/', '', $lesson->content_url);
+            $exists = $this->storage->exists($hlsPath);
 
             if ($exists) {
                 return response()->json([
