@@ -56,7 +56,7 @@ jobs:
     - name: Start MinIO
       working-directory: .
       run: |
-        docker run -d --name minio \
+        docker run -d \
           -p 9000:9000 -p 9001:9001 \
           -e MINIO_ROOT_USER=minioadmin \
           -e MINIO_ROOT_PASSWORD=minioadmin \

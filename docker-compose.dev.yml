@@ -8,10 +8,7 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    environment:
-      - BACKEND_URL=http://localhost:8000
-      - STORAGE_ENDPOINT=http://localhost:9002
-      - STORAGE_BUCKET=certchain-dev
+    env_file: ./frontend/.env
     depends_on:
       - backend
     networks:
@@ -38,23 +35,9 @@ services:
       dockerfile: Dockerfile.dev
     volumes:
       - ./backend:/var/www
+    env_file: ./backend/.env
     environment:
-      - AWS_ACCESS_KEY_ID=minioadmin
-      - AWS_SECRET_ACCESS_KEY=minioadmin
-      - AWS_DEFAULT_REGION=us-east-1
-      - AWS_ENDPOINT=http://nginx:9002
-      - AWS_USE_PATH_STYLE_ENDPOINT=true
-      - AWS_BUCKET=certchain-dev
-      - STORAGE_ACCESS_KEY=minioadmin
-      - STORAGE_SECRET_KEY=minioadmin
-      - STORAGE_ENDPOINT=http://nginx:9002
-      - FRONTEND_STORAGE_ENDPOINT=http://localhost:9002
-      - STORAGE_USE_PATH_STYLE_ENDPOINT=true
-      - STORAGE_BUCKET=certchain-dev
-      - QUEUE_CONNECTION=redis
-      - QUEUE_FAILED_DRIVER=redis
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      # Override for Docker network
       - BLOCKCHAIN_SERVICE_URL=http://blockchain:3001
     command: php artisan queue:work redis --tries=3 --timeout=3600 --sleep=3
     depends_on:
@@ -77,17 +60,7 @@ services:
       - /app/node_modules
       - blockchain_data:/app/blockchain-data
       - blockchain_data_ignition:/app/ignition/deployments
-    environment:
-      - NODE_ENV=development
-      - PORT=3001
-      - BLOCKCHAIN_NETWORK=localhost
-      - HARDHAT_RPC_URL=http://127.0.0.1:8545
-      - POLYGON_RPC_URL=https://polygon-rpc.com
-      - POLYGON_MUMBAI_RPC_URL=https://rpc-mumbai.maticvigil.com
-      - PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-      - CERTIFICATE_CONTRACT_ADDRESS_HARDHAT=0x5FbDB2315678afecb367f032d93F642f64180aa3
-      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000
-      - LOG_LEVEL=debug
+    env_file: ./blockchain/.env
     working_dir: /app/blockchain
     user: root
     command: >
@@ -171,6 +144,7 @@ services:
         sleep 10 &&
         php artisan rabbitmq:consume-reset-email
       "
+    env_file: ./backend/.env
     depends_on:
       - backend
       - rabbitmq

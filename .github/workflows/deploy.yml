@@ -3,16 +3,14 @@ name: CD Pipeline
 on:
   workflow_run:
     workflows: ["CI Pipeline"]
-    types:
-      - completed
-    branches:
-      - main
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: read
+  packages: read
 
 jobs:
-  # Deploy to Production VM
   deploy:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
@@ -26,9 +24,12 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          port: 22
-          source: "docker-compose.prod.yml,init-minio.sh,backend/nginx.conf"
-          target: "/home/${{ secrets.VM_USER }}/app"
+          source: |
+            docker-compose.prod.yml
+            init-minio.sh
+            backend/nginx.conf
+            scripts/deploy.sh
+          target: /home/${{ secrets.VM_USER }}/app
           overwrite: true
 
       - name: Deploy to VM
@@ -38,47 +39,14 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           port: 22
+          envs: VM_USER,GITHUB_TOKEN,GITHUB_ACTOR,ENV_FILE
           script: |
-            set -e
+            export VM_USER="${{ secrets.VM_USER }}"
+            export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+            export GITHUB_ACTOR="${{ github.actor }}"
+            export ENV_FILE="${{ secrets.ENV_FILE }}"
 
             cd /home/${{ secrets.VM_USER }}/app
+            chmod +x scripts/deploy.sh
+            ./scripts/deploy.sh
 
-            # Create app directory structure if not exists
-            mkdir -p backend
-
-            # Move nginx config to correct location
-            if [ -f backend/nginx.conf ]; then
-                cp backend/nginx.conf ./nginx.conf
-            fi
-
-            # Create backend .env file from secret (if ENV_FILE secret is set)
-            if [ -n "${{ secrets.ENV_FILE }}" ]; then
-                echo "${{ secrets.ENV_FILE }}" > backend/.env.production
-            fi
-
-            # Login to GitHub Container Registry
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-            # Pull latest images
-            docker compose -f docker-compose.prod.yml pull
-
-            # Stop and remove old containers, then start new ones
-            docker compose -f docker-compose.prod.yml down --remove-orphans || true
-            docker compose -f docker-compose.prod.yml up -d
-
-            # Wait for backend to be ready
-            echo "Waiting for backend to be ready..."
-            sleep 30
-
-            # Run database migrations
-            docker compose -f docker-compose.prod.yml exec -T backend php artisan migrate --force || true
-
-            # Clear and cache Laravel config
-            docker compose -f docker-compose.prod.yml exec -T backend php artisan config:cache || true
-            docker compose -f docker-compose.prod.yml exec -T backend php artisan route:cache || true
-            docker compose -f docker-compose.prod.yml exec -T backend php artisan view:cache || true
-
-            # Clean up unused Docker images
-            docker image prune -af --filter "until=24h"
-
-            echo "Deployment completed successfully!"
