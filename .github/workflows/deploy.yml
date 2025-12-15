@@ -1,0 +1,84 @@
+name: CD Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  # Deploy to Production VM
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy deployment files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          port: 22
+          source: "docker-compose.prod.yml,init-minio.sh,backend/nginx.conf"
+          target: "/home/${{ secrets.VM_USER }}/app"
+          overwrite: true
+
+      - name: Deploy to VM
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+
+            cd /home/${{ secrets.VM_USER }}/app
+
+            # Create app directory structure if not exists
+            mkdir -p backend
+
+            # Move nginx config to correct location
+            if [ -f backend/nginx.conf ]; then
+                cp backend/nginx.conf ./nginx.conf
+            fi
+
+            # Create backend .env file from secret (if ENV_FILE secret is set)
+            if [ -n "${{ secrets.ENV_FILE }}" ]; then
+                echo "${{ secrets.ENV_FILE }}" > backend/.env.production
+            fi
+
+            # Login to GitHub Container Registry
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # Pull latest images
+            docker compose -f docker-compose.prod.yml pull
+
+            # Stop and remove old containers, then start new ones
+            docker compose -f docker-compose.prod.yml down --remove-orphans || true
+            docker compose -f docker-compose.prod.yml up -d
+
+            # Wait for backend to be ready
+            echo "Waiting for backend to be ready..."
+            sleep 30
+
+            # Run database migrations
+            docker compose -f docker-compose.prod.yml exec -T backend php artisan migrate --force || true
+
+            # Clear and cache Laravel config
+            docker compose -f docker-compose.prod.yml exec -T backend php artisan config:cache || true
+            docker compose -f docker-compose.prod.yml exec -T backend php artisan route:cache || true
+            docker compose -f docker-compose.prod.yml exec -T backend php artisan view:cache || true
+
+            # Clean up unused Docker images
+            docker image prune -af --filter "until=24h"
+
+            echo "Deployment completed successfully!"

@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI Pipeline
 
 on:
   push:
@@ -97,58 +97,81 @@ jobs:
         STORAGE_USE_PATH_STYLE_ENDPOINT: true
       run: php artisan test
 
-  deploy:
+  # 2. Build and Push Docker Images
+  build-and-push:
     runs-on: ubuntu-latest
-    needs: [build-and-push]
-    if: github.ref == 'refs/heads/main'
+    needs: [backend-test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Copy deployment files to server
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.KEY }}
-          port: 22
-          source: "docker-compose.prod.yml,init-minio.sh,backend/nginx.conf"
-          target: "/home/${{ secrets.USERNAME }}/app"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Execute deployment
-        uses: appleboy/ssh-action@master
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.KEY }}
-          port: 22
-          script: |
-            cd /home/${{ secrets.USERNAME }}/app
-            
-            # Setup environment
-            export GITHUB_REPOSITORY=${{ github.repository }}
-            
-            # Move nginx config
-            if [ -f backend/nginx.conf ]; then
-                mv backend/nginx.conf ./nginx.conf
-            fi
-            
-            # Create/Update .env file
-            echo "${{ secrets.ENV_FILE }}" > backend/.env.production
-            
-            # Login to GHCR
-            echo ${{ secrets.GHCR_PAT }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
-            # Pull latest images
-            docker-compose -f docker-compose.prod.yml pull
-            
-            # Pass repository name to compose
-            export GITHUB_REPOSITORY=${{ github.repository }}
-            
-            # Start services
-            docker-compose -f docker-compose.prod.yml up -d --remove-orphans
-            
-            # Run backend migrations
-            docker-compose -f docker-compose.prod.yml exec -T backend php artisan migrate --force
-            
-            # Clean up
-            docker image prune -a -f
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/certchain-frontend
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - name: Build and push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract metadata for Backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/certchain-backend
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - name: Build and push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract metadata for Blockchain
+        id: meta-blockchain
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/certchain-blockchain
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - name: Build and push Blockchain
+        uses: docker/build-push-action@v5
+        with:
+          context: ./blockchain
+          file: ./blockchain/Dockerfile
+          push: true
+          tags: ${{ steps.meta-blockchain.outputs.tags }}
+          labels: ${{ steps.meta-blockchain.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
