@@ -13,6 +13,9 @@
     "build:prod": "docker-compose build",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "clean": "docker compose down --rmi local -v --remove-orphans && docker system prune -f"
+    "clean": "docker compose down --rmi local -v --remove-orphans && docker system prune -f",
+    "ci:test": "act -j backend-test --container-options=\"--memory=4g --cpus=2\" --rm",
+    "ci:build": "act -j build-and-push --container-options=\"--memory=4g --cpus=2\" --rm",
+    "ci": "act --container-options=\"--memory=4g --cpus=2\" --rm"
   }
 }
