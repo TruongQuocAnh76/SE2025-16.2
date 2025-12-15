@@ -17,9 +17,9 @@ class GeminiChatService
     public function __construct()
     {
         $this->apiKey = config('services.gemini.api_key');
-        $this->model = config('services.gemini.model', 'gemini-1.5-flash');
-        // Use v1 API (v1beta may have model availability issues)
-        $this->apiUrl = 'https://generativelanguage.googleapis.com/v1/models/';
+        $this->model = config('services.gemini.model', 'gemini-2.0-flash');
+        // Use v1beta for systemInstruction support
+        $this->apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/';
     }
 
     /**
@@ -36,10 +36,8 @@ class GeminiChatService
             ];
         }
 
-        // Enable demo mode for testing (set to false to use real API)
-        // Free tier API keys are rate-limited after a few requests
-        // Demo mode returns intelligent responses based on course data
-        $demoMode = true; // Set to false when you have a paid Gemini API key
+        // Demo mode có thể bật từ .env với AI_DEMO_MODE=true
+        $demoMode = config('services.gemini.demo_mode', false);
         
         if ($demoMode) {
             return $this->getDemoResponse($message, $courseId);
@@ -52,10 +50,15 @@ class GeminiChatService
             // Xây dựng prompt với lịch sử hội thoại
             $fullPrompt = $this->buildFullPrompt($context, $message, $conversationHistory);
 
-            // Gọi Gemini API
+            // Gọi Gemini API với system instruction
             $response = Http::timeout(30)->withoutVerifying()->post(
                 $this->apiUrl . $this->model . ':generateContent?key=' . $this->apiKey,
                 [
+                    'systemInstruction' => [
+                        'parts' => [
+                            ['text' => $this->getSystemInstruction()]
+                        ]
+                    ],
                     'contents' => [
                         [
                             'parts' => [
@@ -64,10 +67,10 @@ class GeminiChatService
                         ]
                     ],
                     'generationConfig' => [
-                        'temperature' => 0.7,
-                        'topK' => 40,
+                        'temperature' => 0.85,
+                        'topK' => 64,
                         'topP' => 0.95,
-                        'maxOutputTokens' => 1024,
+                        'maxOutputTokens' => 2048,
                     ],
                     'safetySettings' => [
                         [
@@ -128,15 +131,8 @@ class GeminiChatService
      */
     private function buildCourseContext(?int $courseId): string
     {
-        $baseContext = "Bạn là CertChain AI Assistant - trợ lý thông minh của nền tảng học trực tuyến CertChain. ";
-        $baseContext .= "CertChain là nền tảng học tập trực tuyến cung cấp các khóa học chất lượng cao với chứng chỉ blockchain. ";
-        $baseContext .= "Nhiệm vụ của bạn là hỗ trợ học viên một cách thân thiện, chuyên nghiệp và chi tiết.\n\n";
-
         if (!$courseId) {
-            $baseContext .= "Hãy trả lời các câu hỏi chung về nền tảng CertChain, các khóa học, quy trình đăng ký, ";
-            $baseContext .= "chứng chỉ, thanh toán và các vấn đề liên quan đến học tập trực tuyến.\n\n";
-            $baseContext .= "QUAN TRỌNG: Luôn trả lời bằng tiếng Việt, thân thiện và dễ hiểu.";
-            return $baseContext;
+            return $this->getGeneralContext();
         }
 
         try {
@@ -147,11 +143,9 @@ class GeminiChatService
                 'instructor'
             ])->findOrFail($courseId);
 
-            $context = $baseContext;
-            $context .= "Hiện tại bạn đang tư vấn về khóa học sau:\n\n";
-            $context .= "=== THÔNG TIN KHÓA HỌC ===\n";
-            $context .= "Tên khóa học: {$course->title}\n";
-            $context .= "Mô tả ngắn: {$course->description}\n";
+            $context = "Người dùng đang xem khóa học cụ thể. Dưới đây là thông tin:\n\n";
+            $context .= "📚 **{$course->title}**\n";
+            $context .= "Mô tả: {$course->description}\n";
             
             if ($course->long_description) {
                 $context .= "Mô tả chi tiết: {$course->long_description}\n";
@@ -246,14 +240,8 @@ class GeminiChatService
                 $context .= "Tổng số bài kiểm tra: {$totalQuizzes}\n";
             }
 
-            $context .= "\n=== HƯỚNG DẪN TRẢ LỜI ===\n";
-            $context .= "- Luôn trả lời bằng tiếng Việt\n";
-            $context .= "- Thân thiện, nhiệt tình và chuyên nghiệp\n";
-            $context .= "- Cung cấp thông tin chi tiết dựa trên dữ liệu khóa học\n";
-            $context .= "- Nếu học viên hỏi về nội dung chưa được cung cấp, hãy khuyến khích họ đăng ký khóa học để tìm hiểu thêm\n";
-            $context .= "- Nếu câu hỏi không liên quan đến khóa học, lịch sự chuyển hướng về chủ đề khóa học\n";
-            $context .= "- Sử dụng emoji phù hợp để câu trả lời sinh động hơn\n";
-            $context .= "- Khuyến khích học viên đăng ký nếu họ quan tâm\n";
+            $context .= "\n=== HƯỚNG DẪN ===\n";
+            $context .= "Dựa vào thông tin trên để trả lời câu hỏi của học viên.\n";
 
             return $context;
 
@@ -263,7 +251,7 @@ class GeminiChatService
                 'error' => $e->getMessage(),
             ]);
 
-            return $baseContext . "Hãy trả lời các câu hỏi về khóa học một cách chung chung và thân thiện.";
+            return "Không tìm thấy thông tin khóa học. Hãy trả lời chung về CertChain.";
         }
     }
 
@@ -272,24 +260,27 @@ class GeminiChatService
      */
     private function buildFullPrompt(string $context, string $currentMessage, array $conversationHistory): string
     {
-        $prompt = $context . "\n\n";
+        $prompt = "";
         
-        // Thêm lịch sử hội thoại (giới hạn 10 tin nhắn gần nhất để tránh context quá dài)
+        // Thêm context về khóa học/nền tảng
+        if (!empty($context)) {
+            $prompt .= "[Thông tin hệ thống]\n{$context}\n\n";
+        }
+        
+        // Thêm lịch sử hội thoại (giới hạn 6 tin nhắn gần nhất)
         if (!empty($conversationHistory)) {
-            $prompt .= "=== LỊCH SỬ HỘI THOẠI ===\n";
-            $recentHistory = array_slice($conversationHistory, -10);
+            $prompt .= "[Cuộc trò chuyện trước đó]\n";
+            $recentHistory = array_slice($conversationHistory, -6);
             
             foreach ($recentHistory as $item) {
-                $role = ($item['role'] ?? 'user') === 'user' ? 'Học viên' : 'AI';
+                $role = ($item['role'] ?? 'user') === 'user' ? 'Người dùng' : 'Cert';
                 $content = $item['content'] ?? $item['message'] ?? '';
                 $prompt .= "{$role}: {$content}\n";
             }
             $prompt .= "\n";
         }
         
-        $prompt .= "=== CÂU HỎI HIỆN TẠI ===\n";
-        $prompt .= "Học viên: {$currentMessage}\n\n";
-        $prompt .= "AI: ";
+        $prompt .= "[Tin nhắn mới]\nNgười dùng: {$currentMessage}";
         
         return $prompt;
     }
@@ -411,5 +402,63 @@ class GeminiChatService
                 'output_tokens' => 0
             ]
         ];
+    }
+
+    /**
+     * System instruction cho Gemini - định nghĩa personality và behavior
+     */
+    private function getSystemInstruction(): string
+    {
+        return <<<PROMPT
+Bạn là "Cert" - trợ lý AI thân thiện của CertChain, nền tảng học trực tuyến với chứng chỉ blockchain.
+
+## TÍNH CÁCH CỦA BẠN:
+- Thân thiện, nhiệt tình như một người bạn đồng hành học tập
+- Nói chuyện tự nhiên, không máy móc, sử dụng ngôn ngữ đời thường
+- Hay dùng emoji để tạo không khí vui vẻ 😊
+- Thi thoảng có thể đùa vui nhẹ nhàng
+- Luôn khuyến khích và động viên người học
+
+## CÁCH TRẢ LỜI:
+- Trả lời ngắn gọn, đi thẳng vào vấn đề (tối đa 3-4 câu cho câu hỏi đơn giản)
+- Chỉ trả lời dài hơn khi người dùng hỏi chi tiết
+- Sử dụng bullet points khi liệt kê nhiều thông tin
+- Tránh lặp lại thông tin đã nói
+
+## VỀ CERTCHAIN:
+CertChain là nền tảng học trực tuyến với các tính năng:
+- 📚 Khóa học đa dạng: lập trình, AI, blockchain, marketing, soft skills...
+- 🎓 Chứng chỉ blockchain: xác thực vĩnh viễn, không thể làm giả
+- 📱 Học mọi lúc mọi nơi
+- 💰 Có cả khóa miễn phí và trả phí
+- 👨‍🏫 Giảng viên chất lượng từ các công ty lớn
+
+## NGUYÊN TẮC:
+- LUÔN trả lời bằng tiếng Việt
+- Nếu không biết, thành thật nói "Mình chưa có thông tin về vấn đề này" thay vì bịa
+- Khuyến khích đăng ký học nhưng không spam quảng cáo
+- Nếu câu hỏi không liên quan đến học tập, nhẹ nhàng chuyển hướng về CertChain
+PROMPT;
+    }
+
+    /**
+     * Context chung khi không có khóa học cụ thể
+     */
+    private function getGeneralContext(): string
+    {
+        // Lấy danh sách các khóa học phổ biến
+        $popularCourses = Course::take(5)->get(['id', 'title', 'category', 'price']);
+        
+        $context = "Người dùng đang ở trang chung, chưa chọn khóa học cụ thể.\n\n";
+        
+        if ($popularCourses->count() > 0) {
+            $context .= "Một số khóa học đang có:\n";
+            foreach ($popularCourses as $course) {
+                $price = $course->price > 0 ? "\${$course->price}" : "Miễn phí";
+                $context .= "- {$course->title} ({$course->category}) - {$price}\n";
+            }
+        }
+        
+        return $context;
     }
 }
