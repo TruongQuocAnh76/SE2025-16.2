@@ -6,6 +6,7 @@ use Tests\TestCase;
 use App\Services\Storage\MinioStorageService;
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Integration tests that require a running MinIO instance.
@@ -13,7 +14,10 @@ use PHPUnit\Framework\Attributes\Test;
  * 
  * Run these tests with: php artisan test --filter StorageIntegrationTest
  * Requires: MinIO running on the configured endpoint
+ * 
+ * These tests are skipped in CI (use --exclude-group=integration)
  */
+#[Group('integration')]
 class StorageIntegrationTest extends TestCase
 {
     protected MinioStorageService $storage;
@@ -24,8 +28,8 @@ class StorageIntegrationTest extends TestCase
     {
         parent::setUp();
         
-        // Use internal endpoint for actual HTTP calls from within container
-        $this->internalEndpoint = env('STORAGE_ENDPOINT', 'http://nginx:9002');
+        // Use internal endpoint for actual HTTP calls
+        $this->internalEndpoint = env('STORAGE_ENDPOINT', 'http://localhost:9000');
         
         // Configure storage
         config([

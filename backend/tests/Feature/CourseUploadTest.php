@@ -11,7 +11,14 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\UploadedFile;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\Group;
 
+/**
+ * Feature tests for course upload functionality.
+ * Requires PostgreSQL database and MinIO storage.
+ * Skipped in CI (use --exclude-group=integration)
+ */
+#[Group('integration')]
 class CourseUploadTest extends TestCase
 {
     use RefreshDatabase;
