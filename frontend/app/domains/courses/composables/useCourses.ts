@@ -135,7 +135,6 @@ export const useCourses = () => {
       const response = await fetch(uploadUrl, {
         method: 'PUT',
         body: file,
-        headers: { 'Content-Type': file.type }
       })
       return response.ok
     } catch (error) {
@@ -231,7 +230,6 @@ export const useCourses = () => {
       const response = await fetch(uploadUrl, {
         method: 'PUT',
         body: videoFile,
-        headers: { 'Content-Type': videoFile.type }
       })
       
       if (!response.ok) {

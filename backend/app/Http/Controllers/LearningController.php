@@ -300,7 +300,8 @@ class LearningController extends Controller
                 if (!$existingCertificate) {
                     // Use the proper certificate service to create certificate with PDF
                     $certificateService = new \App\Services\CertificateService(
-                        new \App\Repositories\CertificateRepository(new \App\Models\Certificate())
+                        new \App\Repositories\CertificateRepository(new \App\Models\Certificate()),
+                        app(\App\Contracts\StorageServiceInterface::class)
                     );
                     
                     try {

@@ -1,0 +1,207 @@
+services:
+  frontend:
+    image: ghcr.io/truongquocanh76/se2025-16.2/certchain-frontend:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - BACKEND_URL=http://localhost:8000
+      - AWS_ENDPOINT=http://localhost:9000
+      - AWS_BUCKET=certchain
+    depends_on:
+      - nginx
+    networks:
+      - app_network
+    restart: always
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8000:80"
+    volumes:
+      - ./backend/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend
+    networks:
+      - app_network
+    restart: always
+
+  backend:
+    image: ghcr.io/truongquocanh76/se2025-16.2/certchain-backend:latest
+    # Run PHP-FPM instead of artisan serve
+    command: php-fpm
+    environment:
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minioadmin}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ENDPOINT=http://minio:9000
+      - FRONTEND_AWS_ENDPOINT=http://localhost:9000
+      - AWS_USE_PATH_STYLE_ENDPOINT=true
+      - AWS_BUCKET=certchain
+      - QUEUE_CONNECTION=redis
+      - QUEUE_FAILED_DRIVER=redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - BLOCKCHAIN_SERVICE_URL=http://blockchain:3001
+      - MAIL_MAILER=smtp
+      - MAIL_HOST=mailpit
+      - MAIL_PORT=1025
+    depends_on:
+      - db
+      - redis
+      - minio
+      - rabbitmq
+    networks:
+      - app_network
+    restart: always
+
+  queue-worker:
+    image: ghcr.io/truongquocanh76/se2025-16.2/certchain-backend:latest
+    environment:
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minioadmin}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ENDPOINT=http://minio:9000
+      - FRONTEND_AWS_ENDPOINT=http://localhost:9000
+      - AWS_USE_PATH_STYLE_ENDPOINT=true
+      - AWS_BUCKET=certchain
+      - QUEUE_CONNECTION=redis
+      - QUEUE_FAILED_DRIVER=redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - BLOCKCHAIN_SERVICE_URL=http://blockchain:3001
+      - MAIL_MAILER=smtp
+      - MAIL_HOST=mailpit
+      - MAIL_PORT=1025
+    command: php artisan queue:work redis --tries=3 --timeout=3600 --sleep=3
+    depends_on:
+      - backend
+      - redis
+      - blockchain
+    networks:
+      - app_network
+    restart: always
+
+  blockchain:
+    image: ghcr.io/truongquocanh76/se2025-16.2/certchain-blockchain:latest
+    ports:
+      - "3001:3001"
+      - "8545:8545"
+    volumes:
+      - blockchain_data:/app/blockchain-data
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - BLOCKCHAIN_NETWORK=localhost
+      - HARDHAT_RPC_URL=http://127.0.0.1:8545
+      - POLYGON_RPC_URL=https://polygon-rpc.com
+      - POLYGON_MUMBAI_RPC_URL=https://rpc-mumbai.maticvigil.com
+      - PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+      - CERTIFICATE_CONTRACT_ADDRESS_HARDHAT=0x5FbDB2315678afecb367f032d93F642f64180aa3
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000
+      - LOG_LEVEL=debug
+    networks:
+      - app_network
+    restart: always
+
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=certchain
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app_network
+    restart: always
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - app_network
+    restart: always
+
+  rabbitmq-worker:
+    image: ghcr.io/truongquocanh76/se2025-16.2/certchain-backend:latest
+    command: >
+      sh -c "
+        echo 'Waiting for RabbitMQ to be ready...' &&
+        sleep 10 &&
+        php artisan rabbitmq:consume-reset-email
+      "
+    depends_on:
+      - backend
+      - rabbitmq
+    networks:
+      - app_network
+    restart: always
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - app_network
+    restart: always
+
+  minio-init:
+    image: minio/mc:latest
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - AWS_BUCKET=certchain
+    depends_on:
+      - minio
+    volumes:
+      - ./init-minio.sh:/scripts/init-minio.sh
+    entrypoint: ["/bin/sh", "/scripts/init-minio.sh"]
+    networks:
+      - app_network
+    restart: "no"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - app_network
+    restart: always
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  blockchain_data:
+  minio_data:
+
+networks:
+  app_network:
+    driver: bridge

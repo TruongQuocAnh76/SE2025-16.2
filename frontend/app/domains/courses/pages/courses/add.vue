@@ -1283,7 +1283,7 @@ const handleSubmit = async () => {
                   uploadInfo.upload_url,
                   lesson.video_file,
                   uploadInfo.original_video_path,
-                  uploadInfo.original_video_path.replace('.mp4', '')
+                  uploadInfo.hls_base_path
                 )
                 if (uploadSuccess) {
                   uploadedCount++

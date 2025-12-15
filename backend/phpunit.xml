@@ -31,12 +31,19 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
-        <env name="AWS_ACCESS_KEY_ID" value="test"/>
-        <env name="AWS_SECRET_ACCESS_KEY" value="test"/>
+        <env name="AWS_ACCESS_KEY_ID" value="minioadmin"/>
+        <env name="AWS_SECRET_ACCESS_KEY" value="minioadmin"/>
         <env name="AWS_DEFAULT_REGION" value="us-east-1"/>
-        <env name="AWS_BUCKET" value="certchain-test"/>
-        <env name="AWS_ENDPOINT" value="http://localhost:4566"/>
+        <env name="AWS_BUCKET" value="certchain-dev"/>
+        <env name="AWS_ENDPOINT" value="http://nginx:9002"/>
         <env name="AWS_USE_PATH_STYLE_ENDPOINT" value="true"/>
+        <env name="STORAGE_ACCESS_KEY" value="minioadmin"/>
+        <env name="STORAGE_SECRET_KEY" value="minioadmin"/>
+        <env name="STORAGE_REGION" value="us-east-1"/>
+        <env name="STORAGE_BUCKET" value="certchain-dev"/>
+        <env name="STORAGE_ENDPOINT" value="http://nginx:9002"/>
+        <env name="FRONTEND_STORAGE_ENDPOINT" value="http://localhost:9002"/>
+        <env name="STORAGE_USE_PATH_STYLE_ENDPOINT" value="true"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

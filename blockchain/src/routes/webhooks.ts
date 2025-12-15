@@ -5,14 +5,19 @@ import { BlockchainService } from '../services/BlockchainService.js';
 const router = Router();
 
 // Initialize services and controllers
-let transactionController: TransactionController;
+let transactionController: TransactionController | null = null;
 
-try {
-  const blockchainService = new BlockchainService();
-  transactionController = new TransactionController(blockchainService);
-} catch (error) {
-  console.error('Failed to initialize blockchain service for webhooks:', error);
-  throw error;
+function getTransactionController(): TransactionController {
+  if (!transactionController) {
+    try {
+      const blockchainService = new BlockchainService();
+      transactionController = new TransactionController(blockchainService);
+    } catch (error) {
+      console.error('Failed to initialize blockchain service for webhooks:', error);
+      throw error;
+    }
+  }
+  return transactionController;
 }
 
 /**
@@ -20,6 +25,6 @@ try {
  */
 
 // POST /v1/webhook/tc - Transaction confirmation webhook/callback
-router.post('/tc', (req, res) => transactionController.transactionConfirmationWebhook(req, res));
+router.post('/tc', (req, res) => getTransactionController().transactionConfirmationWebhook(req, res));
 
 export default router;

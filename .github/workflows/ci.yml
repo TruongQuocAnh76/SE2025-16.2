@@ -13,6 +13,36 @@ jobs:
       run:
         working-directory: ./backend
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: certchain_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      minio:
+        image: bitnami/minio:latest
+        ports:
+          - 9000:9000
+          - 9001:9001
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+          MINIO_DEFAULT_BUCKETS: certchain-dev:public
+        options: >-
+          --health-cmd "curl -f http://localhost:9000/minio/health/live || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
     - uses: actions/checkout@v4
 
@@ -20,7 +50,7 @@ jobs:
       uses: shivammathur/setup-php@v2
       with:
         php-version: '8.2'
-        extensions: mbstring, xml, bcmath, curl
+        extensions: mbstring, xml, bcmath, curl, pdo_pgsql, pgsql
         coverage: none
 
     - name: Copy .env
@@ -35,15 +65,31 @@ jobs:
     - name: Directory Permissions
       run: chmod -R 777 storage bootstrap/cache
 
-    - name: Create Database
-      run: |
-        mkdir -p database
-        touch database/database.sqlite
+    - name: Run Migrations
+      env:
+        DB_CONNECTION: pgsql
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_DATABASE: certchain_test
+        DB_USERNAME: postgres
+        DB_PASSWORD: password
+      run: php artisan migrate --force
 
     - name: Execute Tests
       env:
-        DB_CONNECTION: sqlite
-        DB_DATABASE: database/database.sqlite
+        DB_CONNECTION: pgsql
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_DATABASE: certchain_test
+        DB_USERNAME: postgres
+        DB_PASSWORD: password
+        STORAGE_ENDPOINT: http://localhost:9000
+        FRONTEND_STORAGE_ENDPOINT: http://localhost:9000
+        STORAGE_ACCESS_KEY: minioadmin
+        STORAGE_SECRET_KEY: minioadmin
+        STORAGE_BUCKET: certchain-dev
+        STORAGE_REGION: us-east-1
+        STORAGE_USE_PATH_STYLE_ENDPOINT: true
       run: php artisan test
 
   frontend-build:
