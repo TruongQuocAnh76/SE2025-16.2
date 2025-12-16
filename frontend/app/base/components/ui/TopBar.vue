@@ -79,7 +79,7 @@
               >
                 <div class="w-8 h-8 rounded-full overflow-hidden bg-white/20 flex items-center justify-center">
                   <img
-                    src="/placeholder-avatar.png"
+                    src="/default-profile.png"
                     :alt="user?.username"
                     class="w-full h-full object-cover"
                   />
