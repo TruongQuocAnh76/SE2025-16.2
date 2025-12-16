@@ -347,5 +347,10 @@ watch(mode, () => {
 </script>
 
 <style scoped>
-/* Additional styles if needed */
+/* Hide Edge's built-in password reveal/clear icons */
+:deep(input[type="password"]::-ms-reveal),
+:deep(input[type="password"]::-ms-clear),
+:deep(input[type="text"]::-ms-clear) {
+  display: none;
+}
 </style>
