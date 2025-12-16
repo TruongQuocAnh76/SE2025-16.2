@@ -91,9 +91,29 @@ const username = route.params.username as string
 
 const { currentUser } = useUserStats()
 
+
+function getDisplayName(user: any, fallback: string) {
+  if (!user) {
+    // Nếu fallback là email, cắt phần sau @
+    if (fallback && fallback.includes('@')) {
+      return fallback.split('@')[0]
+    }
+    return fallback
+  }
+  if (user.username && !user.username.includes('@')) return user.username
+  if (user.first_name || user.last_name) return `${user.first_name || ''} ${user.last_name || ''}`.trim()
+  if (user.email && typeof user.email === 'string') return user.email.split('@')[0]
+  if (user.username && user.username.includes('@')) return user.username.split('@')[0]
+  // Nếu fallback là email, cắt phần sau @
+  if (fallback && fallback.includes('@')) {
+    return fallback.split('@')[0]
+  }
+  return fallback
+}
+
 const displayName = computed(() => {
   const user = currentUser.value
-  return user ? `${user.first_name} ${user.last_name}` : username
+  return getDisplayName(user, username)
 })
 
 // Reactive state
