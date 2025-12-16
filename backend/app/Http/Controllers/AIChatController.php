@@ -2,21 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\GeminiChatService;
+use App\Services\AIChatService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 
 class AIChatController extends Controller
 {
-    private GeminiChatService $geminiChatService;
+    private AIChatService $aiChatService;
 
-    public function __construct(GeminiChatService $geminiChatService)
+    public function __construct(AIChatService $aiChatService)
     {
-        $this->geminiChatService = $geminiChatService;
+        $this->aiChatService = $aiChatService;
     }
 
     /**
-     * Chat với Gemini AI
+     * Chat với AI
      * 
      * @param Request $request
      * @return JsonResponse
@@ -28,12 +29,12 @@ class AIChatController extends Controller
             $body = $request->getContent();
             $data = !empty($body) ? json_decode($body, true) : [];
             
-            \Illuminate\Support\Facades\Log::info('AI Chat Request', [
+            Log::info('AI Chat Request', [
                 'body_length' => strlen($body),
                 'parsed_data' => $data,
             ]);
             
-            // Manual validation instead of using request->validate()
+            // Manual validation
             if (empty($data) || !isset($data['message']) || empty($data['message'])) {
                 return response()->json([
                     'success' => false,
@@ -50,34 +51,28 @@ class AIChatController extends Controller
                 ], 422);
             }
 
-            $validated = [
-                'message' => $data['message'],
-                'course_id' => isset($data['course_id']) ? (int)$data['course_id'] : null,
-                'conversation_history' => $data['conversation_history'] ?? []
-            ];
-
-            $result = $this->geminiChatService->chat(
-                $validated['message'],
-                $validated['course_id'],
-                $validated['conversation_history']
+            $result = $this->aiChatService->chat(
+                $data['message'],
+                isset($data['course_id']) ? (int)$data['course_id'] : null,
+                $data['conversation_history'] ?? []
             );
 
             return response()->json($result);
+
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('AI Chat Controller Error', [
+            Log::error('AI Chat Controller Error', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            // Check if it's a quota error
             $statusCode = 500;
             $message = 'Xin lỗi, tôi không thể trả lời câu hỏi này lúc này. Vui lòng thử lại sau.';
             
-            if (strpos($e->getMessage(), 'quota') !== false || 
-                strpos($e->getMessage(), 'RESOURCE_EXHAUSTED') !== false ||
-                strpos($e->getMessage(), '429') !== false) {
+            if (str_contains($e->getMessage(), 'quota') || 
+                str_contains($e->getMessage(), 'RESOURCE_EXHAUSTED') ||
+                str_contains($e->getMessage(), '429')) {
                 $statusCode = 429;
-                $message = 'Dịch vụ AI đạt giới hạn sử dụng. Vui lòng thử lại trong vài giây.';
+                $message = 'Dịch vụ AI đạt giới hạn sử dụng. Vui lòng thử lại sau.';
             }
 
             return response()->json([
@@ -90,27 +85,20 @@ class AIChatController extends Controller
 
     /**
      * Lấy câu hỏi gợi ý
-     * 
-     * @param Request $request
-     * @return JsonResponse
      */
     public function suggestedQuestions(Request $request): JsonResponse
     {
         try {
             $courseId = $request->query('course_id');
             
-            $questions = $this->geminiChatService->getSuggestedQuestions(
+            $questions = $this->aiChatService->getSuggestedQuestions(
                 $courseId ? (int)$courseId : null
             );
 
-            return response()->json([
-                'questions' => $questions
-            ]);
+            return response()->json(['questions' => $questions]);
+
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Suggested Questions Error', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
+            Log::error('Suggested Questions Error', ['message' => $e->getMessage()]);
 
             return response()->json([
                 'questions' => [],
@@ -120,32 +108,43 @@ class AIChatController extends Controller
     }
 
     /**
-     * Kiểm tra trạng thái API
-     * 
-     * @return JsonResponse
+     * Kiểm tra trạng thái AI service
      */
     public function status(): JsonResponse
     {
         try {
-            $isValid = $this->geminiChatService->validateApiKey();
+            $provider = $this->aiChatService->getProvider();
+            $isAvailable = $provider->isAvailable();
+            $isValid = $isAvailable && $provider->validateApiKey();
 
             return response()->json([
                 'status' => $isValid ? 'active' : 'inactive',
+                'provider' => $provider->getName(),
+                'model' => $provider->getModel(),
                 'message' => $isValid 
-                    ? 'Gemini AI is ready' 
-                    : 'Gemini API key is invalid or service is unavailable'
+                    ? 'AI service is ready' 
+                    : 'AI service is unavailable or API key is invalid',
             ]);
+
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Status Check Error', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
+            Log::error('Status Check Error', ['message' => $e->getMessage()]);
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error checking Gemini API status',
+                'message' => 'Error checking AI service status',
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Lấy danh sách providers có sẵn
+     */
+    public function providers(): JsonResponse
+    {
+        return response()->json([
+            'providers' => \App\LLM\LLMProviderFactory::getAvailableProviders(),
+            'current' => $this->aiChatService->getProvider()->getName(),
+        ]);
     }
 }

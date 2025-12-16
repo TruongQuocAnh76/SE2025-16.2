@@ -501,20 +501,14 @@ const isTeacher = computed(() => {
   const userDataCookie = useCookie('user_data')
   const authTokenCookie = useCookie('auth_token')
   
-  console.log('=== DEBUG COOKIES ===')
-  console.log('userCookie.value:', userCookie.value)
-  console.log('userDataCookie.value:', userDataCookie.value)
-  console.log('authTokenCookie.value:', authTokenCookie.value)
-  
   let user = null
   
   // Try user_data cookie first
   if (userDataCookie.value) {
     try {
       user = typeof userDataCookie.value === 'string' ? JSON.parse(userDataCookie.value) : userDataCookie.value
-      console.log('Parsed from user_data cookie:', user)
     } catch (e) {
-      console.error('Failed to parse user_data cookie:', e)
+      // Failed to parse user_data cookie
     }
   }
   
@@ -522,13 +516,10 @@ const isTeacher = computed(() => {
   if (!user && userCookie.value) {
     try {
       user = typeof userCookie.value === 'string' ? JSON.parse(userCookie.value) : userCookie.value
-      console.log('Parsed from user cookie:', user)
     } catch (e) {
-      console.error('Failed to parse user cookie:', e)
+      // Failed to parse user cookie
     }
   }
-  
-  console.log('isTeacher check:', { user, courseTeacherId: course.value?.teacher_id, isAdmin: user?.role === 'ADMIN' })
   
   if (!course.value || !user) return false
   // Admin can edit any course, or teacher can edit their own course

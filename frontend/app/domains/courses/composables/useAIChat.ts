@@ -1,21 +1,5 @@
 import type { Ref } from 'vue'
-
-export interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: Date
-}
-
-export interface AIChatResponse {
-  success: boolean
-  message: string
-  usage?: any
-  error?: string
-}
-
-export interface SuggestedQuestionsResponse {
-  questions: string[]
-}
+import type { ChatMessage, AIChatResponse, SuggestedQuestionsResponse, AIStatusResponse } from '../types/aiChat'
 
 export const useAIChat = () => {
   const config = useRuntimeConfig()
@@ -142,7 +126,7 @@ export const useAIChat = () => {
    */
   const checkStatus = async (): Promise<boolean> => {
     try {
-      const response = await $fetch<{ status: string; message: string }>(
+      const response = await $fetch<AIStatusResponse>(
         '/api/ai/status',
         {
           baseURL: config.public.backendUrl as string,
