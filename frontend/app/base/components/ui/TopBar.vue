@@ -84,7 +84,7 @@
                     class="w-full h-full object-cover"
                   />
                 </div>
-                <span class="text-sm font-medium">{{ user?.username || 'User' }}</span>
+                <span class="text-sm font-medium">{{ displayName }}</span>
                 <svg
                   class="w-4 h-4 transition-transform duration-200"
                   :class="{ 'rotate-180': isDropdownOpen }"
@@ -270,6 +270,26 @@ const userInitials = computed(() => {
     return user.value.username.split(' ').map(n => n[0]).join('').toUpperCase()
   }
   return ''
+})
+
+// Computed property để lấy tên hiển thị
+const displayName = computed(() => {
+  if (!user.value) return 'User'
+  const u = user.value
+  
+  // Nếu username không phải email, dùng luôn
+  if (u.username && !u.username.includes('@')) return u.username
+  
+  // Ưu tiên tên đầy đủ
+  if (u.first_name || u.last_name) return `${u.first_name || ''} ${u.last_name || ''}`.trim()
+  
+  // Nếu có email, cắt phần trước @
+  if (u.email && typeof u.email === 'string') return u.email.split('@')[0]
+  
+  // Nếu username là email, cắt phần trước @
+  if (u.username && u.username.includes('@')) return u.username.split('@')[0]
+  
+  return 'User'
 })
 
 const handleLogout = async () => {
