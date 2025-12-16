@@ -13,6 +13,7 @@ use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\SystemController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\TeacherApplicationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -163,6 +164,18 @@ Route::middleware('auth:sanctum')->prefix('certificates')->group(function () {
     Route::get('/{certificateId}', [CertificateController::class, 'show']); // Get cert details
     Route::post('/{certificateId}/revoke', [CertificateController::class, 'revoke']); // Revoke (Teacher/Admin)
     Route::post('/{certificateId}/attach-blockchain', [CertificateController::class, 'attachBlockchainData']); // Attach blockchain
+});
+
+/* ========================
+ * TEACHER APPLICATIONS
+ * ======================== */
+Route::middleware('auth:sanctum')->prefix('teacher-applications')->group(function () {
+    Route::post('/submit', [TeacherApplicationController::class, 'submit']); // Submit application
+    Route::get('/my-applications', [TeacherApplicationController::class, 'myApplications']); // Get my applications
+    Route::get('/', [TeacherApplicationController::class, 'index']); // Get all applications (Admin)
+    Route::get('/{id}', [TeacherApplicationController::class, 'show']); // Get application details
+    Route::post('/{id}/approve', [TeacherApplicationController::class, 'approve']); // Approve (Admin)
+    Route::post('/{id}/reject', [TeacherApplicationController::class, 'reject']); // Reject (Admin)
 });
 
 // Public certificate verification routes (no auth required)
