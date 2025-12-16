@@ -4,7 +4,7 @@
       <div class="flex justify-between items-center h-16">
         <!-- Left: Logo -->
         <div class="flex-shrink-0">
-          <NuxtLink :to="user?.username ? `/s/${user.username}` : '/'" class="flex items-center">
+          <NuxtLink to="/" class="flex items-center">
             <img src="/logo2.svg" alt="" class="h-8 w-auto" />
           </NuxtLink>
         </div>
@@ -12,14 +12,14 @@
         <!-- Middle: Navigation -->
         <nav class="hidden lg:flex lg:absolute lg:left-1/2 lg:transform lg:-translate-x-1/2 space-x-10">
           <NuxtLink
-            :to="user?.username ? `/s/${user.username}` : '/'"
+            to="/"
             class="text-white hover:text-accent-star px-4 py-2 text-sm font-medium transition-colors duration-200 relative group whitespace-nowrap cursor-pointer"
-            :class="{ 'text-accent-star': $route.path === (user?.username ? `/s/${user.username}` : '/') }"
+            :class="{ 'text-accent-star': $route.path === '/' }"
           >
             Home
             <span
               class="absolute bottom-0 left-0 w-full h-0.5 bg-accent-star transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"
-              :class="{ 'scale-x-100': $route.path === (user?.username ? `/s/${user.username}` : '/') }"
+              :class="{ 'scale-x-100': $route.path === '/' }"
             ></span>
           </NuxtLink>
           <NuxtLink
@@ -84,7 +84,6 @@
                     class="w-full h-full object-cover"
                   />
                 </div>
-                <!-- wtf -->
                 <span class="text-sm font-medium">{{ user?.username || 'User' }}</span>
                 <svg
                   class="w-4 h-4 transition-transform duration-200"
@@ -101,14 +100,18 @@
                 class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
               >
                 <div class="py-1">
-                  <div class="px-4 py-2 text-sm text-gray-700 border-b border-gray-100">
-                    {{ user?.username }}
-                  </div>
+                  <NuxtLink
+                    :to="`/s/${user?.username}`"
+                    @click="isDropdownOpen = false"
+                    class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                  >
+                    <i class="fas fa-user-circle mr-2"></i>My Dashboard
+                  </NuxtLink>
                   <button
                     @click="handleLogout"
                     class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
                   >
-                    Logout
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
                   </button>
                 </div>
               </div>
@@ -169,9 +172,9 @@
       >
         <div class="px-2 pt-2 pb-3 space-y-1">
           <NuxtLink
-            :to="user?.username ? `/s/${user.username}` : '/'"
+            to="/"
             class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md"
-            :class="{ 'text-accent-star bg-accent-star/10': $route.path === (user?.username ? `/s/${user.username}` : '/') }"
+            :class="{ 'text-accent-star bg-accent-star/10': $route.path === '/' }"
             @click="isMobileMenuOpen = false"
           >
             Home
@@ -213,6 +216,13 @@
               <div class="px-3 py-2 text-base font-medium text-text-dark">
                 {{ user?.username }}
               </div>
+              <NuxtLink
+                :to="`/s/${user?.username}`"
+                @click="isMobileMenuOpen = false"
+                class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md mb-2"
+              >
+                <i class="fas fa-user-circle mr-2"></i>My Dashboard
+              </NuxtLink>
               <Button
                 size="sm"
                 @click="handleLogout"
