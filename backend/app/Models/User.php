@@ -16,10 +16,14 @@ class User extends Authenticatable
     protected $fillable = [
         'id', 'first_name', 'last_name', 'email', 'username', 'password',
         'auth_provider', 'role', 'bio', 'avatar', 'is_active',
-        'google_id', 'facebook_id'
+        'google_id', 'facebook_id', 'membership_tier', 'membership_expires_at'
     ];
 
     protected $hidden = ['password', 'remember_token'];
+    
+    protected $casts = [
+        'membership_expires_at' => 'datetime',
+    ];
 
     public $incrementing = false;
     protected $keyType = 'string';
@@ -43,6 +47,21 @@ class User extends Authenticatable
 
     public function hasRole($role) {
         return $this->role === $role;
+    }
+    
+    /**
+     * Check if user has Premium membership
+     */
+    public function isPremium(): bool {
+        return $this->membership_tier === 'PREMIUM' 
+            && ($this->membership_expires_at === null || $this->membership_expires_at->isFuture());
+    }
+    
+    /**
+     * Check if user can enroll in courses for free (Premium members)
+     */
+    public function canEnrollForFree(): bool {
+        return $this->isPremium();
     }
 }
 

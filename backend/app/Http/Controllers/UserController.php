@@ -274,8 +274,14 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
-        // First test basic query without relationships
+        // Get enrollments with course information
         $enrollments = Enrollment::where('student_id', $id)
+            ->with(['course' => function($query) {
+                $query->select('id', 'title', 'description', 'thumbnail', 'price', 'level', 'duration')
+                      ->with(['teacher' => function($q) {
+                          $q->select('id', 'first_name', 'last_name', 'email');
+                      }]);
+            }])
             ->orderByDesc('created_at')
             ->get();
 
@@ -318,5 +324,41 @@ class UserController extends Controller
         $count = QuizAttempt::where('student_id', $id)->count();
 
         return response()->json(['count' => $count]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/users/membership-status",
+     *     summary="Get current user's membership status",
+     *     tags={"Users"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Membership status retrieved",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="isPremium", type="boolean"),
+     *             @OA\Property(property="membershipTier", type="string"),
+     *             @OA\Property(property="expiresAt", type="string", format="date-time"),
+     *             @OA\Property(property="daysRemaining", type="integer")
+     *         )
+     *     )
+     * )
+     */
+    public function getMembershipStatus()
+    {
+        $user = Auth::user();
+        
+        $daysRemaining = null;
+        if ($user->membership_expires_at) {
+            $expiryDate = \Carbon\Carbon::parse($user->membership_expires_at);
+            $daysRemaining = max(0, $expiryDate->diffInDays(now(), false) * -1);
+        }
+
+        return response()->json([
+            'isPremium' => $user->isPremium(),
+            'membershipTier' => $user->membership_tier,
+            'expiresAt' => $user->membership_expires_at,
+            'daysRemaining' => $daysRemaining
+        ]);
     }
 }

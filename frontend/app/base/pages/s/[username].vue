@@ -30,17 +30,65 @@
 
     <div class="grid grid-cols-7 gap-6 mt-8">
       <div class="col-span-5 bg-white p-6 rounded-lg shadow-lg">
-        <h3 class="text-xl font-semibold mb-4">Recent Enrollment Course</h3>
+        <h3 class="text-xl font-semibold mb-4">Enrolled Courses</h3>
         <div class="space-y-6">
-          <RecentCourseCard
-            v-for="course in coursesProgress.slice(0, 5)"
-            :key="course.course_id"
-            :thumbnail="'/placeholder-course.jpg'"
-            :name="course.course_title"
-            :author="'Instructor'"
-            :rating="4.5"
-            :studentsCount="100"
-          />
+          <template v-if="enrolledCourses.length > 0">
+            <NuxtLink 
+              v-for="enrollment in enrolledCourses.slice(0, 5)"
+              :key="enrollment.id"
+              :to="`/courses/${enrollment.course?.id}`"
+              class="block"
+            >
+              <div class="flex gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                <img 
+                  :src="enrollment.course?.thumbnail || '/placeholder-course.jpg'" 
+                  :alt="enrollment.course?.title"
+                  class="w-32 h-20 object-cover rounded"
+                />
+                <div class="flex-1">
+                  <h4 class="font-semibold text-lg text-gray-800 mb-1">{{ enrollment.course?.title }}</h4>
+                  <p class="text-sm text-gray-600 line-clamp-2 mb-2">{{ enrollment.course?.description }}</p>
+                  <div class="flex items-center gap-4 text-sm text-gray-500">
+                    <span class="flex items-center gap-1">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                      </svg>
+                      {{ enrollment.course?.teacher?.first_name }} {{ enrollment.course?.teacher?.last_name }}
+                    </span>
+                    <span class="flex items-center gap-1">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      {{ enrollment.course?.duration || 'N/A' }} hours
+                    </span>
+                    <span class="px-2 py-1 text-xs rounded" :class="{
+                      'bg-green-100 text-green-800': enrollment.status === 'ACTIVE',
+                      'bg-blue-100 text-blue-800': enrollment.status === 'COMPLETED',
+                      'bg-gray-100 text-gray-800': enrollment.status === 'EXPIRED'
+                    }">
+                      {{ enrollment.status }}
+                    </span>
+                  </div>
+                </div>
+                <div class="flex flex-col justify-center items-end">
+                  <div class="text-sm text-gray-500 mb-2">Progress</div>
+                  <div class="text-2xl font-bold text-brand-primary">{{ enrollment.progress || 0 }}%</div>
+                </div>
+              </div>
+            </NuxtLink>
+          </template>
+          <template v-else>
+            <div class="text-center py-12 text-gray-500">
+              <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+              </svg>
+              <p class="text-lg font-medium mb-2">No enrolled courses yet</p>
+              <p class="text-sm text-gray-400 mb-4">Start learning by enrolling in courses</p>
+              <NuxtLink to="/courses" class="inline-block px-6 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-secondary transition">
+                Browse Courses
+              </NuxtLink>
+            </div>
+          </template>
         </div>
       </div>
       <div class="col-span-2 bg-white p-6 rounded-lg shadow-lg">
@@ -131,6 +179,7 @@ const continueLearningCourses = ref<Array<{
 }>>([])
 
 const coursesProgress = ref<Array<any>>([])
+const enrolledCourses = ref<Array<any>>([])
 
 const recentCertificates = ref<Array<{
   id: string
@@ -183,7 +232,8 @@ onMounted(async () => {
     getContinueLearningCourses,
     getRecentCertificates,
     getQuizAttemptsCount,
-    getCoursesProgress
+    getCoursesProgress,
+    getUserEnrollments
   } = useUserStats()
 
   // Fetch current user and set it
@@ -244,6 +294,14 @@ onMounted(async () => {
     coursesProgress.value = await getCoursesProgress()
   } catch (error) {
     console.error('Failed to load courses progress:', error)
+  }
+
+  // Fetch enrolled courses
+  try {
+    enrolledCourses.value = await getUserEnrollments()
+    console.log('Enrolled courses:', enrolledCourses.value)
+  } catch (error) {
+    console.error('Failed to load enrolled courses:', error)
   }
 
   // Fetch continue learning courses
