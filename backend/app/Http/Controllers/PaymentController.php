@@ -40,6 +40,10 @@ class PaymentController extends Controller
      */
     public function createPayment(Request $request)
     {
+        // Debug log
+        Log::info('Payment request headers:', $request->headers->all());
+        Log::info('Authorization header:', ['auth' => $request->header('Authorization')]);
+        
         $request->validate([
             'payment_type' => 'required|in:COURSE,MEMBERSHIP',
             'course_id' => 'required_if:payment_type,COURSE|uuid|exists:courses,id',

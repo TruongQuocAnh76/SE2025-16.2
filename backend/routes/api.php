@@ -12,6 +12,7 @@ use App\Http\Controllers\QuizController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\SystemController;
+use App\Http\Controllers\PaymentController;
 
 /*
 |--------------------------------------------------------------------------
