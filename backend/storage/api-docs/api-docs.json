@@ -711,6 +711,29 @@
                 ]
             }
         },
+        "/api/_preview/certificates": {
+            "get": {
+                "tags": [
+                    "Certificates"
+                ],
+                "summary": "Preview certificate template with dummy data",
+                "description": "Generate and display a sample certificate PDF for preview purposes",
+                "operationId": "previewCertificate",
+                "responses": {
+                    "200": {
+                        "description": "Certificate PDF preview",
+                        "content": {
+                            "application/pdf": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/certificates/{certificateId}/attach-blockchain": {
             "post": {
                 "tags": [
@@ -830,7 +853,8 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "certificate_number"
+                                    "certificate_number",
+                                    "pdf_hash"
                                 ],
                                 "properties": {
                                     "certificate_number": {
@@ -838,7 +862,7 @@
                                         "example": "CERT-WEB-2024-001"
                                     },
                                     "pdf_hash": {
-                                        "description": "Optional PDF hash for additional verification",
+                                        "description": "SHA-256 hash of the PDF certificate for verification",
                                         "type": "string",
                                         "example": "sha256hashofpdf"
                                     }
@@ -1053,6 +1077,14 @@
                                 "intermediate",
                                 "advanced"
                             ]
+                        }
+                    },
+                    {
+                        "name": "keyword",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 ],
@@ -2281,6 +2313,222 @@
                 "security": [
                     {
                         "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/lessons/{lessonId}": {
+            "get": {
+                "tags": [
+                    "Lessons"
+                ],
+                "summary": "Get lesson details",
+                "description": "Get detailed information about a specific lesson",
+                "operationId": "75eeba0f8342910724b7cd7b7703fcbd",
+                "parameters": [
+                    {
+                        "name": "lessonId",
+                        "in": "path",
+                        "description": "Lesson ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lesson details retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Lesson retrieved successfully"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Lesson not found"
+                    },
+                    "403": {
+                        "description": "Access denied - enrollment required"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/modules/{moduleId}/lessons": {
+            "get": {
+                "tags": [
+                    "Lessons"
+                ],
+                "summary": "Get lessons by module",
+                "description": "Get all lessons in a specific module",
+                "operationId": "af24608b6aa07a1cf03681625d5e6c3d",
+                "parameters": [
+                    {
+                        "name": "moduleId",
+                        "in": "path",
+                        "description": "Module ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lessons retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Lessons retrieved successfully"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Module not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/learning/lesson/{lessonId}/progress": {
+            "get": {
+                "tags": [
+                    "Learning Progress"
+                ],
+                "summary": "Get lesson progress",
+                "description": "Get progress information for a specific lesson",
+                "operationId": "86f7c0d54616c185fe2008dc8b6a710a",
+                "parameters": [
+                    {
+                        "name": "lessonId",
+                        "in": "path",
+                        "description": "Lesson ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Progress retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Progress retrieved successfully"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Lesson not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/courses/{courseId}/enrollment/check": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Check course enrollment",
+                "description": "Check if user is enrolled in a course",
+                "operationId": "91ffdfd8ef1edb160874921a2d5fd1b7",
+                "parameters": [
+                    {
+                        "name": "courseId",
+                        "in": "path",
+                        "description": "Course ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Enrollment status retrieved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "enrolled": {
+                                            "type": "boolean"
+                                        },
+                                        "enrollment_date": {
+                                            "type": "string",
+                                            "format": "date-time",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
                     }
                 ]
             }
@@ -3653,6 +3901,562 @@
                 ]
             }
         },
+        "/api/teacher-applications/submit": {
+            "post": {
+                "tags": [
+                    "Teacher Applications"
+                ],
+                "summary": "Submit a teacher application",
+                "description": "Submit an application to become a teacher by providing certification details",
+                "operationId": "submitTeacherApplication",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "certificate_title",
+                                    "issuer",
+                                    "issue_date"
+                                ],
+                                "properties": {
+                                    "certificate_title": {
+                                        "type": "string",
+                                        "example": "Master of Computer Science"
+                                    },
+                                    "issuer": {
+                                        "type": "string",
+                                        "example": "Stanford University"
+                                    },
+                                    "issue_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2023-05-15"
+                                    },
+                                    "expiry_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2028-05-15",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Application submitted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Application submitted successfully"
+                                        },
+                                        "application": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error or pending application exists"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/teacher-applications/my-applications": {
+            "get": {
+                "tags": [
+                    "Teacher Applications"
+                ],
+                "summary": "Get my teacher applications",
+                "description": "Retrieve all applications submitted by the authenticated user",
+                "operationId": "getMyApplications",
+                "responses": {
+                    "200": {
+                        "description": "List of user's applications",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "user_id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "status": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "PENDING",
+                                                    "APPROVED",
+                                                    "REJECTED"
+                                                ]
+                                            },
+                                            "certificate_title": {
+                                                "type": "string"
+                                            },
+                                            "issuer": {
+                                                "type": "string"
+                                            },
+                                            "issue_date": {
+                                                "type": "string",
+                                                "format": "date"
+                                            },
+                                            "expiry_date": {
+                                                "type": "string",
+                                                "format": "date",
+                                                "nullable": true
+                                            },
+                                            "reviewed_by": {
+                                                "type": "string",
+                                                "format": "uuid",
+                                                "nullable": true
+                                            },
+                                            "reviewed_at": {
+                                                "type": "string",
+                                                "format": "date-time",
+                                                "nullable": true
+                                            },
+                                            "rejection_reason": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "created_at": {
+                                                "type": "string",
+                                                "format": "date-time"
+                                            },
+                                            "updated_at": {
+                                                "type": "string",
+                                                "format": "date-time"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/teacher-applications": {
+            "get": {
+                "tags": [
+                    "Teacher Applications"
+                ],
+                "summary": "Get all teacher applications",
+                "description": "Retrieve all teacher applications (admin only)",
+                "operationId": "getAllApplications",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by status",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "PENDING",
+                                "APPROVED",
+                                "REJECTED"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of applications",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "user_id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "status": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "PENDING",
+                                                    "APPROVED",
+                                                    "REJECTED"
+                                                ]
+                                            },
+                                            "certificate_title": {
+                                                "type": "string"
+                                            },
+                                            "issuer": {
+                                                "type": "string"
+                                            },
+                                            "issue_date": {
+                                                "type": "string",
+                                                "format": "date"
+                                            },
+                                            "expiry_date": {
+                                                "type": "string",
+                                                "format": "date",
+                                                "nullable": true
+                                            },
+                                            "reviewed_by": {
+                                                "type": "string",
+                                                "format": "uuid",
+                                                "nullable": true
+                                            },
+                                            "reviewed_at": {
+                                                "type": "string",
+                                                "format": "date-time",
+                                                "nullable": true
+                                            },
+                                            "rejection_reason": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "created_at": {
+                                                "type": "string",
+                                                "format": "date-time"
+                                            },
+                                            "updated_at": {
+                                                "type": "string",
+                                                "format": "date-time"
+                                            },
+                                            "user": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string",
+                                                        "format": "uuid"
+                                                    },
+                                                    "first_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "last_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "email": {
+                                                        "type": "string",
+                                                        "format": "email"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            },
+                                            "reviewer": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string",
+                                                        "format": "uuid"
+                                                    },
+                                                    "first_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "last_name": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "type": "object",
+                                                "nullable": true
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden - Admin only"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/teacher-applications/{id}": {
+            "get": {
+                "tags": [
+                    "Teacher Applications"
+                ],
+                "summary": "Get application details",
+                "description": "Retrieve a specific teacher application by ID",
+                "operationId": "getApplicationById",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Application details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "string",
+                                            "format": "uuid"
+                                        },
+                                        "user_id": {
+                                            "type": "string",
+                                            "format": "uuid"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "PENDING",
+                                                "APPROVED",
+                                                "REJECTED"
+                                            ]
+                                        },
+                                        "certificate_title": {
+                                            "type": "string"
+                                        },
+                                        "issuer": {
+                                            "type": "string"
+                                        },
+                                        "issue_date": {
+                                            "type": "string",
+                                            "format": "date"
+                                        },
+                                        "expiry_date": {
+                                            "type": "string",
+                                            "format": "date",
+                                            "nullable": true
+                                        },
+                                        "reviewed_by": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "nullable": true
+                                        },
+                                        "reviewed_at": {
+                                            "type": "string",
+                                            "format": "date-time",
+                                            "nullable": true
+                                        },
+                                        "rejection_reason": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "created_at": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "updated_at": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "user": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "first_name": {
+                                                    "type": "string"
+                                                },
+                                                "last_name": {
+                                                    "type": "string"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "format": "email"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "reviewer": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "first_name": {
+                                                    "type": "string"
+                                                },
+                                                "last_name": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Application not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/teacher-applications/{id}/approve": {
+            "post": {
+                "tags": [
+                    "Teacher Applications"
+                ],
+                "summary": "Approve teacher application",
+                "description": "Approve a pending teacher application and upgrade user to teacher role",
+                "operationId": "approveApplication",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Application approved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "application": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Admin only"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/teacher-applications/{id}/reject": {
+            "post": {
+                "tags": [
+                    "Teacher Applications"
+                ],
+                "summary": "Reject teacher application",
+                "description": "Reject a pending teacher application with a reason",
+                "operationId": "rejectApplication",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "rejection_reason"
+                                ],
+                                "properties": {
+                                    "rejection_reason": {
+                                        "type": "string",
+                                        "example": "Insufficient qualifications"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Application rejected successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "application": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Admin only"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/users": {
             "get": {
                 "tags": [
@@ -4837,6 +5641,14 @@
             "description": "Learning"
         },
         {
+            "name": "Lessons",
+            "description": "Lessons"
+        },
+        {
+            "name": "Learning Progress",
+            "description": "Learning Progress"
+        },
+        {
             "name": "Payments",
             "description": "Payments"
         },
@@ -4847,6 +5659,10 @@
         {
             "name": "System",
             "description": "System"
+        },
+        {
+            "name": "Teacher Applications",
+            "description": "Teacher Applications"
         },
         {
             "name": "Users",
