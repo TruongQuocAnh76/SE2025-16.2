@@ -3,8 +3,8 @@ import type { Enrollment, Certificate, CourseTimeSpent, CourseProgress, User } f
 export const useUserStats = () => {
   const config = useRuntimeConfig()
   
-  // Global variable storing user data
-  const currentUser = ref<User | null>(null)
+  // Use useState for shared state across all components and SSR
+  const currentUser = useState<User | null>('user-stats-current-user', () => null)
   
   const setCurrentUser = (user: User | null) => {
     currentUser.value = user
