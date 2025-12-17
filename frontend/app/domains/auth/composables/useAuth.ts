@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import type { User, LoginRequest, RegisterRequest, LoginResponse, RegisterResponse, AuthError } from '../types/auth'
 import { validateLoginForm, validateRegisterForm } from '../utils/validation'
 
@@ -6,10 +6,11 @@ export const useAuth = () => {
   const config = useRuntimeConfig()
   const nuxtApp = useNuxtApp() as any
   const $toast = nuxtApp.$toast
-  const user = ref<User | null>(null)
-  const isLoading = ref(false)
-  const error = ref<string | null>(null)
-  const validationErrors = ref<Record<string, string>>({})
+  // Use useState for shared state across all components and SSR
+  const user = useState<User | null>('auth-user', () => null)
+  const isLoading = useState<boolean>('auth-loading', () => false)
+  const error = useState<string | null>('auth-error', () => null)
+  const validationErrors = useState<Record<string, string>>('auth-validation-errors', () => ({}))
 
   const login = async (login: string, password: string) => {
     isLoading.value = true
@@ -160,8 +161,13 @@ export const useAuth = () => {
     error.value = null
 
     try {
+      const token = useCookie('auth_token').value
       const response = await $fetch('/api/auth/me', {
-        baseURL: config.public.backendUrl
+        baseURL: config.public.backendUrl,
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : undefined,
+          'Accept': 'application/json'
+        }
       }) as User
 
       user.value = response

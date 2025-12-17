@@ -14,6 +14,7 @@ use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\SystemController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\TeacherApplicationController;
+use App\Http\Controllers\TeacherController;
 
 /*
 |--------------------------------------------------------------------------
@@ -176,6 +177,15 @@ Route::middleware('auth:sanctum')->prefix('teacher-applications')->group(functio
     Route::get('/{id}', [TeacherApplicationController::class, 'show']); // Get application details
     Route::post('/{id}/approve', [TeacherApplicationController::class, 'approve']); // Approve (Admin)
     Route::post('/{id}/reject', [TeacherApplicationController::class, 'reject']); // Reject (Admin)
+});
+
+/* ========================
+ * TEACHERS
+ * ======================== */
+Route::middleware('auth:sanctum')->prefix('teachers')->group(function () {
+    Route::get('/{id}/courses', [TeacherController::class, 'getCourses']); // Get teacher's courses
+    Route::get('/{id}/students', [TeacherController::class, 'getStudents']); // Get students in teacher's courses
+    Route::get('/{id}/statistics', [TeacherController::class, 'getStatistics']); // Get teacher statistics
 });
 
 // Public certificate verification routes (no auth required)

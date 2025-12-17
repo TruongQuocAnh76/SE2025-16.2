@@ -329,20 +329,13 @@ onMounted(async () => {
     }
   }
 
-  // If still no user data but authenticated, try API call
+  // If still no user data but authenticated, try to load via useAuth.getUser()
   if (isAuthenticated.value && !user.value) {
     try {
-      const config = useRuntimeConfig()
-      const response = await $fetch('/api/auth/me', {
-        baseURL: config.public.backendUrl,
-        headers: {
-          'Authorization': `Bearer ${useCookie('auth_token').value}`,
-          'Accept': 'application/json'
-        }
-      })
-      user.value = response as User
-      // Update cookie with fresh data
-      userCookie.value = JSON.stringify(response)
+      await getUser()
+      if (user.value) {
+        userCookie.value = JSON.stringify(user.value)
+      }
     } catch (err) {
       console.error('Failed to load user from API:', err)
     }
