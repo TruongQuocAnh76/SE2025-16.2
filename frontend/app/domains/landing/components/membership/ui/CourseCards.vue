@@ -57,6 +57,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 const router = useRouter()
 import { useCookie } from '#app'
+import { useUserStats } from '@/base/composables/useUserStats'
 
 const courses = ref([
   {
@@ -90,17 +91,11 @@ async function handleJoinTeacher() {
     router.push('/auth/signup')
     return
   }
-  // Gọi API lấy thông tin user
-  try {
-    const res = await fetch('/api/auth/me', { credentials: 'include' })
-    if (!res.ok) throw new Error('Failed to fetch user info')
-    const user = await res.json()
-    if (user.role === 'teacher') {
-      router.push('/teacher/dashboard')
-    } else {
-      router.push('/teacher/register')
-    }
-  } catch (e) {
+  // Lấy info user qua composable
+  const { currentUser } = useUserStats()
+  if (currentUser.value?.role === 'teacher') {
+    router.push('/teacher/dashboard')
+  } else {
     router.push('/teacher/register')
   }
 }
