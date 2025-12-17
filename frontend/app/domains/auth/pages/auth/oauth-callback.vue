@@ -58,8 +58,15 @@ onMounted(async () => {
       const userCookie = useCookie('user_data')
       userCookie.value = JSON.stringify(userData)
       
+      function getDisplayName(user) {
+        if (!user) return 'User'
+        if (user.username) return user.username
+        if (user.first_name || user.last_name) return `${user.first_name || ''} ${user.last_name || ''}`.trim()
+        if (user.email && typeof user.email === 'string') return user.email.split('@')[0]
+        return 'User'
+      }
       if ($toast && $toast.success) {
-        $toast.success(`Welcome back, ${userData?.first_name || userData?.email || 'User'}!`)
+        $toast.success(`Welcome back, ${getDisplayName(userData)}!`)
       }
       
       await navigateTo(`/s/${userData?.username || ''}`)
