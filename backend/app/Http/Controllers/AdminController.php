@@ -353,4 +353,95 @@ class AdminController extends Controller
 
         return response()->json(['message' => 'Course rejected']);
     }
+
+    /**
+     * List all users with pagination
+     */
+    public function listUsers(Request $request)
+    {
+        $user = Auth::user();
+        
+        if ($user->role !== 'ADMIN') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $perPage = $request->input('per_page', 20);
+        $users = User::orderBy('created_at', 'desc')->paginate($perPage);
+
+        return response()->json($users);
+    }
+
+    /**
+     * List all courses with pagination
+     */
+    public function listCourses(Request $request)
+    {
+        $user = Auth::user();
+        
+        if ($user->role !== 'ADMIN') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $perPage = $request->input('per_page', 20);
+        $courses = Course::with('teacher')->orderBy('created_at', 'desc')->paginate($perPage);
+
+        return response()->json($courses);
+    }
+
+    /**
+     * List all certificates with pagination
+     */
+    public function listCertificates(Request $request)
+    {
+        $user = Auth::user();
+        
+        if ($user->role !== 'ADMIN') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $perPage = $request->input('per_page', 20);
+        $certificates = Certificate::with(['student', 'course'])
+            ->orderBy('issued_at', 'desc')
+            ->paginate($perPage);
+
+        return response()->json($certificates);
+    }
+
+    /**
+     * List all teacher applications with pagination
+     */
+    public function listApplications(Request $request)
+    {
+        $user = Auth::user();
+        
+        if ($user->role !== 'ADMIN') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $perPage = $request->input('per_page', 20);
+        $applications = TeacherApplication::with(['user', 'reviewer'])
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        return response()->json($applications);
+    }
+
+    /**
+     * List all system logs with pagination
+     */
+    public function listLogs(Request $request)
+    {
+        $user = Auth::user();
+        
+        if ($user->role !== 'ADMIN') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $perPage = $request->input('per_page', 50);
+        $logs = SystemLog::with('user')
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        return response()->json($logs);
+    }
 }
