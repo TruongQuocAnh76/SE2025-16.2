@@ -21,12 +21,30 @@
           <div class="p-6">
             <h3 class="text-xl font-bold mb-2">{{ course.title }}</h3>
             <p class="text-gray-600 text-sm mb-4">{{ course.description }}</p>
-            <NuxtLink 
-              :to="course.link"
-              class="inline-block bg-teal-400 text-white px-6 py-2 rounded-lg font-medium hover:bg-teal-500 transition-colors"
-            >
-              {{ course.buttonText }}
-            </NuxtLink>
+            <template v-if="course.buttonText === 'Join as Student'">
+              <button
+                @click="handleJoinStudent"
+                class="inline-block bg-teal-400 text-white px-6 py-2 rounded-lg font-medium hover:bg-teal-500 transition-colors"
+              >
+                {{ course.buttonText }}
+              </button>
+            </template>
+            <template v-else-if="course.buttonText === 'Join as Teacher'">
+              <button
+                @click="handleJoinTeacher"
+                class="inline-block bg-teal-400 text-white px-6 py-2 rounded-lg font-medium hover:bg-teal-500 transition-colors"
+              >
+                {{ course.buttonText }}
+              </button>
+            </template>
+            <template v-else>
+              <NuxtLink 
+                :to="course.link"
+                class="inline-block bg-teal-400 text-white px-6 py-2 rounded-lg font-medium hover:bg-teal-500 transition-colors"
+              >
+                {{ course.buttonText }}
+              </NuxtLink>
+            </template>
           </div>
         </div>
       </div>
@@ -36,6 +54,10 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+const router = useRouter()
+import { useCookie } from '#app'
+import { useUserStats } from '@/base/composables/useUserStats'
 
 const courses = ref([
   {
@@ -53,4 +75,28 @@ const courses = ref([
     image: '/images/membership/student.jpg'
   }
 ])
+
+function handleJoinStudent() {
+  const token = useCookie('auth_token')
+  if (token.value) {
+    router.push('/courses')
+  } else {
+    router.push('/auth/signup')
+  }
+}
+
+async function handleJoinTeacher() {
+  const token = useCookie('auth_token')
+  if (!token.value) {
+    router.push('/auth/signup')
+    return
+  }
+  // Lấy info user qua composable
+  const { currentUser } = useUserStats()
+  if (currentUser.value?.role === 'teacher') {
+    router.push('/teacher/dashboard')
+  } else {
+    router.push('/teacher/register')
+  }
+}
 </script>
