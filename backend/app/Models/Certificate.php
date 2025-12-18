@@ -36,4 +36,9 @@ class Certificate extends Model
     public function course() {
         return $this->belongsTo(Course::class);
     }
+
+    public function blockchainTransaction()
+    {
+        return $this->hasOne(BlockchainTransaction::class, 'certificate_id', 'id');
+    }
 }

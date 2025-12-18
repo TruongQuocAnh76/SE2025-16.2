@@ -33,6 +33,10 @@
         {
             "url": "http://localhost:8000/api",
             "description": "Local development server"
+        },
+        {
+            "url": "http://localhost:8000/api",
+            "description": "Local development server"
         }
     ],
     "paths": {
@@ -4457,6 +4461,358 @@
                 ]
             }
         },
+        "/teachers/{id}/courses": {
+            "get": {
+                "tags": [
+                    "Teachers"
+                ],
+                "summary": "Get all courses taught by a specific teacher",
+                "description": "Retrieve all courses created by a specific teacher with enrollment counts",
+                "operationId": "getTeacherCourses",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Teacher ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by course status",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "DRAFT",
+                                "PENDING",
+                                "PUBLISHED",
+                                "ARCHIVED"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of teacher's courses",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "teacher": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "first_name": {
+                                                    "type": "string"
+                                                },
+                                                "last_name": {
+                                                    "type": "string"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "format": "email"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "courses": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string",
+                                                        "format": "uuid"
+                                                    },
+                                                    "title": {
+                                                        "type": "string"
+                                                    },
+                                                    "slug": {
+                                                        "type": "string"
+                                                    },
+                                                    "status": {
+                                                        "type": "string"
+                                                    },
+                                                    "level": {
+                                                        "type": "string"
+                                                    },
+                                                    "price": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    },
+                                                    "enrollments_count": {
+                                                        "type": "integer"
+                                                    },
+                                                    "reviews_avg_rating": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "total_courses": {
+                                            "type": "integer"
+                                        },
+                                        "total_enrollments": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Teacher not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/teachers/{id}/students": {
+            "get": {
+                "tags": [
+                    "Teachers"
+                ],
+                "summary": "Get all students enrolled in a teacher's courses",
+                "description": "Retrieve unique students enrolled in any course taught by the specified teacher, with enrollment details",
+                "operationId": "getTeacherStudents",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Teacher ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "course_id",
+                        "in": "query",
+                        "description": "Filter students by specific course ID",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of students",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "teacher": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "first_name": {
+                                                    "type": "string"
+                                                },
+                                                "last_name": {
+                                                    "type": "string"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "format": "email"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "students": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "student_id": {
+                                                        "type": "string",
+                                                        "format": "uuid"
+                                                    },
+                                                    "first_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "last_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "email": {
+                                                        "type": "string",
+                                                        "format": "email"
+                                                    },
+                                                    "enrollments": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "properties": {
+                                                                "enrollment_id": {
+                                                                    "type": "string",
+                                                                    "format": "uuid"
+                                                                },
+                                                                "course_id": {
+                                                                    "type": "string",
+                                                                    "format": "uuid"
+                                                                },
+                                                                "course_title": {
+                                                                    "type": "string"
+                                                                },
+                                                                "status": {
+                                                                    "type": "string"
+                                                                },
+                                                                "progress": {
+                                                                    "type": "number",
+                                                                    "format": "decimal"
+                                                                },
+                                                                "enrolled_at": {
+                                                                    "type": "string",
+                                                                    "format": "date-time"
+                                                                },
+                                                                "completed_at": {
+                                                                    "type": "string",
+                                                                    "format": "date-time",
+                                                                    "nullable": true
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        }
+                                                    },
+                                                    "total_courses_enrolled": {
+                                                        "type": "integer"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "total_students": {
+                                            "type": "integer"
+                                        },
+                                        "total_enrollments": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Teacher not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/teachers/{id}/statistics": {
+            "get": {
+                "tags": [
+                    "Teachers"
+                ],
+                "summary": "Get teacher statistics",
+                "description": "Get aggregated statistics for a teacher including course counts, enrollment counts, and average ratings",
+                "operationId": "getTeacherStatistics",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Teacher ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Teacher statistics",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "teacher": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "first_name": {
+                                                    "type": "string"
+                                                },
+                                                "last_name": {
+                                                    "type": "string"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "format": "email"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "statistics": {
+                                            "properties": {
+                                                "total_courses": {
+                                                    "type": "integer"
+                                                },
+                                                "published_courses": {
+                                                    "type": "integer"
+                                                },
+                                                "draft_courses": {
+                                                    "type": "integer"
+                                                },
+                                                "total_enrollments": {
+                                                    "type": "integer"
+                                                },
+                                                "unique_students": {
+                                                    "type": "integer"
+                                                },
+                                                "average_rating": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "total_reviews": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Teacher not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/users": {
             "get": {
                 "tags": [
@@ -5663,6 +6019,10 @@
         {
             "name": "Teacher Applications",
             "description": "Teacher Applications"
+        },
+        {
+            "name": "Teachers",
+            "description": "Teachers"
         },
         {
             "name": "Users",
