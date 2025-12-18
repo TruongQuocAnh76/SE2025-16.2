@@ -229,6 +229,13 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::post('/teacher-applications/{applicationId}/reject', [AdminController::class, 'rejectTeacher']);
     Route::post('/courses/{courseId}/approve', [AdminController::class, 'approveCourse']);
     Route::post('/courses/{courseId}/reject', [AdminController::class, 'rejectCourse']);
+    
+    // Admin list endpoints
+    Route::get('/list/users', [AdminController::class, 'listUsers']);
+    Route::get('/list/courses', [AdminController::class, 'listCourses']);
+    Route::get('/list/certificates', [AdminController::class, 'listCertificates']);
+    Route::get('/list/applications', [AdminController::class, 'listApplications']);
+    Route::get('/list/logs', [AdminController::class, 'listLogs']);
 });
 
 /* ========================

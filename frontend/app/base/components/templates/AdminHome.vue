@@ -21,6 +21,12 @@
             </svg>
           </div>
         </div>
+
+        <div class="mt-4">
+          <button @click="goToApplications" class="w-full text-center text-body-sm text-text-muted hover:text-text-dark transition-colors py-2">
+            Show more...
+          </button>
+        </div>
       </div>
 
       <!-- Total Courses -->
@@ -77,12 +83,13 @@
         <div>
           <h3 class="text-h5 text-text-dark mb-6">Applications</h3>
           <div class="grid grid-cols-1 gap-6">
-            <!-- Teacher Application Card -->
-            <div 
-              v-for="app in teacherApplications.slice(0, 2)" 
-              :key="app.id"
-              class="bg-white p-6 rounded-2xl shadow-md"
-            >
+            <template v-if="teacherApplications.length > 0">
+              <!-- Teacher Application Card -->
+              <div 
+                v-for="app in teacherApplications.slice(0, 2)" 
+                :key="app.id"
+                class="bg-white p-6 rounded-2xl shadow-md"
+              >
               <div class="flex items-center justify-between mb-4">
                 <span class="px-3 py-1 bg-accent-purple/10 text-accent-purple text-caption font-medium rounded-full">
                   Teacher Application
@@ -122,7 +129,13 @@
                   </svg>
                 </button>
               </div>
-            </div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="bg-white p-6 rounded-2xl shadow-md text-center text-text-muted">
+                No applications yet.
+              </div>
+            </template>
 
             <!-- (Course applications removed - teacher applications occupy full width) -->
           </div>
@@ -151,11 +164,12 @@
         <div class="bg-white p-6 rounded-2xl shadow-md">
           <h3 class="text-h5 text-text-dark mb-6">Recent Certificates</h3>
           <div class="space-y-4">
-            <div 
-              v-for="cert in recentCertificates.slice(0, 5)" 
-              :key="cert.id"
-              class="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:shadow-sm transition-shadow"
-            >
+            <template v-if="recentCertificates.length > 0">
+              <div 
+                v-for="cert in recentCertificates.slice(0, 5)" 
+                :key="cert.id"
+                class="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:shadow-sm transition-shadow"
+              >
               <div class="flex items-center gap-4">
                 <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
                   <img v-if="cert.student_avatar" :src="cert.student_avatar" alt="Avatar" class="w-full h-full object-cover" />
@@ -178,9 +192,19 @@
                   View Certificate
                 </button>
               </div>
-            </div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="text-center py-8 text-gray-500">
+                <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+                <p class="text-sm">No recent certificates</p>
+                <p class="text-xs text-gray-400">No certificates have been issued recently.</p>
+              </div>
+            </template>
           </div>
-          <button class="w-full mt-4 text-center text-body-sm text-text-muted hover:text-text-dark transition-colors py-2">
+          <button @click="goToCertificates" class="w-full mt-4 text-center text-body-sm text-text-muted hover:text-text-dark transition-colors py-2">
             Show more...
           </button>
         </div>
@@ -191,11 +215,12 @@
         <div class="bg-white p-6 rounded-2xl shadow-md">
           <h3 class="text-h5 text-text-dark mb-6">System Log</h3>
           <div class="space-y-4">
-            <div 
-              v-for="log in systemLogs.slice(0, 8)" 
-              :key="log.id"
-              class="border-b border-gray-100 pb-4 last:border-0 last:pb-0"
-            >
+            <template v-if="systemLogs.length > 0">
+              <div 
+                v-for="log in systemLogs.slice(0, 8)" 
+                :key="log.id"
+                class="border-b border-gray-100 pb-4 last:border-0 last:pb-0"
+              >
               <div class="flex items-start justify-between">
                 <div class="flex-1">
                   <p class="text-body font-medium text-text-dark">{{ log.message }}</p>
@@ -209,9 +234,15 @@
                 </div>
                 <p class="text-caption text-text-muted whitespace-nowrap ml-4">{{ log.timestamp }}</p>
               </div>
-            </div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="text-center py-8 text-text-muted">
+                No system logs yet.
+              </div>
+            </template>
           </div>
-          <button class="w-full mt-4 text-center text-body-sm text-text-muted hover:text-text-dark transition-colors py-2">
+          <button @click="goToAuditLog" class="w-full mt-4 text-center text-body-sm text-text-muted hover:text-text-dark transition-colors py-2">
             Show more...
           </button>
         </div>
@@ -313,6 +344,12 @@ const handleModalReject = async (applicationId: string) => {
 }
 
 const loading = ref(true)
+
+const router = useRouter()
+
+const goToCertificates = () => router.push('/admin/certificates')
+const goToAuditLog = () => router.push('/admin/audit-log')
+const goToApplications = () => router.push('/admin/applications')
 
 // Helper functions
 const formatNumber = (num: number): string => {

@@ -33,5 +33,13 @@ export default defineNuxtRouteMiddleware((to) => {
     return navigateTo('/auth/login')
   }
 
+  // Role-based guard for admin pages
+  if (to.path.startsWith('/admin')) {
+    const user = auth.user?.value
+    if (!user || user.role !== 'ADMIN') {
+      return navigateTo('/')
+    }
+  }
+
   // User is authenticated, allow navigation
 })

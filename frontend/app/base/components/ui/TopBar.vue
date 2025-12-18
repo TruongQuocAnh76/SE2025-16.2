@@ -107,6 +107,48 @@
                   >
                     <i class="fas fa-user-circle mr-2"></i>My Dashboard
                   </NuxtLink>
+                  <template v-if="isAdmin">
+                    <div class="border-t border-gray-200 my-1"></div>
+                    <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      Admin
+                    </div>
+                    <NuxtLink
+                      to="/admin/users"
+                      @click="isDropdownOpen = false"
+                      class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <i class="fas fa-users mr-2"></i>Users
+                    </NuxtLink>
+                    <NuxtLink
+                      to="/admin/courses"
+                      @click="isDropdownOpen = false"
+                      class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <i class="fas fa-book mr-2"></i>Courses
+                    </NuxtLink>
+                    <NuxtLink
+                      to="/admin/certificates"
+                      @click="isDropdownOpen = false"
+                      class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <i class="fas fa-certificate mr-2"></i>Certificates
+                    </NuxtLink>
+                    <NuxtLink
+                      to="/admin/applications"
+                      @click="isDropdownOpen = false"
+                      class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <i class="fas fa-file-alt mr-2"></i>Applications
+                    </NuxtLink>
+                    <NuxtLink
+                      to="/admin/audit-log"
+                      @click="isDropdownOpen = false"
+                      class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <i class="fas fa-clipboard-list mr-2"></i>Audit Log
+                    </NuxtLink>
+                    <div class="border-t border-gray-200 my-1"></div>
+                  </template>
                   <button
                     @click="handleLogout"
                     class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
@@ -223,6 +265,48 @@
               >
                 <i class="fas fa-user-circle mr-2"></i>My Dashboard
               </NuxtLink>
+              <template v-if="isAdmin">
+                <div class="border-t border-gray-200 my-2"></div>
+                <div class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  Admin
+                </div>
+                <NuxtLink
+                  to="/admin/users"
+                  @click="isMobileMenuOpen = false"
+                  class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md"
+                >
+                  <i class="fas fa-users mr-2"></i>Users
+                </NuxtLink>
+                <NuxtLink
+                  to="/admin/courses"
+                  @click="isMobileMenuOpen = false"
+                  class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md"
+                >
+                  <i class="fas fa-book mr-2"></i>Courses
+                </NuxtLink>
+                <NuxtLink
+                  to="/admin/certificates"
+                  @click="isMobileMenuOpen = false"
+                  class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md"
+                >
+                  <i class="fas fa-certificate mr-2"></i>Certificates
+                </NuxtLink>
+                <NuxtLink
+                  to="/admin/applications"
+                  @click="isMobileMenuOpen = false"
+                  class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md"
+                >
+                  <i class="fas fa-file-alt mr-2"></i>Applications
+                </NuxtLink>
+                <NuxtLink
+                  to="/admin/audit-log"
+                  @click="isMobileMenuOpen = false"
+                  class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md mb-2"
+                >
+                  <i class="fas fa-clipboard-list mr-2"></i>Audit Log
+                </NuxtLink>
+                <div class="border-t border-gray-200 my-2"></div>
+              </template>
               <Button
                 size="sm"
                 @click="handleLogout"
@@ -270,6 +354,11 @@ const userInitials = computed(() => {
     return user.value.username.split(' ').map(n => n[0]).join('').toUpperCase()
   }
   return ''
+})
+
+const isAdmin = computed(() => {
+  const r = user.value?.role
+  return typeof r === 'string' && r.toUpperCase() === 'ADMIN'
 })
 
 // Computed property để lấy tên hiển thị
