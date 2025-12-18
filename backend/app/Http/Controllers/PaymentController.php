@@ -6,6 +6,7 @@ use App\Models\Payment;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Services\PaymentService;
+use App\Services\SystemLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -13,10 +14,12 @@ use Illuminate\Support\Str;
 class PaymentController extends Controller
 {
     protected $paymentService;
+    protected $systemLogService;
 
-    public function __construct(PaymentService $paymentService)
+    public function __construct(PaymentService $paymentService, SystemLogService $systemLogService)
     {
         $this->paymentService = $paymentService;
+        $this->systemLogService = $systemLogService;
     }
 
     /**
@@ -283,6 +286,28 @@ class PaymentController extends Controller
                     'progress' => 0,
                     'enrolled_at' => now(),
                 ]);
+            }
+
+            // Log payment completion to system_logs
+            $course = $payment->course_id ? Course::find($payment->course_id) : null;
+            if (isset($this->systemLogService)) {
+                $this->systemLogService->logAction(
+                    'INFO',
+                    'Payment Completed',
+                    $payment->user_id,
+                    [
+                        'payment_id' => $payment->id,
+                        'payment_type' => $payment->payment_type,
+                        'amount' => $payment->amount,
+                        'currency' => $payment->currency,
+                        'course_id' => $payment->course_id,
+                        'course_title' => $course?->title,
+                        'transaction_id' => $payment->transaction_id,
+                        'test_mode' => $isTestMode,
+                    ],
+                    $request->ip(),
+                    $request->userAgent()
+                );
             }
 
             return response()->json([

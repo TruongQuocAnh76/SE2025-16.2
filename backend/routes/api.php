@@ -15,6 +15,7 @@ use App\Http\Controllers\SystemController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\TeacherApplicationController;
 use App\Http\Controllers\TeacherController;
+use App\Http\Controllers\AdminController;
 
 /*
 |--------------------------------------------------------------------------
@@ -212,6 +213,22 @@ Route::middleware('auth:sanctum')->prefix('system')->group(function () {
     Route::get('/jobs', [SystemController::class, 'getJobs']); // Get jobs (Admin)
     Route::delete('/jobs/{id}', [SystemController::class, 'deleteJob']); // Delete job (Admin)
     Route::post('/jobs/{id}/retry', [SystemController::class, 'retryJob']); // Retry job (Admin)
+});
+
+/* ========================
+ * ADMIN DASHBOARD
+ * ======================== */
+Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
+    Route::get('/dashboard-stats', [AdminController::class, 'getDashboardStats']);
+    Route::get('/teacher-applications', [AdminController::class, 'getPendingTeacherApplications']);
+    Route::get('/course-applications', [AdminController::class, 'getPendingCourseApplications']);
+    Route::get('/certificates-overview', [AdminController::class, 'getCertificatesOverview']);
+    Route::get('/recent-certificates', [AdminController::class, 'getRecentCertificates']);
+    Route::get('/system-logs', [AdminController::class, 'getSystemLogs']);
+    Route::post('/teacher-applications/{applicationId}/approve', [AdminController::class, 'approveTeacher']);
+    Route::post('/teacher-applications/{applicationId}/reject', [AdminController::class, 'rejectTeacher']);
+    Route::post('/courses/{courseId}/approve', [AdminController::class, 'approveCourse']);
+    Route::post('/courses/{courseId}/reject', [AdminController::class, 'rejectCourse']);
 });
 
 /* ========================

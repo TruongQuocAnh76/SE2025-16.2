@@ -76,7 +76,7 @@
         <!-- Application Section -->
         <div>
           <h3 class="text-h5 text-text-dark mb-6">Applications</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 gap-6">
             <!-- Teacher Application Card -->
             <div 
               v-for="app in teacherApplications.slice(0, 2)" 
@@ -96,7 +96,10 @@
                 <p class="text-caption text-text-muted mt-2">Submitted: {{ app.submitted_at }}</p>
               </div>
               <div class="flex items-center gap-2 flex-wrap">
-                <button class="px-3 py-1.5 text-brand-primary border border-brand-primary text-caption font-medium rounded-lg hover:bg-brand-primary/5 transition-colors">
+                <button 
+                  @click="openTeacherModal(app)"
+                  class="px-3 py-1.5 text-brand-primary border border-brand-primary text-caption font-medium rounded-lg hover:bg-brand-primary/5 transition-colors"
+                >
                   View Submission
                 </button>
                 <button 
@@ -121,47 +124,7 @@
               </div>
             </div>
 
-            <!-- Course Application Card -->
-            <div 
-              v-for="course in courseApplications.slice(0, 2)" 
-              :key="course.id"
-              class="bg-white p-6 rounded-2xl shadow-md"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <span class="px-3 py-1 bg-accent-blue/10 text-accent-blue text-caption font-medium rounded-full">
-                  Course Application
-                </span>
-              </div>
-              <div class="space-y-2 mb-4">
-                <p class="text-body font-medium text-text-dark">{{ course.title }}</p>
-                <p class="text-body-sm"><span class="text-text-muted">Teacher:</span> {{ course.teacher_name }}</p>
-                <p class="text-body-sm"><span class="text-text-muted">Category:</span> {{ course.category }}</p>
-                <p class="text-body-sm"><span class="text-text-muted">Level:</span> {{ course.level }}</p>
-                <p class="text-body-sm"><span class="text-text-muted">Duration:</span> {{ course.duration }}h</p>
-                <p class="text-caption text-text-muted mt-2">Submitted: {{ course.submitted_at }}</p>
-              </div>
-              <div class="flex items-center gap-2">
-                <button 
-                  @click="handleApproveCourse(course.id)"
-                  class="px-3 py-1.5 bg-brand-primary text-white text-caption font-medium rounded-lg hover:bg-teal-600 transition-colors"
-                >
-                  Approve
-                </button>
-                <button 
-                  @click="handleRejectCourse(course.id)"
-                  class="px-3 py-1.5 border border-accent-red text-accent-red text-caption font-medium rounded-lg hover:bg-accent-red/5 transition-colors"
-                >
-                  Reject
-                </button>
-              </div>
-              <div class="text-center mt-4">
-                <button class="text-text-muted hover:text-text-dark">
-                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                  </svg>
-                </button>
-              </div>
-            </div>
+            <!-- (Course applications removed - teacher applications occupy full width) -->
           </div>
         </div>
 
@@ -211,7 +174,7 @@
                   {{ cert.is_verified ? 'Verified' : 'Pending' }}
                 </span>
                 <p class="text-caption text-text-muted">{{ cert.issued_at }}</p>
-                <button class="text-brand-primary hover:text-teal-600 text-body-sm font-medium transition-colors">
+                <button @click="openCertificateModal(cert.id)" class="text-brand-primary hover:text-teal-600 text-body-sm font-medium transition-colors">
                   View Certificate
                 </button>
               </div>
@@ -255,22 +218,36 @@
       </div>
     </div>
   </div>
+  <!-- Certificate Modal -->
+  <CertificateModal
+    :isOpen="certificateModalOpen"
+    :certificateId="selectedCertificateId || undefined"
+    @close="closeCertificateModal"
+  />
+  
+  <!-- Teacher Application Modal -->
+  <TeacherApplicationModal
+    :isOpen="teacherModalOpen"
+    :application="selectedApplication"
+    @close="closeTeacherModal"
+    @approve="handleModalApprove"
+    @reject="handleModalReject"
+  />
 </template>
 
 <script setup lang="ts">
 import { useUserStats } from '../../composables/useUserStats'
-import { useAdminStats, type DashboardStats, type TeacherApplication, type CourseApplication, type CertificatesOverview, type RecentCertificate, type SystemLogEntry } from '../../composables/useAdminStats'
+import { useAdminStats, type DashboardStats, type TeacherApplication, type CertificatesOverview, type RecentCertificate, type SystemLogEntry } from '../../composables/useAdminStats'
+import CertificateModal from '../../components/ui/CertificateModal.vue'
+import TeacherApplicationModal from '../../components/ui/TeacherApplicationModal.vue'
 
 const { currentUser } = useUserStats()
 const { 
   getDashboardStats, 
   getTeacherApplications, 
-  getCourseApplications, 
   getCertificatesOverview, 
   getRecentCertificates, 
   getSystemLogs,
-  approveCourse,
-  rejectCourse,
   approveTeacher,
   rejectTeacher
 } = useAdminStats()
@@ -291,10 +268,49 @@ const stats = ref<DashboardStats>({
 })
 
 const teacherApplications = ref<TeacherApplication[]>([])
-const courseApplications = ref<CourseApplication[]>([])
 const certsOverview = ref<CertificatesOverview>({ issued: 0, verified: 0, pending: 0 })
 const recentCertificates = ref<RecentCertificate[]>([])
 const systemLogs = ref<SystemLogEntry[]>([])
+
+// applications grid is inline in template to keep code concise
+
+// Certificate modal state
+const certificateModalOpen = ref(false)
+const selectedCertificateId = ref<string | null>(null)
+
+const openCertificateModal = (certificateId: string) => {
+  selectedCertificateId.value = certificateId
+  certificateModalOpen.value = true
+}
+
+const closeCertificateModal = () => {
+  certificateModalOpen.value = false
+  selectedCertificateId.value = null
+}
+
+// Teacher application modal state
+const teacherModalOpen = ref(false)
+const selectedApplication = ref<TeacherApplication | null>(null)
+
+const openTeacherModal = (application: TeacherApplication) => {
+  selectedApplication.value = application
+  teacherModalOpen.value = true
+}
+
+const closeTeacherModal = () => {
+  teacherModalOpen.value = false
+  selectedApplication.value = null
+}
+
+const handleModalApprove = async (applicationId: string) => {
+  closeTeacherModal()
+  await handleApproveTeacher(applicationId)
+}
+
+const handleModalReject = async (applicationId: string) => {
+  closeTeacherModal()
+  await handleRejectTeacher(applicationId)
+}
 
 const loading = ref(true)
 
@@ -328,33 +344,14 @@ const handleRejectTeacher = async (applicationId: string) => {
   }
 }
 
-const handleApproveCourse = async (courseId: string) => {
-  const success = await approveCourse(courseId)
-  if (success) {
-    courseApplications.value = await getCourseApplications()
-    const newStats = await getDashboardStats()
-    if (newStats) stats.value = newStats
-    systemLogs.value = await getSystemLogs()
-  }
-}
-
-const handleRejectCourse = async (courseId: string) => {
-  const success = await rejectCourse(courseId)
-  if (success) {
-    courseApplications.value = await getCourseApplications()
-    const newStats = await getDashboardStats()
-    if (newStats) stats.value = newStats
-    systemLogs.value = await getSystemLogs()
-  }
-}
+// Course approval/rejection handlers removed (no course applications UI)
 
 // Fetch data on mount
 onMounted(async () => {
   try {
-    const [statsData, teacherApps, courseApps, certsOverviewData, recentCerts, logs] = await Promise.all([
+    const [statsData, teacherApps, certsOverviewData, recentCerts, logs] = await Promise.all([
       getDashboardStats(),
       getTeacherApplications(),
-      getCourseApplications(),
       getCertificatesOverview(),
       getRecentCertificates(),
       getSystemLogs()
@@ -362,7 +359,6 @@ onMounted(async () => {
 
     if (statsData) stats.value = statsData
     teacherApplications.value = teacherApps
-    courseApplications.value = courseApps
     if (certsOverviewData) certsOverview.value = certsOverviewData
     recentCertificates.value = recentCerts
     systemLogs.value = logs

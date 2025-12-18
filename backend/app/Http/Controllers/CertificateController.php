@@ -13,6 +13,7 @@ use App\Models\Course;
 use App\Models\QuizAttempt;
 use App\Models\BlockchainTransaction;
 use App\Services\CertificateService;
+use App\Services\SystemLogService;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 /**
@@ -25,14 +26,17 @@ class CertificateController extends Controller
 {
     protected $certificateService;
     protected StorageServiceInterface $storage;
+    protected $systemLogService;
 
     public function __construct(
         CertificateService $certificateService,
-        StorageServiceInterface $storage
+        StorageServiceInterface $storage,
+        SystemLogService $systemLogService
     )
     {
         $this->certificateService = $certificateService;
         $this->storage = $storage;
+        $this->systemLogService = $systemLogService;
     }
     /**
      * @OA\Get(
@@ -165,6 +169,26 @@ class CertificateController extends Controller
                 'pdf_url' => $pdfData['pdf_url'],
                 'student_id' => $studentId
             ]);
+
+            // Log to system_logs table via service
+            if (isset($this->systemLogService)) {
+                $this->systemLogService->logAction(
+                    'INFO',
+                    'Certificate Issued',
+                    $studentId,
+                    [
+                        'certificate_id' => $certificate->id,
+                        'certificate_number' => $certNumber,
+                        'student_id' => $studentId,
+                        'student_name' => Auth::user()->first_name . ' ' . Auth::user()->last_name,
+                        'course_id' => $courseId,
+                        'course_title' => $course->title,
+                        'final_score' => $finalAttempt->score,
+                    ],
+                    $request->ip(),
+                    $request->userAgent()
+                );
+            }
 
             return response()->json([
                 'message' => 'Chứng chỉ đã được cấp thành công.',
