@@ -15,7 +15,7 @@ export default defineNuxtRouteMiddleware((to) => {
     '/forgot-password',
     '/reset-password',
     '/auth/oauth-callback',
-    '/privacy-policy',
+    '/privacy',
     '/terms'
   ]
 
