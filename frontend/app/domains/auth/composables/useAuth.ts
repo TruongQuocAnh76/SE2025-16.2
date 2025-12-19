@@ -11,6 +11,63 @@ export const useAuth = () => {
   const isLoading = useState<boolean>('auth-loading', () => false)
   const error = useState<string | null>('auth-error', () => null)
   const validationErrors = useState<Record<string, string>>('auth-validation-errors', () => ({}))
+  const ready = useState<boolean>('auth-ready', () => false)
+  let _initPromise: Promise<void> | null = null
+
+  const init = async () => {
+    if (ready.value) return
+
+    if (_initPromise) return _initPromise
+
+    _initPromise = (async () => {
+      if (user.value) {
+        ready.value = true
+        _initPromise = null
+        return
+      }
+
+      isLoading.value = true
+      const token = useCookie('auth_token').value
+      
+      if (token) {
+        // First try to restore user from cookie (avoids API call on reload)
+        const userDataCookie = useCookie('user_data').value
+        if (userDataCookie) {
+          try {
+            const cachedUser = typeof userDataCookie === 'string' 
+              ? JSON.parse(userDataCookie) 
+              : userDataCookie
+            if (cachedUser && cachedUser.id) {
+              user.value = cachedUser as User
+              isLoading.value = false
+              ready.value = true
+              _initPromise = null
+              return
+            }
+          } catch (e) {
+            // Cookie parse failed, will fetch from API
+          }
+        }
+        
+        // Fallback: fetch from API
+        try {
+          await getUser()
+        } catch (e) {
+          // Clear invalid token
+          const tokenCookie = useCookie('auth_token')
+          tokenCookie.value = null
+          const userCookie = useCookie('user_data')
+          userCookie.value = null
+        }
+      }
+      
+      isLoading.value = false
+      ready.value = true
+      _initPromise = null
+    })()
+
+    return _initPromise
+  }
 
   const login = async (login: string, password: string) => {
     isLoading.value = true
@@ -162,15 +219,23 @@ export const useAuth = () => {
 
     try {
       const token = useCookie('auth_token').value
+      if (!token) {
+        throw new Error('No auth token')
+      }
+      
       const response = await $fetch('/api/auth/me', {
-        baseURL: config.public.backendUrl,
+        baseURL: config.public.backendUrl as string,
         headers: {
-          'Authorization': token ? `Bearer ${token}` : undefined,
+          'Authorization': `Bearer ${token}`,
           'Accept': 'application/json'
         }
       }) as User
 
       user.value = response
+      
+      // Update user_data cookie to keep it in sync
+      const userCookie = useCookie('user_data')
+      userCookie.value = JSON.stringify(response)
 
       return response
     } catch (err: any) {
@@ -192,8 +257,10 @@ export const useAuth = () => {
   }
 
   return {
+    init,
     user,
     isLoading,
+    ready,
     error,
     validationErrors,
     login,

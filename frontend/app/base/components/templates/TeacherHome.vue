@@ -91,12 +91,13 @@
         <div class="bg-white p-6 rounded-2xl shadow-md">
           <h3 class="text-h5 text-text-dark mb-6">Recent Courses</h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div
-              v-for="course in recentCourses.slice(0, 4)"
-              :key="course.id"
-              class="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-shadow cursor-pointer"
-              @click="navigateToCourse(course.id)"
-            >
+            <template v-if="recentCourses.length > 0">
+              <div
+                v-for="course in recentCourses.slice(0, 4)"
+                :key="course.id"
+                class="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-shadow cursor-pointer"
+                @click="navigateToCourse(course.id)"
+              >
               <div class="flex items-start gap-4">
                 <div class="w-16 h-16 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-xl flex items-center justify-center flex-shrink-0">
                   <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -121,7 +122,14 @@
                   </div>
                 </div>
               </div>
-            </div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="text-center py-8 text-gray-500 col-span-1 md:col-span-2">
+                <p class="text-sm">No recent courses yet.</p>
+                <p class="text-xs text-gray-400">Create a course to see it listed here.</p>
+              </div>
+            </template>
           </div>
         </div>
 
@@ -144,11 +152,12 @@
           </div>
           
           <div class="space-y-4">
-            <div
-              v-for="submission in pendingSubmissions"
-              :key="submission.id"
-              class="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:shadow-sm transition-shadow"
-            >
+            <template v-if="pendingSubmissions.length > 0">
+              <div
+                v-for="submission in pendingSubmissions"
+                :key="submission.id"
+                class="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:shadow-sm transition-shadow"
+              >
               <div class="flex items-center gap-4">
                 <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
                   <span class="text-body-sm font-semibold text-text-dark">{{ getInitials(submission.student_name) }}</span>
@@ -169,7 +178,14 @@
                   Review Now
                 </button>
               </div>
-            </div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="text-center py-8 text-gray-500">
+                <p class="text-sm">No pending submissions</p>
+                <p class="text-xs text-gray-400">Students haven't submitted any assignments yet.</p>
+              </div>
+            </template>
           </div>
           
           <button class="w-full mt-4 text-center text-body-sm text-text-muted hover:text-text-dark transition-colors py-2">
@@ -182,11 +198,12 @@
           <h3 class="text-h5 text-text-dark mb-6">Certificates Pending</h3>
           
           <div class="space-y-4">
-            <div
-              v-for="cert in pendingCertificates"
-              :key="cert.id"
-              class="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:shadow-sm transition-shadow"
-            >
+            <template v-if="pendingCertificates.length > 0">
+              <div
+                v-for="cert in pendingCertificates"
+                :key="cert.id"
+                class="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:shadow-sm transition-shadow"
+              >
               <div>
                 <p class="text-body font-medium text-text-dark">
                   {{ cert.student_name }} – <span class="text-brand-primary">{{ cert.course_title }}</span>
@@ -201,7 +218,14 @@
                   Deny
                 </button>
               </div>
-            </div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="text-center py-8 text-gray-500">
+                <p class="text-sm">No certificates pending</p>
+                <p class="text-xs text-gray-400">There are no students awaiting certificate issuance.</p>
+              </div>
+            </template>
           </div>
           
           <button class="w-full mt-4 text-center text-body-sm text-text-muted hover:text-text-dark transition-colors py-2">
@@ -216,11 +240,12 @@
         <div class="bg-white p-6 rounded-2xl shadow-md">
           <h3 class="text-h5 text-text-dark mb-6">Your Courses</h3>
           <div class="space-y-3">
-            <div
-              v-for="course in allCourses.slice(0, 5)"
-              :key="course.id"
-              class="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors"
-              @click="navigateToCourse(course.id)"
+            <template v-if="allCourses.length > 0">
+              <div
+                v-for="course in allCourses.slice(0, 5)"
+                :key="course.id"
+                class="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors"
+                @click="navigateToCourse(course.id)">
             >
               <div class="w-10 h-10 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-lg flex items-center justify-center flex-shrink-0">
                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -228,7 +253,14 @@
                 </svg>
               </div>
               <span class="text-body text-text-dark truncate">{{ course.title }}</span>
-            </div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="text-center py-6 text-gray-500">
+                <p class="text-sm">You have no courses yet.</p>
+                <p class="text-xs text-gray-400">Create your first course to get started.</p>
+              </div>
+            </template>
           </div>
         </div>
 

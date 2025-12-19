@@ -22,30 +22,31 @@ class LessonPolicy
      */
     public function view(User $user, Lesson $lesson): bool
     {
-        // ADMIN can view any lesson
-        if ($user->role === 'ADMIN') {
-            return true;
-        }
+        try {
+            // ADMIN can view any lesson
+            if (strtoupper($user->role ?? '') === 'ADMIN') {
+                return true;
+            }
 
-        // TEACHER can view lessons in their own courses
-        if ($user->role === 'TEACHER') {
-            return $lesson->module->course->teacher_id === $user->id;
-        }
+            // TEACHER can view lessons in their own courses
+            if (strtoupper($user->role ?? '') === 'TEACHER') {
+                if ($lesson->module->course->teacher_id === $user->id) {
+                    return true;
+                }
+                // Fall through to enrollment check for teachers enrolled in other courses
+            }
 
-        // STUDENT can view lessons in courses they are enrolled in
-        // Free lessons can be viewed by anyone enrolled
-        if ($user->role === 'STUDENT') {
+            // Any enrolled user can view lessons in their enrolled courses
             $courseId = $lesson->module->course_id;
             $isEnrolled = Enrollment::where('student_id', $user->id)
                                   ->where('course_id', $courseId)
                                   ->exists();
             
-            // If lesson is free, enrolled students can view it
-            // If lesson is paid, they need full enrollment
-            return $isEnrolled && ($lesson->is_free || $lesson->module->course->price > 0);
+            return $isEnrolled;
+        } catch (\Exception $e) {
+            \Log::error('LessonPolicy view error: ' . $e->getMessage());
+            return false;
         }
-
-        return false;
     }
 
     /**
