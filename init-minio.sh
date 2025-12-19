@@ -42,7 +42,7 @@ cat <<'EOF' > /tmp/cors.json
 {
   "CORSRules": [
     {
-      "AllowedOrigins": ["http://localhost:3000", "http://localhost:9002", "http://localhost:9000"],
+      "AllowedOrigins": [*],
       "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
       "AllowedHeaders": ["*"],
       "ExposeHeaders": ["ETag", "x-amz-request-id"],

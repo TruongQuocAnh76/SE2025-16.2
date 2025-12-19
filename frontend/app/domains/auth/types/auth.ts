@@ -34,6 +34,8 @@ export interface LoginResponse {
 
 export interface RegisterResponse {
   message: string
+  access_token: string
+  token_type: string
   user: User
 }
 
