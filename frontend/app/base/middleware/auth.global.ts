@@ -13,7 +13,10 @@ export default defineNuxtRouteMiddleware((to) => {
     '/signup',
     '/register',
     '/forgot-password',
-    '/reset-password'
+    '/reset-password',
+    '/auth/oauth-callback',
+    '/privacy-policy',
+    '/terms'
   ]
 
   const isPublic = publicRoutes.some(route => to.path === route || to.path.startsWith(route + '/'))
