@@ -361,7 +361,17 @@ onMounted(async () => {
 **Problem**: `Can't Load URL: The domain of this URL isn't included in the app's domains`
 - **Solution**: Trong Facebook Login Settings, thêm domain vào **App Domains** và **Site URL**
 
+### System & Environment Issues:
+
+**Problem**: `Class "Laravel\Socialite\Facades\Socialite" not found` (Error 500)
+- **Cause**: Thư viện `laravel/socialite` chưa được cài đặt trong Docker container (dù đã có trong `composer.json`).
+- **Solution**: Chạy lệnh sau để cài đặt dependencies:
+  ```bash
+  docker-compose -f docker-compose.dev.yml exec backend composer install
+  ```
+
 ---
+
 
 ## 📊 Environment Variables Summary
 
