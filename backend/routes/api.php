@@ -263,6 +263,9 @@ Route::middleware('auth:sanctum')->prefix('payments')->group(function () {
     // Stripe routes
     Route::post('/{id}/stripe/create-intent', [PaymentController::class, 'createStripeIntent']); // Create Stripe payment intent
     Route::post('/{id}/stripe/complete', [PaymentController::class, 'completeStripePayment']); // Complete Stripe payment
+    
+    // PayPal routes
+    Route::post('/{id}/paypal/capture', [PaymentController::class, 'capturePayPalPayment']); // Capture PayPal payment
 });
 
 // Stripe Webhook (no auth needed)
