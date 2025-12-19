@@ -462,13 +462,13 @@ const handleStripePayment = async (paymentId: string) => {
       })
 
       console.log('Stripe payment completed (TEST):', response)
-      alert('Payment successful! (Test Mode)')
+      alert('Payment successful! You can now access the course content.')
       
       // Redirect
       if (paymentType.value === 'COURSE' && courseId.value) {
-        router.push(`/courses/${courseId.value}`)
+        router.push(`/courses/${courseId.value}?payment_success=true`)
       } else if (paymentType.value === 'MEMBERSHIP') {
-        router.push('/membership')
+        router.push('/membership?payment_success=true')
       } else {
         router.push('/')
       }
@@ -537,13 +537,13 @@ const completeStripePayment = async (paymentId: string, paymentIntentId: string)
     })
 
     console.log('Stripe payment completed:', response)
-    alert('Payment successful! Thank you for your purchase.')
+    alert('Payment successful! You can now access the course content.')
     
     // Redirect based on payment type
     if (paymentType.value === 'COURSE' && courseId.value) {
-      router.push(`/courses/${courseId.value}`)
+      router.push(`/courses/${courseId.value}?payment_success=true`)
     } else if (paymentType.value === 'MEMBERSHIP') {
-      router.push('/membership')
+      router.push('/membership?payment_success=true')
     } else {
       router.push('/')
     }

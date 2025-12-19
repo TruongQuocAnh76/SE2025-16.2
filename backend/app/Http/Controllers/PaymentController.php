@@ -123,12 +123,47 @@ class PaymentController extends Controller
                 $payment->update([
                     'transaction_id' => $intent->id,
                     'status' => $dbStatus,
+                    'paid_at' => $dbStatus === 'COMPLETED' ? now() : null,
                 ]);
+                
+                // If payment succeeded and it's a course payment, create enrollment
+                if ($dbStatus === 'COMPLETED' && $request->payment_type === 'COURSE' && $request->course_id) {
+                    Enrollment::firstOrCreate([
+                        'student_id' => $user->id,
+                        'course_id' => $request->course_id,
+                    ], [
+                        'id' => Str::uuid(),
+                        'status' => 'ACTIVE',
+                        'progress' => 0,
+                        'enrolled_at' => now(),
+                    ]);
+                    
+                    Log::info('Enrollment created after successful payment', [
+                        'user_id' => $user->id,
+                        'course_id' => $request->course_id,
+                        'payment_id' => $payment->id,
+                    ]);
+                }
+                
+                // If payment succeeded and it's a membership payment, upgrade to Premium
+                if ($dbStatus === 'COMPLETED' && $request->payment_type === 'MEMBERSHIP' && $request->membership_plan === 'PREMIUM') {
+                    $user->membership_tier = 'PREMIUM';
+                    $user->membership_expires_at = now()->addDays(30);
+                    $user->save();
+                    
+                    Log::info('User upgraded to Premium membership', [
+                        'user_id' => $user->id,
+                        'expires_at' => $user->membership_expires_at,
+                        'payment_id' => $payment->id,
+                    ]);
+                }
+                
                 return response()->json([
                     'success' => true,
-                    'payment' => $payment,
+                    'payment' => $payment->fresh(['course', 'user']),
                     'amount' => $amount,
                     'stripe_intent' => $intent,
+                    'enrolled' => $dbStatus === 'COMPLETED' && $request->payment_type === 'COURSE',
                 ]);
             } catch (\Exception $e) {
                 Log::error('Stripe error: ' . $e->getMessage(), []);

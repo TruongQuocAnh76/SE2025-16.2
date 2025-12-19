@@ -60,6 +60,7 @@ Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
 Route::middleware('auth:sanctum')->prefix('users')->group(function () {
     Route::get('/', [UserController::class, 'index']); // Admin only
     Route::get('/filter/by-role', [UserController::class, 'filterByRole']); // MUST be before /{id}
+    Route::get('/membership-status', [UserController::class, 'getMembershipStatus']); // MUST be before /{id}
     Route::get('/{id}', [UserController::class, 'show']);
     Route::put('/{id}', [UserController::class, 'update']);
     Route::delete('/{id}', [UserController::class, 'destroy']); // Admin only
@@ -85,10 +86,11 @@ Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
     Route::get('/lesson/{lessonId}/hls-status', [CourseController::class, 'checkHlsProcessingStatus']); // Check HLS processing status
     Route::get('/{id}/modules', [CourseController::class, 'getModulesWithLessons']);
     Route::get('/{id}/students', [CourseController::class, 'getEnrolledStudents']); // Teacher only
-    Route::get('/{id}/enrollment/check', [LessonController::class, 'checkEnrollment']); // Check enrollment
+    Route::get('/{id}/enrollment/check', [CourseController::class, 'checkEnrollment']); // Check enrollment status
     Route::put('/{id}', [CourseController::class, 'update']); // Teacher/Admin update
     Route::delete('/{id}', [CourseController::class, 'destroy']); // Teacher/Admin delete
     Route::post('/{id}/enroll', [CourseController::class, 'enroll']); // Student enroll
+    Route::post('/{id}/enroll-free', [CourseController::class, 'enrollFree']); // Premium members enroll for free
     Route::post('/{id}/review', [CourseController::class, 'addReview']); // Add review
 });
 
