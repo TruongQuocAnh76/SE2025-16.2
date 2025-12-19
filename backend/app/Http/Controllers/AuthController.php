@@ -380,6 +380,8 @@ class AuthController extends Controller
      *         description="User registered successfully",
      *         @OA\JsonContent(
      *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="access_token", type="string"),
+     *             @OA\Property(property="token_type", type="string", example="Bearer"),
      *             @OA\Property(property="user", ref="#/components/schemas/User")
      *         )
      *     ),
@@ -469,8 +471,13 @@ class AuthController extends Controller
             );
         }
 
+        // Create auth token for auto-login after registration
+        $token = $user->createToken('auth_token')->plainTextToken;
+
         return response()->json([
             'message' => 'User registered successfully',
+            'access_token' => $token,
+            'token_type' => 'Bearer',
             'user' => $user,
         ], 201);
     }
