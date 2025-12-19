@@ -693,7 +693,7 @@ class AuthController extends Controller
      */
     public function redirectToFacebook()
     {
-        return Socialite::driver('facebook')->redirect();
+        return Socialite::driver('facebook')->stateless()->redirect();
     }
 
     /**
@@ -710,16 +710,45 @@ class AuthController extends Controller
     public function handleFacebookCallback()
     {
         try {
-            $socialiteUser = Socialite::driver('facebook')->user();
+            $socialiteUser = Socialite::driver('facebook')->stateless()->user();
+
+            $email = $socialiteUser->email;
+            
+            // Fix: Handle missing email from Facebook
+            if (empty($email)) {
+                Log::warning('Facebook login: Missing email for user ' . $socialiteUser->id . '. Generatire fake email.');
+                $email = $socialiteUser->id . '@facebook.invalid';
+            }
+
+            // Fix: Generate unique username
+            $baseUsername = $socialiteUser->nickname;
+            if (empty($baseUsername)) {
+                // Fallback to name or email prefix
+                $baseUsername = Str::slug($socialiteUser->name);
+                if (empty($baseUsername)) {
+                    $baseUsername = explode('@', $email)[0];
+                }
+            }
+            
+            // Ensure username is clean
+            $baseUsername = Str::slug($baseUsername, '_');
+            $username = $baseUsername;
+            
+            // Ensure uniqueness
+            $counter = 1;
+            while (User::where('username', $username)->exists()) {
+                $username = $baseUsername . '_' . $counter;
+                $counter++;
+            }
 
             $user = User::firstOrCreate(
-                ['email' => $socialiteUser->email],
+                ['email' => $email],
                 [
                     'id' => Str::uuid(),
                     'facebook_id' => $socialiteUser->id,
                     'first_name' => explode(' ', $socialiteUser->name)[0] ?? $socialiteUser->name,
                     'last_name' => explode(' ', $socialiteUser->name, 2)[1] ?? '',
-                    'username' => $socialiteUser->email,
+                    'username' => $username,
                     'avatar' => $socialiteUser->avatar,
                     'auth_provider' => 'FACEBOOK',
                     'is_email_verified' => true,
@@ -730,13 +759,16 @@ class AuthController extends Controller
             // Update facebook_id if user exists but doesn't have it
             if (!$user->facebook_id) {
                 $user->facebook_id = $socialiteUser->id;
-                $user->avatar = $socialiteUser->avatar;
+                // Only update avatar if strict requirements met, or keep existing to avoid overwrite
+                if ($socialiteUser->avatar) {
+                     $user->avatar = $socialiteUser->avatar;
+                }
                 $user->save();
             }
 
             $token = $user->createToken('auth_token')->plainTextToken;
-
-            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/oauth-callback?token=' . $token . '&user=' . urlencode(json_encode([
+            
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/oauth-callback?token=' . $token . '&user=' . rawurlencode(json_encode([
                 'id' => $user->id,
                 'first_name' => $user->first_name,
                 'last_name' => $user->last_name,
@@ -748,7 +780,7 @@ class AuthController extends Controller
             ])));
         } catch (\Exception $e) {
             Log::error('Facebook OAuth error: ' . $e->getMessage());
-            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/login?error=' . urlencode('Facebook authentication failed'));
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/login?error=' . rawurlencode('Facebook authentication failed: ' . $e->getMessage()));
         }
     }
 }
