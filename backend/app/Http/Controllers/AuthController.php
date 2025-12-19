@@ -645,7 +645,7 @@ class AuthController extends Controller
     public function handleGoogleCallback()
     {
         try {
-            $socialiteUser = Socialite::driver('google')->user();
+            $socialiteUser = Socialite::driver('google')->stateless()->user();
 
             $user = User::firstOrCreate(
                 ['email' => $socialiteUser->email],
@@ -671,7 +671,7 @@ class AuthController extends Controller
 
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/oauth-callback?token=' . $token . '&user=' . urlencode(json_encode([
+            return redirect(env('FRONTEND_URL') . '/auth/oauth-callback?token=' . $token . '&user=' . rawurlencode(json_encode([
                 'id' => $user->id,
                 'first_name' => $user->first_name,
                 'last_name' => $user->last_name,
@@ -683,7 +683,7 @@ class AuthController extends Controller
             ])));
         } catch (\Exception $e) {
             Log::error('Google OAuth error: ' . $e->getMessage());
-            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/login?error=' . urlencode('Google authentication failed'));
+            return redirect(env('FRONTEND_URL') . '/auth/login?error=' . rawurlencode('Google authentication failed'));
         }
     }
 
@@ -700,7 +700,7 @@ class AuthController extends Controller
      */
     public function redirectToFacebook()
     {
-        return Socialite::driver('facebook')->redirect();
+        return Socialite::driver('facebook')->stateless()->redirect();
     }
 
     /**
@@ -717,7 +717,7 @@ class AuthController extends Controller
     public function handleFacebookCallback()
     {
         try {
-            $socialiteUser = Socialite::driver('facebook')->user();
+            $socialiteUser = Socialite::driver('facebook')->stateless()->user();
 
             $user = User::firstOrCreate(
                 ['email' => $socialiteUser->email],
@@ -743,7 +743,7 @@ class AuthController extends Controller
 
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/oauth-callback?token=' . $token . '&user=' . urlencode(json_encode([
+            return redirect(env('FRONTEND_URL') . '/auth/oauth-callback?token=' . $token . '&user=' . rawurlencode(json_encode([
                 'id' => $user->id,
                 'first_name' => $user->first_name,
                 'last_name' => $user->last_name,
@@ -755,7 +755,7 @@ class AuthController extends Controller
             ])));
         } catch (\Exception $e) {
             Log::error('Facebook OAuth error: ' . $e->getMessage());
-            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/login?error=' . urlencode('Facebook authentication failed'));
+            return redirect(env('FRONTEND_URL') . '/auth/login?error=' . rawurlencode('Facebook authentication failed'));
         }
     }
 }
