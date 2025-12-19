@@ -58,6 +58,10 @@ onMounted(async () => {
       const userCookie = useCookie('user_data')
       userCookie.value = JSON.stringify(userData)
       
+      // Sync with useAuth composable state
+      const auth = useAuth()
+      auth.user.value = userData
+      
       function getDisplayName(user) {
         if (!user) return 'User'
         if (user.username) return user.username
