@@ -3,6 +3,15 @@ import { defineConfig } from "hardhat/config";
 
 export default defineConfig({
   plugins: [hardhatToolboxMochaEthersPlugin],
+  paths: {
+    cache: "/app/blockchain-data/cache",
+    artifacts: "/app/blockchain-data/artifacts",
+    sources: "./contracts",
+    tests: "./test",
+  },
+  typechain: {
+    outDir: "/app/blockchain-data/types",
+  },
   solidity: {
     profiles: {
       default: {

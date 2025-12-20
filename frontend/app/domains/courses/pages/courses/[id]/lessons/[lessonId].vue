@@ -378,6 +378,21 @@ const fetchLessonData = async () => {
     modules.value = courseData.modules || []
     course.value = courseData
     
+    // Check enrollment status first
+    const config = useRuntimeConfig()
+    const enrollmentCheck = await $fetch(`/api/courses/${courseId}/enrollment/check`, {
+      baseURL: config.public.backendUrl as string,
+      headers: {
+        'Authorization': `Bearer ${useCookie('auth_token').value}`
+      }
+    })
+    
+    if (!enrollmentCheck.isEnrolled) {
+      // User is not enrolled, redirect to course page with message
+      await navigateTo(`/courses/${courseId}?enrollment_required=true`)
+      return
+    }
+    
     // Check enrollment and progress
     const progressResponse = await getCourseProgress(courseId)
     

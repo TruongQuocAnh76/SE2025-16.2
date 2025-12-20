@@ -312,7 +312,7 @@ const handleLogin = async () => {
 const handleRegister = async () => {
   auth.clearErrors()
   try {
-    await auth.register(
+    const response = await auth.register(
       registerForm.email,
       registerForm.username,
       registerForm.password,
@@ -320,10 +320,10 @@ const handleRegister = async () => {
       registerForm.firstName,
       registerForm.lastName
     )
-    // Auto login after successful registration
+    // Auto login after successful registration using the returned token
     const tokenCookie = useCookie<string | null>('auth_token')
-    if (auth.user.value) {
-      tokenCookie.value = 'temp_token' // Backend should return token
+    if (response?.access_token && auth.user.value) {
+      tokenCookie.value = response.access_token
       await navigateTo(`/s/${auth.user.value.username}`)
     }
   } catch (error) {
@@ -347,5 +347,10 @@ watch(mode, () => {
 </script>
 
 <style scoped>
-/* Additional styles if needed */
+/* Hide Edge's built-in password reveal/clear icons */
+:deep(input[type="password"]::-ms-reveal),
+:deep(input[type="password"]::-ms-clear),
+:deep(input[type="text"]::-ms-clear) {
+  display: none;
+}
 </style>

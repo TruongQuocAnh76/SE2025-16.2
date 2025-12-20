@@ -307,11 +307,42 @@
                   }}</span>
               </div>
 
-              <p v-if="enrollError" class="text-red-500 text-sm mb-3">{{ enrollError }}</p>
+              <p v-if="!isEnrolled && enrollError" class="text-red-500 text-sm mb-3">{{ enrollError }}</p>
               <p v-if="enrollSuccess" class="text-green-500 text-sm mb-3">{{ enrollSuccess }}</p>
 
-              <button @click="handleEnroll" :disabled="enrollLoading"
-                class="w-full bg-brand-primary text-white py-3 rounded-lg font-semibold text-lg hover:bg-brand-secondary transition disabled:opacity-50 disabled:cursor-not-allowed">
+              <!-- Enrolled Status -->
+              <div v-if="isEnrolled" class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div class="flex items-center gap-2 text-green-700 mb-2">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                  </svg>
+                  <span class="font-semibold">You're enrolled!</span>
+                </div>
+                <p class="text-sm text-green-600">
+                  Enrolled on {{ enrollmentDate ? new Date(enrollmentDate).toLocaleDateString() : 'N/A' }}
+                </p>
+              </div>
+
+              <!-- Premium User Badge -->
+              <div v-if="isPremiumUser && !isEnrolled" class="mb-3 p-3 bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-300 rounded-lg">
+                <div class="flex items-center gap-2 text-yellow-800">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                  </svg>
+                  <span class="font-semibold text-sm">Premium Member - All Courses Free!</span>
+                </div>
+              </div>
+
+              <button 
+                v-if="!isEnrolled"
+                @click="handleEnroll" 
+                :disabled="enrollLoading"
+                :class="[
+                  'w-full py-3 rounded-lg font-semibold text-lg transition disabled:opacity-50 disabled:cursor-not-allowed',
+                  isPremiumUser 
+                    ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700' 
+                    : 'bg-brand-primary text-white hover:bg-brand-secondary'
+                ]">
                 <span v-if="enrollLoading" class="flex items-center justify-center">
                   <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
                     viewBox="0 0 24 24">
@@ -322,7 +353,21 @@
                   </svg>
                   Enrolling...
                 </span>
+                <span v-else-if="isPremiumUser" class="flex items-center justify-center gap-2">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                  </svg>
+                  Enroll Free (Premium)
+                </span>
                 <span v-else>Enroll Now</span>
+              </button>
+              
+              <button 
+                v-else
+                @click="goToFirstLesson"
+                class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold text-lg hover:bg-green-700 transition"
+                :disabled="!course?.modules || course.modules.length === 0">
+                Continue Learning
               </button>
             </div>
 
@@ -412,6 +457,10 @@ const reviewError = ref('')
 const enrollLoading = ref(false)
 const enrollError = ref('')
 const enrollSuccess = ref('')
+const isEnrolled = ref(false)
+const enrollmentDate = ref<string | null>(null)
+const isPremiumUser = ref(false)
+const membershipExpiresAt = ref<string | null>(null)
 
 const tabs = [
   { id: 'description', name: 'Description' },
@@ -421,15 +470,111 @@ const tabs = [
 
 const courseId = route.params.id as string
 
+// Check for enrollment requirement from query params
+const checkEnrollmentRequirement = () => {
+  // Only show error if not enrolled
+  if (route.query.enrollment_required === 'true' && !isEnrolled.value) {
+    enrollError.value = 'You need to enroll in this course to access the lessons.'
+  }
+  if (route.query.payment_success === 'true') {
+    enrollSuccess.value = 'Payment successful! You are now enrolled in this course.'
+    // Clear the query param after showing message
+    setTimeout(() => {
+      router.replace({ query: {} })
+    }, 3000)
+  }
+}
+
+const checkUserMembershipStatus = async () => {
+  try {
+    const token = useCookie('auth_token').value
+    if (!token) return
+    
+    const config = useRuntimeConfig()
+    const user = await $fetch('/api/auth/me', {
+      baseURL: config.public.backendUrl as string,
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    isPremiumUser.value = user.membership_tier === 'PREMIUM'
+    membershipExpiresAt.value = user.membership_expires_at
+  } catch (err) {
+    console.error('Error checking membership status:', err)
+  }
+}
+
+const checkEnrollmentStatus = async () => {
+  try {
+    const token = useCookie('auth_token').value
+    if (!token) return
+    
+    const config = useRuntimeConfig()
+    const response = await $fetch(`/api/courses/${courseId}/enrollment/check`, {
+      baseURL: config.public.backendUrl as string,
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    isEnrolled.value = response.isEnrolled
+    if (response.enrollment) {
+      enrollmentDate.value = response.enrollment.enrolled_at
+    }
+  } catch (err) {
+    console.error('Error checking enrollment:', err)
+  }
+}
+
 onMounted(async () => {
   if (!courseId) return
 
   loading.value = true
   error.value = null
+  
   try {
     // Call getCourseById function (now includes token)
     const result = await getCourseById(courseId)
     course.value = result
+    
+    // Fetch modules with lessons (requires auth)
+    const token = useCookie('auth_token').value
+    if (token) {
+      try {
+        const config = useRuntimeConfig()
+        const modulesData = await $fetch(`/api/courses/${courseId}/modules`, {
+          baseURL: config.public.backendUrl as string,
+          headers: { 
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        
+        // Add modules to course
+        if (course.value && modulesData) {
+          course.value.modules = modulesData
+          console.log('Loaded modules:', modulesData)
+        }
+      } catch (modulesErr) {
+        console.error('Failed to load modules:', modulesErr)
+        // Continue without modules if fetch fails
+      }
+    }
+    
+    // Check user membership and enrollment status first
+    await Promise.all([
+      checkUserMembershipStatus(),
+      checkEnrollmentStatus()
+    ])
+    
+    // Then check enrollment requirement (will use isEnrolled value)
+    checkEnrollmentRequirement()
+    
+    // Clear error message if already enrolled
+    if (isEnrolled.value) {
+      enrollError.value = ''
+    }
   } catch (err: any) {
     console.error('Error loading course details:', err)
     error.value = err
@@ -546,15 +691,38 @@ const handleEnroll = async () => {
   enrollSuccess.value = ''
 
   try {
+    const token = useCookie('auth_token').value
+    const config = useRuntimeConfig()
+    
+    // If user is Premium, enroll for free
+    if (isPremiumUser.value) {
+      const response = await $fetch(`/api/courses/${courseId}/enroll-free`, {
+        baseURL: config.public.backendUrl as string,
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      enrollSuccess.value = response.message || 'Successfully enrolled! Enjoy your premium benefits.'
+      // Reload enrollment status
+      await checkEnrollmentStatus()
+      return
+    }
+    
+    // If course is free (price = 0), use regular enroll
     if (course.value.price === 0 || !course.value.price) {
       const response = await enrollInCourse(courseId)
 
       if (response.success) {
         enrollSuccess.value = response.message || 'Successfully enrolled in the course!'
+        // Reload enrollment status
+        await checkEnrollmentStatus()
       } else {
         enrollError.value = response.message || 'Failed to enroll in the course.'
       }
     } else {
+      // Course has price and user is not Premium, redirect to payment
       router.push(`/payment?type=COURSE&course_id=${courseId}`)
     }
 
@@ -593,6 +761,33 @@ const totalLessonCount = computed(() => {
     return total + (module.lessons ? module.lessons.length : 0)
   }, 0)
 })
+
+const goToFirstLesson = () => {
+  console.log('goToFirstLesson called')
+  console.log('course:', course.value)
+  console.log('modules:', course.value?.modules)
+  
+  if (!course.value || !course.value.modules || course.value.modules.length === 0) {
+    console.warn('No course or modules available')
+    alert('This course has no lessons available yet.')
+    return
+  }
+  
+  // Find first lesson in first module
+  for (const module of course.value.modules) {
+    console.log('Checking module:', module)
+    if (module.lessons && module.lessons.length > 0) {
+      const firstLesson = module.lessons[0]
+      console.log('Found first lesson:', firstLesson)
+      router.push(`/courses/${courseId}/lessons/${firstLesson.id}`)
+      return
+    }
+  }
+  
+  // If no lessons found, stay on course page
+  console.warn('No lessons found in this course')
+  alert('This course has no lessons available yet.')
+}
 
 // SEO
 useHead({

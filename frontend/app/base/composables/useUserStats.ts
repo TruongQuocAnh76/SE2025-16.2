@@ -3,8 +3,8 @@ import type { Enrollment, Certificate, CourseTimeSpent, CourseProgress, User } f
 export const useUserStats = () => {
   const config = useRuntimeConfig()
   
-  // Global variable storing user data
-  const currentUser = ref<User | null>(null)
+  // Use useState for shared state across all components and SSR
+  const currentUser = useState<User | null>('user-stats-current-user', () => null)
   
   const setCurrentUser = (user: User | null) => {
     currentUser.value = user
@@ -73,7 +73,15 @@ export const useUserStats = () => {
     try {
       const token = useCookie('auth_token').value
       const certificates = await getUserCertificates()
-      return certificates.filter(cert => cert.status === 'ISSUED').length
+      
+      // Deduplicate by course_id and count unique certificates
+      const uniqueCourseIds = new Set(
+        certificates
+          .filter(cert => cert.status === 'ISSUED' || cert.status === 'PENDING')
+          .map(cert => cert.course_id)
+      )
+      
+      return uniqueCourseIds.size
     } catch (error) {
       console.error('Failed to fetch certificate count:', error)
       return 0
@@ -211,10 +219,20 @@ export const useUserStats = () => {
       const token = useCookie('auth_token').value
       const certificates = await getUserCertificates()
       
-      return certificates
-        .filter(cert => cert.status === 'ISSUED')
+      // Deduplicate certificates by course_id (keep only the most recent one per course)
+      const uniqueCertificates = certificates
+        .filter(cert => cert.status === 'ISSUED' || cert.status === 'PENDING')
         .sort((a, b) => new Date(b.issued_at).getTime() - new Date(a.issued_at).getTime())
-        .slice(0, 3) // Get only the 3 most recent
+        .reduce((acc, cert) => {
+          // Only add if we haven't seen this course_id yet
+          if (!acc.some(c => c.course_id === cert.course_id)) {
+            acc.push(cert)
+          }
+          return acc
+        }, [] as typeof certificates)
+      
+      return uniqueCertificates
+        .slice(0, 3) // Get only the 3 most recent unique certificates
         .map(cert => ({
           courseName: cert.course.title,
           dateIssued: new Date(cert.issued_at).toLocaleDateString()

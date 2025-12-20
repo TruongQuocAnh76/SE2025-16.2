@@ -1287,18 +1287,18 @@ const handleSubmit = async () => {
                   uploadInfo.upload_url,
                   lesson.video_file,
                   uploadInfo.original_video_path,
-                  uploadInfo.original_video_path.replace('.mp4', '')
+                  uploadInfo.hls_base_path
                 )
                 if (uploadSuccess) {
                   uploadedCount++
                   successMessage.value = `Video ${uploadedCount} of ${videoUploads.length} uploaded and processing started!`
                 } else {
                   failedCount++
-                  console.warn(`Failed to upload video for lesson ${lesson.title}`)
+                  console.error(`Failed to upload video for lesson ${lesson.title}`)
                 }
               } catch (error) {
                 failedCount++
-                console.warn(`Failed to upload video for lesson ${lesson.title}:`, error)
+                console.error(`Failed to upload video for lesson ${lesson.title}:`, error)
               }
             }
           }

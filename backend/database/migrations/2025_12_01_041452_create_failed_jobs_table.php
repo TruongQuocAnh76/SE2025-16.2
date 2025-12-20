@@ -13,7 +13,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('failed_jobs', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            // Use uuid() without DB-specific default - Laravel will handle UUID generation
+            $table->uuid('id')->primary();
             $table->text('connection');
             $table->text('queue');
             $table->longText('payload');
