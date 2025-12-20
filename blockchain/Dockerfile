@@ -32,9 +32,6 @@ COPY --chown=blockchain:nodejs . .
 # Build root scripts
 RUN pnpm run build
 
-# Copy blockchain folder
-COPY --chown=blockchain:nodejs blockchain ./blockchain
-
 # Build blockchain smart contracts
 WORKDIR /home/blockchain/app/blockchain
 RUN pnpm install --frozen-lockfile
