@@ -117,7 +117,6 @@ jobs:
     - name: Execute Tests
       run: php artisan test
 
-  # 2. Build and Push Docker Images
   build-and-push:
     runs-on: ubuntu-latest
     needs: [backend-test]
@@ -136,59 +135,35 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Frontend
-        id: meta-frontend
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}/certchain-frontend
-          tags: |
-            type=sha,prefix=
-
+      # ---------- FRONTEND ----------
       - name: Build and push Frontend
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          tags: ${{ steps.meta-frontend.outputs.tags }}
-          labels: ${{ steps.meta-frontend.outputs.labels }}
+          tags: ghcr.io/truongquocanh76/se2025-16.2/certchain-frontend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Extract metadata for Backend
-        id: meta-backend
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}/certchain-backend
-          tags: |
-            type=sha,prefix=
-
+      # ---------- BACKEND ----------
       - name: Build and push Backend
         uses: docker/build-push-action@v5
         with:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
-          tags: ${{ steps.meta-backend.outputs.tags }}
-          labels: ${{ steps.meta-backend.outputs.labels }}
+          tags: ghcr.io/truongquocanh76/se2025-16.2/certchain-backend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Extract metadata for Blockchain
-        id: meta-blockchain
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}/certchain-blockchain
-          tags: |
-            type=sha,prefix=
-
+      # ---------- BLOCKCHAIN ----------
       - name: Build and push Blockchain
         uses: docker/build-push-action@v5
         with:
           context: ./blockchain
           file: ./blockchain/Dockerfile
           push: true
-          tags: ${{ steps.meta-blockchain.outputs.tags }}
-          labels: ${{ steps.meta-blockchain.outputs.labels }}
+          tags: ghcr.io/truongquocanh76/se2025-16.2/certchain-blockchain:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -1,31 +1,43 @@
-# Build stage
-FROM node:18 AS build
+# ---------- Build stage ----------
+FROM node:20-slim AS build
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY pnpm-lock.yaml ./
+# Enable pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Install dependencies
-RUN npm install -g pnpm && pnpm install
+# Copy only dependency manifests first (cache-friendly)
+COPY package.json pnpm-lock.yaml ./
 
-# Copy source code
+# Install deps (including dev deps, needed for build)
+RUN pnpm install --frozen-lockfile
+
+# Copy source
 COPY . .
 
-# Build the application
+# Build Nuxt for production
 RUN pnpm build
 
-# Production stage
-FROM node:18-alpine AS production
 
+# ---------- Runtime stage ----------
+FROM node:20-slim AS production
+
+ENV NODE_ENV=production
 WORKDIR /app
 
-# Copy built application from build stage
-COPY --from=build /app/.output ./.output
+# Enable pnpm (needed only if Nuxt runtime needs node_modules)
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Expose port
+# Create non-root user
+RUN useradd -m -u 1001 nodeuser
+
+# Copy output only (not source, not dev deps)
+COPY --from=build /app/.output ./.output
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/package.json ./package.json
+
+USER nodeuser
+
 EXPOSE 3000
 
-# Start the application
 CMD ["node", ".output/server/index.mjs"]

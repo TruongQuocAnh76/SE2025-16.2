@@ -1,7 +1,11 @@
-# Development Dockerfile for Laravel
-FROM php:8.2-fpm-alpine
+# ============================================================
+# Build stage
+# ============================================================
+FROM php:8.2-fpm-alpine AS build
 
-# Install system dependencies
+WORKDIR /var/www
+
+# System deps + PHP build deps
 RUN apk add --no-cache \
     postgresql-dev \
     libzip-dev \
@@ -9,44 +13,84 @@ RUN apk add --no-cache \
     unzip \
     git \
     curl \
-    bash \
     ffmpeg \
-    ffmpeg-dev
+    linux-headers \
+    freetype-dev \
+    libjpeg-turbo-dev \
+    libpng-dev \
+    $PHPIZE_DEPS
 
-# Install PHP extensions
-RUN docker-php-ext-install pdo pdo_pgsql zip bcmath
+# PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+ && docker-php-ext-install \
+    pdo \
+    pdo_pgsql \
+    zip \
+    bcmath \
+    pcntl \
+    sockets \
+    gd
 
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Redis (pin version, deterministic)
+RUN pecl install redis-6.3.0 \
+ && docker-php-ext-enable redis
 
-# Set working directory
-WORKDIR /var/www
+# Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copy composer files first for better caching
+# Copy composer files FIRST (cache-friendly)
 COPY composer.json composer.lock ./
 
-# Install PHP dependencies without scripts first
-RUN composer install --no-scripts --no-interaction
+# Install prod dependencies ONLY
+# --no-scripts avoids artisan before files exist
+RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --prefer-dist \
+    --optimize-autoloader \
+    --no-scripts
 
-# Copy the rest of the application
+# Copy application source
 COPY . .
 
-# Create necessary directories and set permissions
-RUN mkdir -p bootstrap/cache storage/logs storage/framework/cache storage/framework/sessions storage/framework/views \
-    && chown -R www-data:www-data /var/www \
-    && chmod -R 755 /var/www/storage \
-    && chmod -R 755 /var/www/bootstrap/cache
+# REQUIRED directories BEFORE artisan
+RUN mkdir -p \
+    bootstrap/cache \
+    storage/logs \
+    storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
+ && chown -R www-data:www-data bootstrap storage \
+ && chmod -R 775 bootstrap storage
 
-# Run the post-install scripts
-RUN composer run-script post-autoload-dump
+# Run safe artisan commands (NO key generation)
+RUN php artisan package:discover --ansi \
+ && php artisan config:clear \
+ && php artisan route:clear \
+ && php artisan view:clear
 
-# Set permissions again after running scripts
-RUN chown -R www-data:www-data /var/www \
-    && chmod -R 755 /var/www/storage \
-    && chmod -R 755 /var/www/bootstrap/cache
+# ============================================================
+# Runtime stage
+# ============================================================
+FROM php:8.2-fpm-alpine AS production
 
-# Expose port
-EXPOSE 8000
+WORKDIR /var/www
 
-# Start Laravel development server
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+# Runtime-only libs
+RUN apk add --no-cache \
+    postgresql-libs \
+    libzip \
+    curl \
+    ffmpeg
+
+# Copy PHP extensions & config
+COPY --from=build /usr/local/lib/php/extensions /usr/local/lib/php/extensions
+COPY --from=build /usr/local/etc/php/conf.d /usr/local/etc/php/conf.d
+
+# Copy app
+COPY --from=build --chown=www-data:www-data /var/www /var/www
+
+USER www-data
+
+EXPOSE 9000
+CMD ["php-fpm"]

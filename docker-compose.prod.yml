@@ -20,8 +20,6 @@ services:
       - ./frontend/.env
     environment:
       - NODE_ENV=production
-    depends_on:
-      - nginx
     networks:
       - app_network
     restart: always
@@ -130,9 +128,6 @@ services:
   # ---------------------------------------------------------------------------
   blockchain:
     image: ghcr.io/truongquocanh76/se2025-16.2/certchain-blockchain:latest
-    ports:
-      - "3001:3001"
-      - "8545:8545"
     env_file:
       - ./blockchain/.env
     volumes:
@@ -154,8 +149,6 @@ services:
   # ---------------------------------------------------------------------------
   db:
     image: postgres:15-alpine
-    ports:
-      - "5432:5432"
     env_file:
       - ./backend/.env
     environment:
@@ -179,8 +172,6 @@ services:
   # ---------------------------------------------------------------------------
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -197,9 +188,6 @@ services:
   # ---------------------------------------------------------------------------
   rabbitmq:
     image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
     env_file:
       - ./backend/.env
     environment:
