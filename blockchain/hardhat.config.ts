@@ -1,16 +1,22 @@
 import hardhatToolboxMochaEthersPlugin from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 import { defineConfig } from "hardhat/config";
 
+// Use relative paths during build, absolute paths at runtime
+const isProduction = process.env.NODE_ENV === "production";
+const basePath = isProduction && process.env.RUNTIME_PATH === "true" 
+  ? "/app/blockchain-data" 
+  : "./blockchain-data";
+
 export default defineConfig({
   plugins: [hardhatToolboxMochaEthersPlugin],
   paths: {
-    cache: "/app/blockchain-data/cache",
-    artifacts: "/app/blockchain-data/artifacts",
+    cache: `${basePath}/cache`,
+    artifacts: `${basePath}/artifacts`,
     sources: "./contracts",
     tests: "./test",
   },
   typechain: {
-    outDir: "/app/blockchain-data/types",
+    outDir: `${basePath}/types`,
   },
   solidity: {
     profiles: {

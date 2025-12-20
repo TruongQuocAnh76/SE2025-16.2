@@ -132,6 +132,7 @@ export class CertificateController {
       if (!ownerAddr) {
         return res.status(400).json({
           success: false,
+          data: [],
           error: 'Owner address is required',
           pagination: { page: 1, limit: 10, total: 0, pages: 0 }
         });
@@ -160,6 +161,7 @@ export class CertificateController {
       console.error('Error in getCertificatesByOwner:', error);
       res.status(500).json({
         success: false,
+        data: [],
         error: error instanceof Error ? error.message : 'Internal server error',
         pagination: { page: 1, limit: 10, total: 0, pages: 0 }
       });
