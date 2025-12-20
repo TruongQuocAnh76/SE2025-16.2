@@ -1,73 +1,67 @@
-# Multi-stage build for blockchain microservice
+# ---------- Build stage ----------
+FROM node:22-alpine AS build
 
-# Stage 1: Build stage
-FROM node:20-alpine AS builder
-
-# Install pnpm
-RUN npm install -g pnpm
-
+ENV NODE_ENV=production
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Build deps needed for native modules + hardhat
+RUN apk add --no-cache \
+    git \
+    python3 \
+    build-base \
+    curl
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Enable pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Copy source code and build configurations
-COPY src ./src
-COPY tsconfig.json ./
-COPY hardhat.config.ts ./
-COPY contracts ./contracts
-COPY ignition ./ignition
+# Non-root user (same UID/GID as dev)
+RUN addgroup -S nodejs -g 1001 \
+ && adduser -S blockchain -u 1001 -G nodejs -h /home/blockchain
 
-# Build TypeScript code
-RUN pnpm run build
-
-# Compile smart contracts
-RUN pnpm run compile
-
-# Stage 2: Production stage
-FROM node:20-alpine AS production
-
-# Install pnpm
-RUN npm install -g pnpm
-
-# Create app directory
-WORKDIR /app
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S blockchain -u 1001
-
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
-
-# Install production dependencies only
-RUN pnpm install --prod --frozen-lockfile && \
-    pnpm store prune
-
-# Copy built application and contracts from builder stage
-COPY --from=builder --chown=blockchain:nodejs /app/dist ./dist
-COPY --from=builder --chown=blockchain:nodejs /app/artifacts ./artifacts
-COPY --from=builder --chown=blockchain:nodejs /app/typechain-types ./typechain-types
-
-# Copy environment file template
-COPY --chown=blockchain:nodejs .env.example ./.env.example
-
-# Create necessary directories and set permissions
-RUN mkdir -p /app/logs && \
-    chown -R blockchain:nodejs /app
-
-# Switch to non-root user
 USER blockchain
 
-# Expose port
+# Copy manifests first (cache)
+COPY --chown=blockchain:nodejs package.json pnpm-lock.yaml ./
+
+# Install ALL deps (build + runtime)
+RUN pnpm install --frozen-lockfile
+
+# Copy source
+COPY --chown=blockchain:nodejs . .
+
+# Build TypeScript
+RUN pnpm run build
+
+# Compile smart contracts (Hardhat)
+RUN pnpm run compile
+
+
+# ---------- Runtime stage ----------
+FROM node:22-alpine AS production
+
+ENV NODE_ENV=production
+WORKDIR /app
+
+# Minimal runtime deps only
+RUN apk add --no-cache curl su-exec
+
+# Enable pnpm (some libs still resolve through node_modules)
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Same user as dev/build
+RUN addgroup -S nodejs -g 1001 \
+ && adduser -S blockchain -u 1001 -G nodejs -h /home/blockchain \
+ && mkdir -p /app /home/blockchain \
+ && chown blockchain:nodejs /app /home/blockchain
+
+USER blockchain
+
+# Copy only what runtime needs
+COPY --from=build --chown=blockchain:nodejs /app/package.json ./package.json
+COPY --from=build --chown=blockchain:nodejs /app/node_modules ./node_modules
+COPY --from=build --chown=blockchain:nodejs /app/dist ./dist
+COPY --from=build --chown=blockchain:nodejs /app/blockchain-data ./blockchain-data
+
 EXPOSE 3001
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD node -e "fetch('http://localhost:3001/v1/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
-
-# Start the application
 CMD ["node", "dist/index.js"]

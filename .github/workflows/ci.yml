@@ -150,7 +150,7 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          tags: ${{ steps.meta-frontend.outputs.tags }}
+          tags: ghcr.io/${{ github.repository }}/certchain-frontend:latest
           labels: ${{ steps.meta-frontend.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -169,7 +169,7 @@ jobs:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
-          tags: ${{ steps.meta-backend.outputs.tags }}
+          tags: ghcr.io/${{ github.repository }}/certchain-backend:latest
           labels: ${{ steps.meta-backend.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -188,7 +188,7 @@ jobs:
           context: ./blockchain
           file: ./blockchain/Dockerfile
           push: true
-          tags: ${{ steps.meta-blockchain.outputs.tags }}
+          tags: ghcr.io/${{ github.repository }}/certchain-blockchain:latest
           labels: ${{ steps.meta-blockchain.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
