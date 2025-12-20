@@ -72,6 +72,95 @@ class PaymentService
             ];
         }
     }
+
+    /**
+     * Get PayPal Client
+     */
+    public function getPayPalClient()
+    {
+        $authBuilder = \PaypalServerSdkLib\Authentication\ClientCredentialsAuthCredentialsBuilder::init(
+            env('PAYPAL_CLIENT_ID'),
+            env('PAYPAL_CLIENT_SECRET')
+        );
+
+        $mode = strtolower(env('PAYPAL_MODE', 'sandbox')) === 'live'
+            ? \PaypalServerSdkLib\Environment::LIVE
+            : \PaypalServerSdkLib\Environment::SANDBOX;
+
+        return PaypalServerSdkClientBuilder::init()
+            ->clientCredentialsAuthCredentials($authBuilder)
+            ->environment($mode)
+            ->build();
+    }
+
+    /**
+     * Create PayPal Order
+     */
+    public function createPayPalOrder($amount, $currency = 'USD')
+    {
+        try {
+            $client = $this->getPayPalClient();
+            $ordersController = $client->getOrdersController();
+
+            $orderRequest = new OrderRequest(
+                \PaypalServerSdkLib\Models\CheckoutPaymentIntent::CAPTURE,
+                [
+                    new PurchaseUnitRequest(
+                        new AmountWithBreakdown($currency, number_format($amount, 2, '.', ''))
+                    )
+                ]
+            );
+
+            $response = $ordersController->createOrder(['body' => $orderRequest]);
+            $result = $response->getResult();
+
+            return [
+                'success' => true,
+                'order_id' => $result->getId(),
+                'status' => $result->getStatus(),
+                'links' => $result->getLinks()
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('PayPal create order failed: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Capture PayPal Order
+     */
+    public function capturePayPalOrder($orderId)
+    {
+        try {
+            $client = $this->getPayPalClient();
+            $ordersController = $client->getOrdersController();
+
+            $response = $ordersController->captureOrder([
+                'id' => $orderId,
+                'prefer' => 'return=representation'
+            ]);
+            $result = $response->getResult();
+
+            return [
+                'success' => true,
+                'status' => $result->getStatus(),
+                'id' => $result->getId(),
+                'payer' => $result->getPayer(),
+                'purchase_units' => $result->getPurchaseUnits()
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('PayPal capture order failed: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
     public function __construct()
     {
         // Initialize Stripe

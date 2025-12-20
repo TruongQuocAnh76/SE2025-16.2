@@ -63,7 +63,29 @@
                       <path d="M24 6.4c-2.8 2.4-4.5 5.9-4.5 9.6s1.7 7.2 4.5 9.6c2.8-2.4 4.5-5.9 4.5-9.6s-1.7-7.2-4.5-9.6z" fill="#FF5F00"/>
                     </svg>
                   </button>
+
+                  <!-- PayPal -->
+                  <button
+                    @click="selectedCardType = 'PAYPAL'"
+                    :class="[
+                      'p-4 rounded-lg border-2 transition-all flex items-center justify-center',
+                      selectedCardType === 'PAYPAL'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-slate-200 hover:border-slate-300'
+                    ]"
+                  >
+                    <svg class="w-10 h-8" viewBox="0 0 24 24" fill="none">
+                        <path d="M18.8 6.5C18.4 4.1 16.4 2.5 14 2.5H6.5C5.8 2.5 5.2 3 5.1 3.7L3 17.2C2.9 17.6 3.2 18 3.6 18H7.2L7.7 21.2C7.8 21.7 8.2 22 8.7 22H13C13.5 22 13.9 21.7 14 21.2L14.2 19.8L14.3 19.3L14.4 18.5C14.4 18.5 17.3 18.2 18.8 14.8C18.8 14.8 21.2 11.2 18.8 6.5Z" fill="#003087"/>
+                        <path d="M8.9 17.9C9 17.7 9.2 17.5 9.4 17.5H9.9H9.6C9.4 17.5 9.2 17.7 9.2 17.9L8.7 20.8C8.7 21 8.6 21.1 8.4 21.1H6.2C5.9 21.1 5.7 20.9 5.8 20.6L6.2 18.4L6.7 15.6C6.7 15.3 6.5 15.1 6.3 15.1H2.9L3.8 3.8C3.8 3.4 4.2 3.1 4.6 3.1H9.1C12 3.1 15.2 3.1 15.9 7.5C16.1 8.8 15.9 9.9 15.2 10.7C15.7 11.4 15.9 12.2 15.7 13.2C15.4 15.1 14.3 16.1 12.4 16.1H10.2C9.9 16.1 9.7 16.3 9.7 16.6L8.9 17.9Z" fill="#009CDE"/>
+                    </svg>
+                    <span class="ml-2 font-bold text-slate-700">PayPal</span>
+                  </button>
                 </div>
+              </div>
+
+              <!-- PayPal Buttons Container -->
+              <div v-show="selectedCardType === 'PAYPAL'" class="w-full mb-6">
+                  <div id="paypal-button-container" class="w-full mt-4"></div>
               </div>
 
               <!-- Stripe Elements Card Form -->
@@ -239,6 +261,8 @@ onMounted(() => {
         })
       }
     })
+  } else if (selectedCardType.value === 'PAYPAL') {
+      loadPayPal()
   }
 })
 
@@ -250,40 +274,24 @@ const paymentType = computed(() => route.query.type || 'MEMBERSHIP')
 const courseId = computed(() => route.query.course_id || null)
 const selectedCardType = ref('VISA')
 const loading = ref(false)
+const currentPaymentId = ref<string | null>(null)
 
 // Stripe instance
 let stripeInstance: any = null
 
 
-// Stripe Elements chỉ mount khi chọn VISA/MASTERCARD
 
-onMounted(() => {
-  loadCourseData()
-  // Mount Stripe Elements nếu mặc định là VISA/MASTERCARD
-  if (!STRIPE_TEST_MODE && (selectedCardType.value === 'VISA' || selectedCardType.value === 'MASTERCARD')) {
-    nextTick().then(async () => {
-      if (!stripeInstance) {
-        stripeInstance = await loadStripe(config.public.stripePublishableKey)
-      }
-      if (stripeInstance) {
-        elements = stripeInstance.elements()
-        cardElement = elements.create('card')
-        cardElement.mount('#stripe-card-element')
-        cardElement.on('change', (event) => {
-          const errorDiv = document.getElementById('stripe-card-errors')
-          if (event.error) {
-            errorDiv.textContent = event.error.message
-          } else {
-            errorDiv.textContent = ''
-          }
-        })
-      }
-    })
-  }
-})
 
 watch(selectedCardType, async (val, oldVal) => {
-  if (!STRIPE_TEST_MODE && (val === 'VISA' || val === 'MASTERCARD')) {
+  if (val === 'PAYPAL') {
+      // Unmount Stripe
+      if (cardElement && cardElement.unmount) {
+          cardElement.unmount()
+          cardElement = null
+      }
+      await nextTick()
+      loadPayPal()
+  } else if (!STRIPE_TEST_MODE && (val === 'VISA' || val === 'MASTERCARD')) {
     // Đợi DOM render xong
     await nextTick()
     if (!stripeInstance) {
@@ -303,7 +311,7 @@ watch(selectedCardType, async (val, oldVal) => {
       })
     }
     console.log('Stripe initialized:', stripeInstance ? 'success' : 'failed')
-  } else if (oldVal === 'VISA' || oldVal === 'MASTERCARD') {
+  } else if ((oldVal === 'VISA' || oldVal === 'MASTERCARD') && val !== 'PAYPAL') {
     // Unmount Stripe Elements khi chuyển sang loại khác
     if (cardElement && cardElement.unmount) {
       cardElement.unmount()
@@ -311,6 +319,127 @@ watch(selectedCardType, async (val, oldVal) => {
     }
   }
 })
+
+// PAYPAL LOGIC
+const loadPayPal = () => {
+    const PAYPAL_CLIENT_ID = config.public.paypalClientId; 
+    const scriptSrc = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD&intent=capture`;
+
+    const existingScript = document.getElementById('paypal-sdk') as HTMLScriptElement;
+    if (existingScript) {
+        if (existingScript.src === scriptSrc) {
+            renderPayPalButtons();
+            return;
+        } else {
+            existingScript.remove();
+            (window as any).paypal = undefined;
+        }
+    }
+
+    const script = document.createElement('script');
+    script.src = scriptSrc;
+    script.id = 'paypal-sdk';
+    script.onload = () => {
+        renderPayPalButtons();
+    };
+    script.onerror = (err) => {
+        console.error('PayPal SDK failed to load', err);
+        alert('Could not load PayPal SDK');
+    };
+    document.body.appendChild(script);
+}
+
+const renderPayPalButtons = () => {
+    if ((window as any).paypal) {
+        // Clear previous buttons if any
+        const container = document.getElementById('paypal-button-container');
+        if (container) container.innerHTML = '';
+
+        (window as any).paypal.Buttons({
+            fundingSource: (window as any).paypal.FUNDING.PAYPAL,
+            createOrder: async (data: any, actions: any) => {
+                try {
+                    const tokenCookie = useCookie('auth_token')
+                    const token = tokenCookie.value
+                    
+                    const paymentData: any = {
+                        payment_type: paymentType.value,
+                        payment_method: 'PAYPAL',
+                        amount: totalAmount.value 
+                    }
+                    if (paymentType.value === 'COURSE') {
+                        paymentData.course_id = courseId.value
+                    } else {
+                        paymentData.membership_plan = 'PREMIUM'
+                    }
+
+                    const response: any = await $fetch('http://localhost:8000/api/payments/create', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: paymentData
+                    })
+
+                    if (response.success) {
+                        currentPaymentId.value = response.payment.id;
+                        console.log('PayPal Order ID:', response.paypal_order_id);
+                        return response.paypal_order_id;
+                    } else {
+                        throw new Error(response.message || 'Failed to create PayPal order');
+                    }
+                } catch (error) {
+                    console.error('Create PayPal Order Error:', error);
+                    alert('Could not initiate PayPal payment');
+                }
+            },
+            onApprove: async (data: any, actions: any) => {
+                try {
+                     const tokenCookie = useCookie('auth_token')
+                     const token = tokenCookie.value
+                     
+                     if (!currentPaymentId.value) {
+                       // Should be set by createOrder
+                     }
+
+                     const response: any = await $fetch(`http://localhost:8000/api/payments/${currentPaymentId.value}/paypal/capture`, {
+                         method: 'POST',
+                         headers: {
+                             'Authorization': `Bearer ${token}`,
+                             'Content-Type': 'application/json',
+                         },
+                         body: {
+                             paypal_order_id: data.orderID
+                         }
+                     })
+
+                     if (response.success) {
+                         alert('Payment successful!');
+                         if (paymentType.value === 'COURSE' && courseId.value) {
+                             router.push(`/courses/${courseId.value}`)
+                         } else if (paymentType.value === 'MEMBERSHIP') {
+                             router.push('/membership')
+                         } else {
+                             router.push('/')
+                         }
+                     } else {
+                         alert('Payment capture failed: ' + response.message);
+                     }
+                } catch (error) {
+                   console.error('PayPal Capture Error:', error);
+                   alert('Payment capture failed');
+                }
+            },
+            onError: (err: any) => {
+                console.error('PayPal Button Error:', err);
+                alert('An error occurred with PayPal');
+            }
+        }).render('#paypal-button-container');
+    }
+}
+
+
 
 // Card form data
 const cardDetails = ref({
