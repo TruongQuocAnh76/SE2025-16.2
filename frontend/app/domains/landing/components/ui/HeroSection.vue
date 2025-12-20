@@ -21,10 +21,11 @@
           <!-- Action Buttons -->
           <div class="flex flex-col sm:flex-row gap-4">
             <!-- Join for Free Button -->
-            <NuxtLink to="/signup"
+            <button
+              @click="handleJoinClick"
               class="inline-flex items-center justify-center bg-white/80 hover:bg-white text-text-dark px-8 py-4 rounded-3xl text-h6 font-inter transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
               Join for Free
-            </NuxtLink>
+            </button>
 
             <!-- Explore Courses Button -->
             <NuxtLink to="/courses"
@@ -60,6 +61,18 @@
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
+import { useCookie } from '#app'
+
+const router = useRouter()
+const handleJoinClick = () => {
+  const authToken = useCookie('auth_token')
+  if (authToken.value) {
+    router.push('/courses')
+  } else {
+    router.push('/auth/signup')
+  }
+}
 </script>
 
 <style scoped>

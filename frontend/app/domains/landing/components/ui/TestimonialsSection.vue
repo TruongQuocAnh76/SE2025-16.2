@@ -37,21 +37,9 @@
               What They <span class="text-brand-primary">Say?</span>
             </h2>
             <p class="text-body text-text-muted font-inter leading-relaxed">
-              CertChain has got many positive ratings from our users around the world. Some of the students and teachers were greatly helped by the Skilline. Are you too? Please give your assessment
+              CertChain has received many positive ratings from users around the world. Both students and teachers have benefited greatly from our platform. There are some of their experiences and feedback.
             </p>
           </div>
-
-          <!-- Write Assessment Button -->
-          <button class="group inline-flex items-center gap-3 bg-white hover:bg-brand-primary text-text-dark hover:text-white px-8 py-4 rounded-3xl text-h6 font-inter transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 border border-brand-primary/20">
-            <span>Write your assessment</span>
-            <div class="relative">
-              <svg class="w-6 h-6 transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-              </svg>
-              <!-- Circle border around arrow -->
-              <div class="absolute -inset-1 border-2 border-current rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            </div>
-          </button>
         </div>
 
         <!-- Right Content - Image with Testimonial Overlay -->

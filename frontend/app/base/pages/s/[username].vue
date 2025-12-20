@@ -230,9 +230,10 @@ onMounted(async () => {
     ]
   }, 1500)
 })
+import StudentHome from '../../components/templates/StudentHome.vue'
+import TeacherHome from '../../components/templates/TeacherHome.vue'
+import AdminHome from '../../components/templates/AdminHome.vue'
 
-// Set page title
-useSeoMeta({
-  title: `${displayName.value} - Dashboard`
-})
+const auth = useAuth()
+const role = computed(() => auth.user?.value?.role || 'STUDENT')
 </script>

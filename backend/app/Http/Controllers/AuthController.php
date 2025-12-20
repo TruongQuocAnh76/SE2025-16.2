@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Models\User;
+use App\Services\SystemLogService;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -27,6 +28,7 @@ if (!class_exists('App\\Models\\PasswordReset')) {
         ];
     }
 }
+
 
 /**
  * @OA\Info(
@@ -232,6 +234,12 @@ if (!class_exists('App\\Models\\PasswordReset')) {
  */
 class AuthController extends Controller
 {
+    protected $systemLogService;
+
+    public function __construct(\App\Services\SystemLogService $systemLogService)
+    {
+        $this->systemLogService = $systemLogService;
+    }
     /**
      * Forgot Password: Nhận email, tạo token, lưu DB, gửi message RabbitMQ (giả lập)
      */
@@ -372,6 +380,8 @@ class AuthController extends Controller
      *         description="User registered successfully",
      *         @OA\JsonContent(
      *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="access_token", type="string"),
+     *             @OA\Property(property="token_type", type="string", example="Bearer"),
      *             @OA\Property(property="user", ref="#/components/schemas/User")
      *         )
      *     ),
@@ -444,8 +454,30 @@ class AuthController extends Controller
             'role' => 'STUDENT',
         ]);
 
+        // Log user registration via SystemLogService
+        if (isset($this->systemLogService)) {
+            $this->systemLogService->logAction(
+                'INFO',
+                'User Registered',
+                $user->id,
+                [
+                    'user_id' => $user->id,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'auth_provider' => 'EMAIL',
+                ],
+                $request->ip(),
+                $request->userAgent()
+            );
+        }
+
+        // Create auth token for auto-login after registration
+        $token = $user->createToken('auth_token')->plainTextToken;
+
         return response()->json([
             'message' => 'User registered successfully',
+            'access_token' => $token,
+            'token_type' => 'Bearer',
             'user' => $user,
         ], 201);
     }
@@ -613,7 +645,7 @@ class AuthController extends Controller
     public function handleGoogleCallback()
     {
         try {
-            $socialiteUser = Socialite::driver('google')->user();
+            $socialiteUser = Socialite::driver('google')->stateless()->user();
 
             $user = User::firstOrCreate(
                 ['email' => $socialiteUser->email],
@@ -639,7 +671,7 @@ class AuthController extends Controller
 
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/oauth-callback?token=' . $token . '&user=' . urlencode(json_encode([
+            return redirect(env('FRONTEND_URL') . '/auth/oauth-callback?token=' . $token . '&user=' . rawurlencode(json_encode([
                 'id' => $user->id,
                 'first_name' => $user->first_name,
                 'last_name' => $user->last_name,
@@ -651,7 +683,7 @@ class AuthController extends Controller
             ])));
         } catch (\Exception $e) {
             Log::error('Google OAuth error: ' . $e->getMessage());
-            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/login?error=' . urlencode('Google authentication failed'));
+            return redirect(env('FRONTEND_URL') . '/auth/login?error=' . rawurlencode('Google authentication failed'));
         }
     }
 
@@ -668,7 +700,7 @@ class AuthController extends Controller
      */
     public function redirectToFacebook()
     {
-        return Socialite::driver('facebook')->redirect();
+        return Socialite::driver('facebook')->stateless()->redirect();
     }
 
     /**
@@ -685,7 +717,7 @@ class AuthController extends Controller
     public function handleFacebookCallback()
     {
         try {
-            $socialiteUser = Socialite::driver('facebook')->user();
+            $socialiteUser = Socialite::driver('facebook')->stateless()->user();
 
             $user = User::firstOrCreate(
                 ['email' => $socialiteUser->email],
@@ -711,7 +743,7 @@ class AuthController extends Controller
 
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/oauth-callback?token=' . $token . '&user=' . urlencode(json_encode([
+            return redirect(env('FRONTEND_URL') . '/auth/oauth-callback?token=' . $token . '&user=' . rawurlencode(json_encode([
                 'id' => $user->id,
                 'first_name' => $user->first_name,
                 'last_name' => $user->last_name,
@@ -723,7 +755,7 @@ class AuthController extends Controller
             ])));
         } catch (\Exception $e) {
             Log::error('Facebook OAuth error: ' . $e->getMessage());
-            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/login?error=' . urlencode('Facebook authentication failed'));
+            return redirect(env('FRONTEND_URL') . '/auth/login?error=' . rawurlencode('Facebook authentication failed'));
         }
     }
 }

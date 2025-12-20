@@ -12,6 +12,10 @@ use App\Http\Controllers\QuizController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\SystemController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\TeacherApplicationController;
+use App\Http\Controllers\TeacherController;
+use App\Http\Controllers\AdminController;
 
 /*
 |--------------------------------------------------------------------------
@@ -51,6 +55,7 @@ Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
 Route::middleware('auth:sanctum')->prefix('users')->group(function () {
     Route::get('/', [UserController::class, 'index']); // Admin only
     Route::get('/filter/by-role', [UserController::class, 'filterByRole']); // MUST be before /{id}
+    Route::get('/membership-status', [UserController::class, 'getMembershipStatus']); // MUST be before /{id}
     Route::get('/{id}', [UserController::class, 'show']);
     Route::put('/{id}', [UserController::class, 'update']);
     Route::delete('/{id}', [UserController::class, 'destroy']); // Admin only
@@ -76,10 +81,11 @@ Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
     Route::get('/lesson/{lessonId}/hls-status', [CourseController::class, 'checkHlsProcessingStatus']); // Check HLS processing status
     Route::get('/{id}/modules', [CourseController::class, 'getModulesWithLessons']);
     Route::get('/{id}/students', [CourseController::class, 'getEnrolledStudents']); // Teacher only
-    Route::get('/{id}/enrollment/check', [LessonController::class, 'checkEnrollment']); // Check enrollment
+    Route::get('/{id}/enrollment/check', [CourseController::class, 'checkEnrollment']); // Check enrollment status
     Route::put('/{id}', [CourseController::class, 'update']); // Teacher/Admin update
     Route::delete('/{id}', [CourseController::class, 'destroy']); // Teacher/Admin delete
     Route::post('/{id}/enroll', [CourseController::class, 'enroll']); // Student enroll
+    Route::post('/{id}/enroll-free', [CourseController::class, 'enrollFree']); // Premium members enroll for free
     Route::post('/{id}/review', [CourseController::class, 'addReview']); // Add review
 });
 
@@ -159,6 +165,27 @@ Route::middleware('auth:sanctum')->prefix('certificates')->group(function () {
     Route::post('/{certificateId}/attach-blockchain', [CertificateController::class, 'attachBlockchainData']); // Attach blockchain
 });
 
+/* ========================
+ * TEACHER APPLICATIONS
+ * ======================== */
+Route::middleware('auth:sanctum')->prefix('teacher-applications')->group(function () {
+    Route::post('/submit', [TeacherApplicationController::class, 'submit']); // Submit application
+    Route::get('/my-applications', [TeacherApplicationController::class, 'myApplications']); // Get my applications
+    Route::get('/', [TeacherApplicationController::class, 'index']); // Get all applications (Admin)
+    Route::get('/{id}', [TeacherApplicationController::class, 'show']); // Get application details
+    Route::post('/{id}/approve', [TeacherApplicationController::class, 'approve']); // Approve (Admin)
+    Route::post('/{id}/reject', [TeacherApplicationController::class, 'reject']); // Reject (Admin)
+});
+
+/* ========================
+ * TEACHERS
+ * ======================== */
+Route::middleware('auth:sanctum')->prefix('teachers')->group(function () {
+    Route::get('/{id}/courses', [TeacherController::class, 'getCourses']); // Get teacher's courses
+    Route::get('/{id}/students', [TeacherController::class, 'getStudents']); // Get students in teacher's courses
+    Route::get('/{id}/statistics', [TeacherController::class, 'getStatistics']); // Get teacher statistics
+});
+
 // Public certificate verification routes (no auth required)
 Route::prefix('certificates')->group(function () {
     Route::post('/verify', [CertificateVerificationController::class, 'verify']); // Blockchain verify
@@ -186,6 +213,29 @@ Route::middleware('auth:sanctum')->prefix('system')->group(function () {
 });
 
 /* ========================
+ * ADMIN DASHBOARD
+ * ======================== */
+Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
+    Route::get('/dashboard-stats', [AdminController::class, 'getDashboardStats']);
+    Route::get('/teacher-applications', [AdminController::class, 'getPendingTeacherApplications']);
+    Route::get('/course-applications', [AdminController::class, 'getPendingCourseApplications']);
+    Route::get('/certificates-overview', [AdminController::class, 'getCertificatesOverview']);
+    Route::get('/recent-certificates', [AdminController::class, 'getRecentCertificates']);
+    Route::get('/system-logs', [AdminController::class, 'getSystemLogs']);
+    Route::post('/teacher-applications/{applicationId}/approve', [AdminController::class, 'approveTeacher']);
+    Route::post('/teacher-applications/{applicationId}/reject', [AdminController::class, 'rejectTeacher']);
+    Route::post('/courses/{courseId}/approve', [AdminController::class, 'approveCourse']);
+    Route::post('/courses/{courseId}/reject', [AdminController::class, 'rejectCourse']);
+    
+    // Admin list endpoints
+    Route::get('/list/users', [AdminController::class, 'listUsers']);
+    Route::get('/list/courses', [AdminController::class, 'listCourses']);
+    Route::get('/list/certificates', [AdminController::class, 'listCertificates']);
+    Route::get('/list/applications', [AdminController::class, 'listApplications']);
+    Route::get('/list/logs', [AdminController::class, 'listLogs']);
+});
+
+/* ========================
  * TAGS (Public)
  * ======================== */
 Route::prefix('tags')->group(function () {
@@ -200,15 +250,18 @@ Route::prefix('tags')->group(function () {
 /* ========================
  * PAYMENTS (Commented out until PaymentController is implemented)
  * ======================== */
-// Route::middleware('auth:sanctum')->prefix('payments')->group(function () {
-//     Route::post('/create', [PaymentController::class, 'createPayment']); // Create payment intent
-//     Route::get('/', [PaymentController::class, 'index']); // Get payment history
-//     Route::get('/{id}', [PaymentController::class, 'show']); // Get payment details
-//     
-//     // Stripe routes
-//     Route::post('/{id}/stripe/create-intent', [PaymentController::class, 'createStripeIntent']); // Create Stripe payment intent
-//     Route::post('/{id}/stripe/complete', [PaymentController::class, 'completeStripePayment']); // Complete Stripe payment
-// });
+Route::middleware('auth:sanctum')->prefix('payments')->group(function () {
+    Route::post('/create', [PaymentController::class, 'createPayment']); // Create payment intent
+    Route::get('/', [PaymentController::class, 'index']); // Get payment history
+    Route::get('/{id}', [PaymentController::class, 'show']); // Get payment details
+    
+    // Stripe routes
+    Route::post('/{id}/stripe/create-intent', [PaymentController::class, 'createStripeIntent']); // Create Stripe payment intent
+    Route::post('/{id}/stripe/complete', [PaymentController::class, 'completeStripePayment']); // Complete Stripe payment
+    
+    // PayPal routes
+    Route::post('/{id}/paypal/capture', [PaymentController::class, 'capturePayPalPayment']); // Capture PayPal payment
+});
 
 // Stripe Webhook (no auth needed)
 // Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook']);

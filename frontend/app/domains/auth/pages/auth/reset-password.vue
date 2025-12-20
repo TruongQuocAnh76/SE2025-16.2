@@ -11,7 +11,14 @@
           <label class="block mb-1 font-medium">Xác nhận mật khẩu</label>
           <input v-model="confirmPassword" type="password" class="w-full border rounded px-3 py-2" required />
         </div>
-        <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded font-semibold">Đặt lại mật khẩu</button>
+        <button
+          type="submit"
+          class="w-full bg-blue-600 text-white py-2 rounded font-semibold transition-all duration-200 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-60 disabled:cursor-not-allowed"
+          :disabled="loading"
+        >
+          <span v-if="loading">Đang xử lý...</span>
+          <span v-else>Đặt lại mật khẩu</span>
+        </button>
       </form>
       <div v-if="error" class="text-red-500 mt-4 text-center">{{ error }}</div>
       <div v-if="success" class="text-green-500 mt-4 text-center">{{ success }}</div>
@@ -30,12 +37,15 @@ const password = ref('')
 const confirmPassword = ref('')
 const error = ref('')
 const success = ref('')
+const loading = ref(false)
 
-const submit = async () => {
+const submitReset = async () => {
   error.value = ''
   success.value = ''
+  loading.value = true
   if (password.value !== confirmPassword.value) {
     error.value = 'Mật khẩu xác nhận không khớp.'
+    loading.value = false
     return
   }
   try {
@@ -50,11 +60,18 @@ const submit = async () => {
       const data = await res.json().catch(() => ({}))
       throw new Error(data?.message || 'Có lỗi xảy ra, vui lòng thử lại.')
     }
-    success.value = 'Đặt lại mật khẩu thành công! Bạn có thể đăng nhập.'
+    success.value = 'Đặt lại mật khẩu thành công! Đang chuyển hướng...'
+    setTimeout(() => {
+      window.location.href = '/auth/login'
+    }, 1500)
   } catch (e: any) {
     error.value = e?.message || 'Có lỗi xảy ra, vui lòng thử lại.'
+  } finally {
+    loading.value = false
   }
 }
+
+const submit = submitReset;
 </script>
 
 <style scoped>

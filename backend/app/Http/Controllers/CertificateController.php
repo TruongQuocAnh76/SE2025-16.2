@@ -5,13 +5,17 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use App\Contracts\StorageServiceInterface;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\QuizAttempt;
 use App\Models\BlockchainTransaction;
 use PDF; // nếu bạn dùng barryvdh/laravel-dompdf để tạo PDF
+use App\Services\CertificateService;
+use App\Services\SystemLogService;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 /**
  * @OA\Server(
@@ -21,6 +25,20 @@ use PDF; // nếu bạn dùng barryvdh/laravel-dompdf để tạo PDF
  */
 class CertificateController extends Controller
 {
+    protected $certificateService;
+    protected StorageServiceInterface $storage;
+    protected $systemLogService;
+
+    public function __construct(
+        CertificateService $certificateService,
+        StorageServiceInterface $storage,
+        SystemLogService $systemLogService
+    )
+    {
+        $this->certificateService = $certificateService;
+        $this->storage = $storage;
+        $this->systemLogService = $systemLogService;
+    }
     /**
      * @OA\Get(
      *     path="/api/certificates/mine",
@@ -155,6 +173,43 @@ class CertificateController extends Controller
             'message' => 'Chứng chỉ đã được cấp thành công.',
             'certificate' => $certificate
         ], 201);
+            // Log to system_logs table via service
+            if (isset($this->systemLogService)) {
+                $this->systemLogService->logAction(
+                    'INFO',
+                    'Certificate Issued',
+                    $studentId,
+                    [
+                        'certificate_id' => $certificate->id,
+                        'certificate_number' => $certNumber,
+                        'student_id' => $studentId,
+                        'student_name' => Auth::user()->first_name . ' ' . Auth::user()->last_name,
+                        'course_id' => $courseId,
+                        'course_title' => $course->title,
+                        'final_score' => $finalAttempt->score,
+                    ],
+                    $request->ip(),
+                    $request->userAgent()
+                );
+            }
+
+            return response()->json([
+                'message' => 'Chứng chỉ đã được cấp thành công.',
+                'certificate' => $certificate
+            ], 201);
+            
+        } catch (\Exception $e) {
+            Log::error("Certificate issuance failed", [
+                'error' => $e->getMessage(),
+                'student_id' => $studentId,
+                'course_id' => $courseId,
+                'certificate_number' => $certNumber
+            ]);
+            
+            return response()->json([
+                'error' => 'Không thể tạo chứng chỉ: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -312,6 +367,16 @@ class CertificateController extends Controller
         // Kiểm tra hash
         $localPdf = file_get_contents(storage_path('app/public/' . str_replace(Storage::disk('public')->url(''), '', $certificate->pdf_url)));
         $isValid = Hash::check($localPdf, $certificate->pdf_hash);
+        // Verify PDF hash from storage
+        try {
+            // Extract storage path from PDF URL or use stored path
+            $s3Path = $certificate->pdf_path ?? "certificates/{$certificate->certificate_number}.pdf";
+            $pdfContent = $this->storage->get($s3Path);
+            $currentHash = hash('sha256', $pdfContent);
+            $isValid = ($currentHash === $certificate->pdf_hash);
+        } catch (\Exception $e) {
+            return response()->json(['valid' => false, 'message' => 'Không thể xác minh tệp PDF.']);
+        }
 
         return response()->json([
             'valid' => $isValid,

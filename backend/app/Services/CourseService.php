@@ -8,9 +8,10 @@ use App\Repositories\QuestionRepository;
 use App\Models\Review;
 use App\Models\User;
 use App\Services\HlsVideoService;
-use App\Helpers\AwsUrlHelper;
+use App\Contracts\StorageServiceInterface;
+use App\Helpers\StorageUrlHelper;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class CourseService {
     protected $courseRepository;
@@ -20,6 +21,7 @@ class CourseService {
     protected $quizRepository;
     protected $questionRepository;
     protected $hlsVideoService;
+    protected StorageServiceInterface $storage;
 
     public function __construct(
         CourseRepository $courseRepository,
@@ -28,7 +30,8 @@ class CourseService {
         LessonRepository $lessonRepository,
         QuizRepository $quizRepository,
         QuestionRepository $questionRepository,
-        HlsVideoService $hlsVideoService
+        HlsVideoService $hlsVideoService,
+        StorageServiceInterface $storage
     ) {
         $this->courseRepository = $courseRepository;
         $this->enrollmentRepository = $enrollmentRepository;
@@ -37,6 +40,7 @@ class CourseService {
         $this->quizRepository = $quizRepository;
         $this->questionRepository = $questionRepository;
         $this->hlsVideoService = $hlsVideoService;
+        $this->storage = $storage;
     }
     public function getAllCourses($filters = [], $perPage = 12) {
         return $this->courseRepository->getAll($filters, $perPage);
@@ -52,7 +56,7 @@ class CourseService {
     }
 
     public function createCourseWithModules(array $data) {
-        \DB::beginTransaction();
+        DB::beginTransaction();
 
         try {
             // Extract modules data
@@ -75,13 +79,11 @@ class CourseService {
             } else if ($data['thumbnail'] === 'UPLOAD_REQUESTED') {
                 // Frontend specifically requested thumbnail upload
                 $thumbnailPath = 'courses/thumbnails/' . $data['id'] . '.jpg';
-                $awsBucket = env('AWS_BUCKET');
                 
                 // Use frontend-accessible endpoint
-                $frontendAwsEndpoint = AwsUrlHelper::getFrontendAwsEndpoint();
-                $data['thumbnail'] = $frontendAwsEndpoint . '/' . $awsBucket . '/' . $thumbnailPath;
+                $data['thumbnail'] = StorageUrlHelper::buildFullUrl($thumbnailPath);
                 
-                $thumbnailUploadUrl = AwsUrlHelper::generateFrontendPresignedUrl(
+                $thumbnailUploadUrl = $this->storage->temporaryUploadUrl(
                     $thumbnailPath,
                     now()->addMinutes(30),
                     ['ContentType' => 'image/jpeg']
@@ -118,14 +120,11 @@ class CourseService {
                         if (empty($lessonData['content_url'])) {
                             $originalVideoPath = 'courses/original-videos/' . $course->id . '/modules/' . $module->id . '/lessons/' . $lessonData['id'] . '.mp4';
                             $hlsBasePath = 'courses/hls/' . $course->id . '/modules/' . $module->id . '/lessons/' . $lessonData['id'];
-                            $awsBucket = env('AWS_BUCKET');
                             
-                            $frontendAwsEndpoint = AwsUrlHelper::getFrontendAwsEndpoint();
-                            
-                            $lessonData['content_url'] = $frontendAwsEndpoint . '/' . $awsBucket . '/' . $hlsBasePath . '/master.m3u8';
+                            $lessonData['content_url'] = StorageUrlHelper::buildFullUrl($hlsBasePath . '/master.m3u8');
                             
                             // Generate upload URL for original video file
-                            $videoUploadUrl = AwsUrlHelper::generateFrontendPresignedUrl(
+                            $videoUploadUrl = $this->storage->temporaryUploadUrl(
                                 $originalVideoPath,
                                 now()->addMinutes(120), // 2 hours to upload video
                                 ['ContentType' => 'video/mp4']
@@ -162,7 +161,7 @@ class CourseService {
                 }
             }
 
-            \DB::commit();
+            DB::commit();
 
             return [
                 'course' => $course->load(['tags', 'modules.lessons', 'quizzes.questions']),
@@ -171,7 +170,7 @@ class CourseService {
             ];
 
         } catch (\Exception $e) {
-            \DB::rollback();
+            DB::rollback();
             throw $e;
         }
     }
@@ -281,9 +280,9 @@ class CourseService {
                 throw new \Exception('Lesson not found');
             }
 
-            // Verify the video file exists in S3
-            if (!Storage::disk('s3')->exists($originalVideoPath)) {
-                throw new \Exception('Original video file not found in S3');
+            // Verify the video file exists in storage
+            if (!$this->storage->exists($originalVideoPath)) {
+                throw new \Exception('Original video file not found in storage');
             }
 
             // Update lesson metadata if provided
@@ -302,9 +301,7 @@ class CourseService {
             $this->dispatchHlsProcessing(null, $hlsBasePath, $lessonId, $originalVideoPath);
 
             // Generate expected HLS URL
-            $awsBucket = env('AWS_BUCKET');
-            $frontendAwsEndpoint = AwsUrlHelper::getFrontendAwsEndpoint();
-            $expectedHlsUrl = $frontendAwsEndpoint . '/' . $awsBucket . '/' . $hlsBasePath . '/master.m3u8';
+            $expectedHlsUrl = StorageUrlHelper::buildFullUrl($hlsBasePath . '/master.m3u8');
 
             return [
                 'success' => true,

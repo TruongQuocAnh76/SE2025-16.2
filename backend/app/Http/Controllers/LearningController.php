@@ -297,16 +297,58 @@ class LearningController extends Controller
                 ])->first();
                 
                 if (!$existingCertificate) {
-                    // Create certificate
-                    $certificate = \App\Models\Certificate::create([
-                        'id' => Str::uuid(),
-                        'student_id' => $studentId,
-                        'course_id' => $courseId,
-                        'certificate_number' => 'CERT-' . strtoupper(Str::random(8)),
-                        'issued_at' => now(),
-                        'status' => 'PENDING',
-                        'final_score' => 100.00
-                    ]);
+                    // Use the proper certificate service to create certificate with PDF
+                    $certificateService = new \App\Services\CertificateService(
+                        new \App\Repositories\CertificateRepository(new \App\Models\Certificate()),
+                        app(\App\Contracts\StorageServiceInterface::class)
+                    );
+                    
+                    try {
+                        $certificate = $certificateService->issueCertificate($studentId, $courseId, 100.00);
+                        
+                        // Generate PDF for the certificate
+                        $course = \App\Models\Course::findOrFail($courseId);
+                        $student = \App\Models\User::findOrFail($studentId);
+                        
+                        $pdfData = $certificateService->generatePdfCertificate(
+                            $student,
+                            $course,
+                            100.00,
+                            $certificate->certificate_number
+                        );
+                        
+                        // Update certificate with PDF data
+                        $certificate->update([
+                            'pdf_url' => $pdfData['pdf_url'],
+                            'pdf_hash' => $pdfData['pdf_hash'],
+                            'status' => 'ISSUED'
+                        ]);
+                        
+                        Log::info("Certificate issued through LearningController", [
+                            'certificate_number' => $certificate->certificate_number,
+                            'student_id' => $studentId,
+                            'course_id' => $courseId,
+                            'pdf_url' => $pdfData['pdf_url']
+                        ]);
+                        
+                    } catch (\Exception $e) {
+                        Log::error("Failed to issue certificate through LearningController", [
+                            'error' => $e->getMessage(),
+                            'student_id' => $studentId,
+                            'course_id' => $courseId
+                        ]);
+                        
+                        // Fallback: create pending certificate
+                        $certificate = \App\Models\Certificate::create([
+                            'id' => Str::uuid(),
+                            'student_id' => $studentId,
+                            'course_id' => $courseId,
+                            'certificate_number' => 'CERT-' . now()->format('Y') . '-' . strtoupper(Str::random(6)),
+                            'issued_at' => now(),
+                            'status' => 'PENDING',
+                            'final_score' => 100.00
+                        ]);
+                    }
 
                     // Dispatch job to issue certificate to blockchain
                     IssueCertificateToBlockchain::dispatch($studentId, $courseId);
