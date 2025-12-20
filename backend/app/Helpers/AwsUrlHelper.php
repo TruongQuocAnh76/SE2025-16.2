@@ -33,7 +33,14 @@ class AwsUrlHelper
     public static function convertToFrontendUrl(string $internalUrl): string
     {
         if (app()->environment('local', 'development')) {
-            return str_replace('localstack:4566', 'localhost:4566', $internalUrl);
+            $internalHost = parse_url(env('AWS_ENDPOINT'), PHP_URL_HOST) ?? '';
+            $internalPort = parse_url(env('AWS_ENDPOINT'), PHP_URL_PORT) ?? '';
+            $internalEndpoint = $internalHost . ($internalPort !== '' ? ':' . $internalPort : '');
+            $frontendHost = parse_url(env('FRONTEND_AWS_ENDPOINT'), PHP_URL_HOST) ?? '';
+            $frontendPort = parse_url(env('FRONTEND_AWS_ENDPOINT'), PHP_URL_PORT) ?? '';
+            $frontendEndpoint = $frontendHost . ($frontendPort !== '' ? ':' . $frontendPort : '');
+            
+            return str_replace($internalEndpoint, $frontendEndpoint, $internalUrl);
         }
         
         return $internalUrl;

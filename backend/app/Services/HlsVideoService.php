@@ -3,7 +3,8 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
+use App\Contracts\StorageServiceInterface;
+use App\Helpers\StorageUrlHelper;
 use ProtoneMedia\LaravelFFMpeg\Support\FFMpeg;
 use ProtoneMedia\LaravelFFMpeg\Filters\WatermarkFactory;
 use FFMpeg\Coordinate\TimeCode;
@@ -11,6 +12,13 @@ use FFMpeg\Format\Video\X264;
 
 class HlsVideoService
 {
+    protected StorageServiceInterface $storage;
+
+    public function __construct(StorageServiceInterface $storage)
+    {
+        $this->storage = $storage;
+    }
+
     /**
      * Video quality configurations for adaptive streaming
      */
@@ -229,10 +237,7 @@ class HlsVideoService
         $this->uploadHlsFiles($qualityTempDir, $s3QualityPath);
 
         // build returned remote URL (use frontend endpoint for client access)
-        $awsEndpoint = rtrim(env('FRONTEND_AWS_ENDPOINT', env('AWS_ENDPOINT')), '/');
-        $awsBucket   = env('AWS_BUCKET');
-
-        return $awsEndpoint . '/' . $awsBucket . '/' . ltrim($s3QualityPath, '/') . '/playlist.m3u8';
+        return StorageUrlHelper::buildFullUrl(ltrim($s3QualityPath, '/') . '/playlist.m3u8');
     }
 
     /**
@@ -257,7 +262,7 @@ class HlsVideoService
                 $content = file_get_contents($localPath);
                 $contentType = $this->getContentType($localPath);
 
-                Storage::disk('s3')->put($s3Path, $content, [
+                $this->storage->put($s3Path, $content, [
                     'ContentType' => $contentType,
                     'CacheControl' => 'max-age=31536000'
                 ]);
@@ -282,7 +287,7 @@ class HlsVideoService
 
         // upload master (ensure path normalized)
         $masterRemotePath = rtrim($outputBasePath, '/') . '/master.m3u8';
-        Storage::disk('s3')->put($masterRemotePath, $content, [
+        $this->storage->put($masterRemotePath, $content, [
             'ContentType' => 'application/vnd.apple.mpegurl',
             'CacheControl' => 'max-age=3600'
         ]);
@@ -290,10 +295,7 @@ class HlsVideoService
         Log::info("Created master playlist: {$masterRemotePath}");
 
         // Use frontend endpoint for URLs that will be accessed by browser
-        $awsEndpoint = rtrim(env('FRONTEND_AWS_ENDPOINT', env('AWS_ENDPOINT')), '/');
-        $awsBucket   = env('AWS_BUCKET');
-
-        return $awsEndpoint . '/' . $awsBucket . '/' . ltrim($masterRemotePath, '/');
+        return StorageUrlHelper::buildFullUrl(ltrim($masterRemotePath, '/'));
     }
 
     /**

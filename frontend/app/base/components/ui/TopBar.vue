@@ -4,7 +4,7 @@
       <div class="flex justify-between items-center h-16">
         <!-- Left: Logo -->
         <div class="flex-shrink-0">
-          <NuxtLink :to="user?.username ? `/s/${user.username}` : '/'" class="flex items-center">
+          <NuxtLink to="/" class="flex items-center">
             <img src="/logo2.svg" alt="" class="h-8 w-auto" />
           </NuxtLink>
         </div>
@@ -12,14 +12,14 @@
         <!-- Middle: Navigation -->
         <nav class="hidden lg:flex lg:absolute lg:left-1/2 lg:transform lg:-translate-x-1/2 space-x-10">
           <NuxtLink
-            :to="user?.username ? `/s/${user.username}` : '/'"
+            to="/"
             class="text-white hover:text-accent-star px-4 py-2 text-sm font-medium transition-colors duration-200 relative group whitespace-nowrap cursor-pointer"
-            :class="{ 'text-accent-star': $route.path === (user?.username ? `/s/${user.username}` : '/') }"
+            :class="{ 'text-accent-star': $route.path === '/' }"
           >
             Home
             <span
               class="absolute bottom-0 left-0 w-full h-0.5 bg-accent-star transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"
-              :class="{ 'scale-x-100': $route.path === (user?.username ? `/s/${user.username}` : '/') }"
+              :class="{ 'scale-x-100': $route.path === '/' }"
             ></span>
           </NuxtLink>
           <NuxtLink
@@ -79,13 +79,12 @@
               >
                 <div class="w-8 h-8 rounded-full overflow-hidden bg-white/20 flex items-center justify-center">
                   <img
-                    src="/placeholder-avatar.png"
+                    src="/default-profile.png"
                     :alt="user?.username"
                     class="w-full h-full object-cover"
                   />
                 </div>
-                <!-- wtf -->
-                <span class="text-sm font-medium">{{ user?.username || 'User' }}</span>
+                <span class="text-sm font-medium">{{ displayName }}</span>
                 <svg
                   class="w-4 h-4 transition-transform duration-200"
                   :class="{ 'rotate-180': isDropdownOpen }"
@@ -101,14 +100,60 @@
                 class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
               >
                 <div class="py-1">
-                  <div class="px-4 py-2 text-sm text-gray-700 border-b border-gray-100">
-                    {{ user?.username }}
-                  </div>
+                  <NuxtLink
+                    :to="`/s/${user?.username}`"
+                    @click="isDropdownOpen = false"
+                    class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                  >
+                    <i class="fas fa-user-circle mr-2"></i>My Dashboard
+                  </NuxtLink>
+                  <template v-if="isAdmin">
+                    <div class="border-t border-gray-200 my-1"></div>
+                    <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      Admin
+                    </div>
+                    <NuxtLink
+                      to="/admin/users"
+                      @click="isDropdownOpen = false"
+                      class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <i class="fas fa-users mr-2"></i>Users
+                    </NuxtLink>
+                    <NuxtLink
+                      to="/admin/courses"
+                      @click="isDropdownOpen = false"
+                      class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <i class="fas fa-book mr-2"></i>Courses
+                    </NuxtLink>
+                    <NuxtLink
+                      to="/admin/certificates"
+                      @click="isDropdownOpen = false"
+                      class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <i class="fas fa-certificate mr-2"></i>Certificates
+                    </NuxtLink>
+                    <NuxtLink
+                      to="/admin/applications"
+                      @click="isDropdownOpen = false"
+                      class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <i class="fas fa-file-alt mr-2"></i>Applications
+                    </NuxtLink>
+                    <NuxtLink
+                      to="/admin/audit-log"
+                      @click="isDropdownOpen = false"
+                      class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <i class="fas fa-clipboard-list mr-2"></i>Audit Log
+                    </NuxtLink>
+                    <div class="border-t border-gray-200 my-1"></div>
+                  </template>
                   <button
                     @click="handleLogout"
                     class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
                   >
-                    Logout
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
                   </button>
                 </div>
               </div>
@@ -169,9 +214,9 @@
       >
         <div class="px-2 pt-2 pb-3 space-y-1">
           <NuxtLink
-            :to="user?.username ? `/s/${user.username}` : '/'"
+            to="/"
             class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md"
-            :class="{ 'text-accent-star bg-accent-star/10': $route.path === (user?.username ? `/s/${user.username}` : '/') }"
+            :class="{ 'text-accent-star bg-accent-star/10': $route.path === '/' }"
             @click="isMobileMenuOpen = false"
           >
             Home
@@ -213,6 +258,55 @@
               <div class="px-3 py-2 text-base font-medium text-text-dark">
                 {{ user?.username }}
               </div>
+              <NuxtLink
+                :to="`/s/${user?.username}`"
+                @click="isMobileMenuOpen = false"
+                class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md mb-2"
+              >
+                <i class="fas fa-user-circle mr-2"></i>My Dashboard
+              </NuxtLink>
+              <template v-if="isAdmin">
+                <div class="border-t border-gray-200 my-2"></div>
+                <div class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  Admin
+                </div>
+                <NuxtLink
+                  to="/admin/users"
+                  @click="isMobileMenuOpen = false"
+                  class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md"
+                >
+                  <i class="fas fa-users mr-2"></i>Users
+                </NuxtLink>
+                <NuxtLink
+                  to="/admin/courses"
+                  @click="isMobileMenuOpen = false"
+                  class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md"
+                >
+                  <i class="fas fa-book mr-2"></i>Courses
+                </NuxtLink>
+                <NuxtLink
+                  to="/admin/certificates"
+                  @click="isMobileMenuOpen = false"
+                  class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md"
+                >
+                  <i class="fas fa-certificate mr-2"></i>Certificates
+                </NuxtLink>
+                <NuxtLink
+                  to="/admin/applications"
+                  @click="isMobileMenuOpen = false"
+                  class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md"
+                >
+                  <i class="fas fa-file-alt mr-2"></i>Applications
+                </NuxtLink>
+                <NuxtLink
+                  to="/admin/audit-log"
+                  @click="isMobileMenuOpen = false"
+                  class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md mb-2"
+                >
+                  <i class="fas fa-clipboard-list mr-2"></i>Audit Log
+                </NuxtLink>
+                <div class="border-t border-gray-200 my-2"></div>
+              </template>
               <Button
                 size="sm"
                 @click="handleLogout"
@@ -262,6 +356,31 @@ const userInitials = computed(() => {
   return ''
 })
 
+const isAdmin = computed(() => {
+  const r = user.value?.role
+  return typeof r === 'string' && r.toUpperCase() === 'ADMIN'
+})
+
+// Computed property để lấy tên hiển thị
+const displayName = computed(() => {
+  if (!user.value) return 'User'
+  const u = user.value
+  
+  // Nếu username không phải email, dùng luôn
+  if (u.username && !u.username.includes('@')) return u.username
+  
+  // Ưu tiên tên đầy đủ
+  if (u.first_name || u.last_name) return `${u.first_name || ''} ${u.last_name || ''}`.trim()
+  
+  // Nếu có email, cắt phần trước @
+  if (u.email && typeof u.email === 'string') return u.email.split('@')[0]
+  
+  // Nếu username là email, cắt phần trước @
+  if (u.username && u.username.includes('@')) return u.username.split('@')[0]
+  
+  return 'User'
+})
+
 const handleLogout = async () => {
   try {
     await authLogout() // Use authLogout from useAuth composable
@@ -299,20 +418,13 @@ onMounted(async () => {
     }
   }
 
-  // If still no user data but authenticated, try API call
+  // If still no user data but authenticated, try to load via useAuth.getUser()
   if (isAuthenticated.value && !user.value) {
     try {
-      const config = useRuntimeConfig()
-      const response = await $fetch('/api/auth/me', {
-        baseURL: config.public.backendUrl,
-        headers: {
-          'Authorization': `Bearer ${useCookie('auth_token').value}`,
-          'Accept': 'application/json'
-        }
-      })
-      user.value = response as User
-      // Update cookie with fresh data
-      userCookie.value = JSON.stringify(response)
+      await getUser()
+      if (user.value) {
+        userCookie.value = JSON.stringify(user.value)
+      }
     } catch (err) {
       console.error('Failed to load user from API:', err)
     }

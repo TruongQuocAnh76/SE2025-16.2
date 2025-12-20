@@ -5,14 +5,15 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use App\Contracts\StorageServiceInterface;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\QuizAttempt;
 use App\Models\BlockchainTransaction;
 use App\Services\CertificateService;
+use App\Services\SystemLogService;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 /**
@@ -24,10 +25,18 @@ use Barryvdh\DomPDF\Facade\Pdf;
 class CertificateController extends Controller
 {
     protected $certificateService;
+    protected StorageServiceInterface $storage;
+    protected $systemLogService;
 
-    public function __construct(CertificateService $certificateService)
+    public function __construct(
+        CertificateService $certificateService,
+        StorageServiceInterface $storage,
+        SystemLogService $systemLogService
+    )
     {
         $this->certificateService = $certificateService;
+        $this->storage = $storage;
+        $this->systemLogService = $systemLogService;
     }
     /**
      * @OA\Get(
@@ -160,6 +169,26 @@ class CertificateController extends Controller
                 'pdf_url' => $pdfData['pdf_url'],
                 'student_id' => $studentId
             ]);
+
+            // Log to system_logs table via service
+            if (isset($this->systemLogService)) {
+                $this->systemLogService->logAction(
+                    'INFO',
+                    'Certificate Issued',
+                    $studentId,
+                    [
+                        'certificate_id' => $certificate->id,
+                        'certificate_number' => $certNumber,
+                        'student_id' => $studentId,
+                        'student_name' => Auth::user()->first_name . ' ' . Auth::user()->last_name,
+                        'course_id' => $courseId,
+                        'course_title' => $course->title,
+                        'final_score' => $finalAttempt->score,
+                    ],
+                    $request->ip(),
+                    $request->userAgent()
+                );
+            }
 
             return response()->json([
                 'message' => 'Chứng chỉ đã được cấp thành công.',
@@ -332,11 +361,11 @@ class CertificateController extends Controller
             return response()->json(['valid' => false, 'message' => 'Chứng chỉ không còn hiệu lực.']);
         }
 
-        // Verify PDF hash from S3
+        // Verify PDF hash from storage
         try {
-            // Extract S3 path from PDF URL or use stored path
+            // Extract storage path from PDF URL or use stored path
             $s3Path = $certificate->pdf_path ?? "certificates/{$certificate->certificate_number}.pdf";
-            $pdfContent = Storage::disk('s3')->get($s3Path);
+            $pdfContent = $this->storage->get($s3Path);
             $currentHash = hash('sha256', $pdfContent);
             $isValid = ($currentHash === $certificate->pdf_hash);
         } catch (\Exception $e) {

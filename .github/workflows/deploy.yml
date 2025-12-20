@@ -1,0 +1,52 @@
+name: CD Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy deployment files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          source: |
+            docker-compose.prod.yml
+            init-minio.sh
+            backend/nginx.conf
+            scripts/deploy.sh
+          target: /home/${{ secrets.VM_USER }}/app
+          overwrite: true
+
+      - name: Deploy to VM
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          port: 22
+          envs: VM_USER,GITHUB_TOKEN,GITHUB_ACTOR,ENV_FILE
+          script: |
+            export VM_USER="${{ secrets.VM_USER }}"
+            export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+            export GITHUB_ACTOR="${{ github.actor }}"
+            export ENV_FILE="${{ secrets.ENV_FILE }}"
+
+            cd /home/${{ secrets.VM_USER }}/app
+            chmod +x scripts/deploy.sh
+            ./deploy.sh
+

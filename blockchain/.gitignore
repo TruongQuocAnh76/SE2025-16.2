@@ -18,3 +18,11 @@ types
 
 # Hardhat coverage reports
 coverage
+
+# Hardhat
+artifacts
+cache
+types
+ignition/deployments
+
+.env

@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
-
+use App\Contracts\StorageServiceInterface;
+use App\Helpers\StorageUrlHelper;
 use App\Models\Course;
 use App\Models\Module;
 use App\Models\Lesson;
@@ -16,7 +16,6 @@ use App\Models\Review;
 use App\Models\User;
 use App\Services\CourseService;
 use Illuminate\Support\Facades\Log;
-use App\Helpers\AwsUrlHelper;
 use App\Models\Question;
 
 /**
@@ -28,10 +27,15 @@ use App\Models\Question;
 class CourseController extends Controller
 {
     protected $courseService;
+    protected StorageServiceInterface $storage;
 
-    public function __construct(CourseService $courseService)
+    public function __construct(
+        CourseService $courseService,
+        StorageServiceInterface $storage
+    )
     {
         $this->courseService = $courseService;
+        $this->storage = $storage;
     }
 
     /**
@@ -716,8 +720,8 @@ class CourseController extends Controller
             }
 
             // Check if the HLS master playlist exists
-            $hlsPath = str_replace(env('AWS_ENDPOINT') . '/' . env('AWS_BUCKET') . '/', '', $lesson->content_url);
-            $exists = \Illuminate\Support\Facades\Storage::disk('s3')->exists($hlsPath);
+            $hlsPath = str_replace(StorageUrlHelper::getStorageEndpoint() . '/' . StorageUrlHelper::getBucket() . '/', '', $lesson->content_url);
+            $exists = $this->storage->exists($hlsPath);
 
             if ($exists) {
                 return response()->json([
@@ -739,5 +743,131 @@ class CourseController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/courses/{id}/enroll-free",
+     *     summary="Enroll in a course for free (Premium members only)",
+     *     description="Premium members can enroll in any course without payment",
+     *     operationId="enrollFree",
+     *     tags={"Courses"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="Course ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Enrollment successful",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string", example="Enrollment successful"),
+     *             @OA\Property(property="enrollment", ref="#/components/schemas/Enrollment")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Premium membership required",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string", example="Premium membership required for free enrollment")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=409,
+     *         description="Already enrolled",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string", example="Already enrolled in this course")
+     *         )
+     *     )
+     * )
+     */
+    public function enrollFree($id)
+    {
+        $user = Auth::user();
+        $course = Course::findOrFail($id);
+
+        // Check if user has premium membership
+        if (!$user->canEnrollForFree()) {
+            return response()->json([
+                'message' => 'Premium membership required for free enrollment',
+                'isPremium' => false
+            ], 403);
+        }
+
+        // Check if already enrolled
+        $existingEnrollment = Enrollment::where('student_id', $user->id)
+            ->where('course_id', $course->id)
+            ->first();
+
+        if ($existingEnrollment) {
+            return response()->json([
+                'message' => 'Already enrolled in this course',
+                'enrollment' => $existingEnrollment
+            ], 409);
+        }
+
+        // Create enrollment
+        $enrollment = Enrollment::create([
+            'id' => Str::uuid(),
+            'student_id' => $user->id,
+            'course_id' => $course->id,
+            'enrolled_at' => now(),
+            'status' => 'ACTIVE'
+        ]);
+
+        Log::info('Premium user enrolled for free', [
+            'user_id' => $user->id,
+            'course_id' => $course->id,
+            'enrollment_id' => $enrollment->id
+        ]);
+
+        return response()->json([
+            'message' => 'Enrollment successful! Enjoy your premium benefits.',
+            'enrollment' => $enrollment->load('course')
+        ], 201);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/courses/{id}/enrollment/check",
+     *     summary="Check if user is enrolled in a course",
+     *     tags={"Courses"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="Course ID",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Enrollment status",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="isEnrolled", type="boolean"),
+     *             @OA\Property(property="enrollment", ref="#/components/schemas/Enrollment", nullable=true)
+     *         )
+     *     )
+     * )
+     */
+    public function checkEnrollment($id)
+    {
+        $user = Auth::user();
+        $enrollment = Enrollment::where('student_id', $user->id)
+            ->where('course_id', $id)
+            ->with('course')
+            ->first();
+
+        return response()->json([
+            'isEnrolled' => $enrollment !== null,
+            'enrollment' => $enrollment
+        ]);
     }
 }

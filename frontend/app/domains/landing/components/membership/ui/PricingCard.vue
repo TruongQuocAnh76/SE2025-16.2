@@ -14,6 +14,11 @@
         <span>{{ feature }}</span>
       </li>
     </ul>
+    <!-- Success Message -->
+    <div v-if="$parent.upgradeMessage && title === 'Premium'" class="mb-3 p-2 bg-green-100 text-green-700 text-sm rounded">
+      {{ $parent.upgradeMessage }}
+    </div>
+
     <NuxtLink 
       v-if="buttonLink"
       :to="buttonLink"
@@ -25,7 +30,9 @@
     <button 
       v-else
       :class="buttonClass"
-      class="w-full py-2 rounded-lg font-medium transition-colors mt-auto"
+      :disabled="disabled"
+      @click="onClick"
+      class="w-full py-2 rounded-lg font-medium transition-colors mt-auto disabled:opacity-60"
     >
       {{ buttonText }}
     </button>
@@ -61,6 +68,14 @@ defineProps({
   buttonLink: {
     type: String,
     default: ''
+  },
+  disabled: {
+    type: Boolean,
+    default: false
+  },
+  onClick: {
+    type: Function,
+    default: null
   }
 })
 </script>
