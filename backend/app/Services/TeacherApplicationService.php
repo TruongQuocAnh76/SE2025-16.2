@@ -6,6 +6,7 @@ use App\Repositories\TeacherApplicationRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Exception;
 
 class TeacherApplicationService
@@ -24,7 +25,7 @@ class TeacherApplicationService
     /**
      * Submit a new teacher application
      */
-    public function submitApplication($userId, array $data)
+    public function submitApplication($userId, array $data, $certificateFile = null)
     {
         try {
             // Check if user already has a pending application
@@ -38,15 +39,42 @@ class TeacherApplicationService
                 throw new Exception('User not found.');
             }
 
+            // Handle certificate file upload
+            $certificateFilePath = null;
+            if ($certificateFile) {
+                // Generate unique filename
+                $extension = $certificateFile->getClientOriginalExtension();
+                $filename = Str::uuid() . '.' . $extension;
+                
+                // Store file in storage/app (not using 'local' disk which points to private/)
+                $certificateFilePath = $certificateFile->storeAs('certificates', $filename, 'public');
+                
+                Log::info("Certificate file uploaded", [
+                    'filename' => $filename,
+                    'path' => $certificateFilePath
+                ]);
+            }
+
             // Prepare application data
             $applicationData = [
                 'id' => Str::uuid()->toString(),
                 'user_id' => $userId,
                 'status' => 'PENDING',
+                // Personal Information
+                'full_name' => $data['full_name'],
+                'email' => $data['email'],
+                'bio' => $data['bio'] ?? null,
+                'gender' => $data['gender'] ?? null,
+                'phone' => $data['phone'] ?? null,
+                'date_of_birth' => $data['date_of_birth'] ?? null,
+                'country' => $data['country'] ?? null,
+                'avatar_url' => $data['avatar_url'] ?? null,
+                // Certificate Information
                 'certificate_title' => $data['certificate_title'],
                 'issuer' => $data['issuer'],
                 'issue_date' => $data['issue_date'],
                 'expiry_date' => $data['expiry_date'] ?? null,
+                'certificate_file_path' => $certificateFilePath,
             ];
 
             // Create the application
@@ -54,7 +82,8 @@ class TeacherApplicationService
 
             Log::info("Teacher application submitted", [
                 'application_id' => $application->id,
-                'user_id' => $userId
+                'user_id' => $userId,
+                'certificate_file' => $certificateFilePath
             ]);
 
             return $application;

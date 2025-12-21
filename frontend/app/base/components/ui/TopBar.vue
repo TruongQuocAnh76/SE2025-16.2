@@ -107,6 +107,15 @@
                   >
                     <i class="fas fa-cog mr-2"></i>Settings
                   </NuxtLink>
+                  <template v-if="isStudent">
+                    <NuxtLink
+                      to="/teacher/my-applications"
+                      @click="isDropdownOpen = false"
+                      class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <i class="fas fa-file-alt mr-2"></i>My Applications
+                    </NuxtLink>
+                  </template>
                   <template v-if="isAdmin">
                     <div class="border-t border-gray-200 my-1"></div>
                     <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
@@ -359,6 +368,11 @@ const userInitials = computed(() => {
 const isAdmin = computed(() => {
   const r = user.value?.role
   return typeof r === 'string' && r.toUpperCase() === 'ADMIN'
+})
+
+const isStudent = computed(() => {
+  const r = user.value?.role
+  return typeof r === 'string' && r.toUpperCase() === 'STUDENT'
 })
 
 // Computed property để lấy tên hiển thị

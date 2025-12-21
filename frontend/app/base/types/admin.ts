@@ -8,20 +8,38 @@ export interface DashboardStats {
 export interface TeacherApplication {
   id: string
   user_id: string
-  user_name: string
-  first_name: string
-  last_name: string
-  user_email: string
-  username: string
-  avatar: string | null
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  // Personal Information from application
+  full_name: string
+  email: string
   bio: string | null
-  current_role: string
-  requested_role: string
+  gender: 'MALE' | 'FEMALE' | 'OTHER' | null
+  phone: string | null
+  date_of_birth: string | null
+  country: string | null
+  avatar_url: string | null
+  // Certificate Information
   certificate_title: string
   issuer: string
-  issue_date: string | null
+  issue_date: string
   expiry_date: string | null
-  submitted_at: string
+  certificate_file_path: string | null
+  // Review Information
+  reviewed_by: string | null
+  reviewed_at: string | null
+  rejection_reason: string | null
+  // Timestamps
+  created_at: string
+  updated_at: string
+  // User info from relationship
+  user?: {
+    id: string
+    first_name: string
+    last_name: string
+    username: string
+    email: string
+    role: string
+  }
 }
 
 export interface CourseApplication {

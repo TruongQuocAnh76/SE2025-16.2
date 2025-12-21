@@ -23,18 +23,30 @@ class TeacherApplicationController extends Controller
      * @OA\Post(
      *     path="/api/teacher-applications/submit",
      *     summary="Submit a teacher application",
-     *     description="Submit an application to become a teacher by providing certification details",
+     *     description="Submit an application to become a teacher by providing personal information and certification details",
      *     operationId="submitTeacherApplication",
      *     tags={"Teacher Applications"},
      *     security={{"sanctum": {}}},
      *     @OA\RequestBody(
      *         required=true,
-     *         @OA\JsonContent(
-     *             required={"certificate_title", "issuer", "issue_date"},
-     *             @OA\Property(property="certificate_title", type="string", example="Master of Computer Science"),
-     *             @OA\Property(property="issuer", type="string", example="Stanford University"),
-     *             @OA\Property(property="issue_date", type="string", format="date", example="2023-05-15"),
-     *             @OA\Property(property="expiry_date", type="string", format="date", example="2028-05-15", nullable=true)
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 required={"full_name", "email", "certificate_title", "issuer", "issue_date", "certificate_file"},
+     *                 @OA\Property(property="full_name", type="string", example="John Doe"),
+     *                 @OA\Property(property="email", type="string", format="email", example="john.doe@example.com"),
+     *                 @OA\Property(property="bio", type="string", example="Experienced educator with 10 years of teaching", nullable=true),
+     *                 @OA\Property(property="gender", type="string", enum={"MALE", "FEMALE", "OTHER"}, example="MALE", nullable=true),
+     *                 @OA\Property(property="phone", type="string", example="+1234567890", nullable=true),
+     *                 @OA\Property(property="date_of_birth", type="string", format="date", example="1990-01-15", nullable=true),
+     *                 @OA\Property(property="country", type="string", example="United States", nullable=true),
+     *                 @OA\Property(property="avatar_url", type="string", example="https://example.com/avatar.jpg", nullable=true),
+     *                 @OA\Property(property="certificate_title", type="string", example="Master of Computer Science"),
+     *                 @OA\Property(property="issuer", type="string", example="Stanford University"),
+     *                 @OA\Property(property="issue_date", type="string", format="date", example="2023-05-15"),
+     *                 @OA\Property(property="expiry_date", type="string", format="date", example="2028-05-15", nullable=true),
+     *                 @OA\Property(property="certificate_file", type="string", format="binary", description="Certificate document file (PDF, JPG, PNG, max 10MB)")
+     *             )
      *         )
      *     ),
      *     @OA\Response(
@@ -57,14 +69,38 @@ class TeacherApplicationController extends Controller
      */
     public function submit(Request $request)
     {
+        // Debug logging
+        \Log::info('=== TEACHER APPLICATION SUBMIT START ===');
+        \Log::info('Auth user ID: ' . (Auth::id() ?? 'NULL'));
+        \Log::info('Auth check: ' . (Auth::check() ? 'TRUE' : 'FALSE'));
+        \Log::info('Request has file: ' . ($request->hasFile('certificate_file') ? 'YES' : 'NO'));
+        if ($request->hasFile('certificate_file')) {
+            $file = $request->file('certificate_file');
+            \Log::info('File info: name=' . $file->getClientOriginalName() . ', size=' . $file->getSize() . ', mime=' . $file->getMimeType());
+        }
+        \Log::info('All request data keys: ' . implode(', ', array_keys($request->all())));
+        
         $validator = Validator::make($request->all(), [
+            // Personal Information
+            'full_name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'bio' => 'nullable|string|max:1000',
+            'gender' => 'nullable|in:MALE,FEMALE,OTHER',
+            'phone' => 'nullable|string|max:20',
+            'date_of_birth' => 'nullable|date|before:today',
+            'country' => 'nullable|string|max:100',
+            'avatar_url' => 'nullable|string|max:500',
+            
+            // Certificate Information
             'certificate_title' => 'required|string|max:255',
             'issuer' => 'required|string|max:255',
             'issue_date' => 'required|date|before_or_equal:today',
             'expiry_date' => 'nullable|date|after:issue_date',
+            'certificate_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240', // Required, max 10MB
         ]);
 
         if ($validator->fails()) {
+            \Log::error('Validation failed: ' . json_encode($validator->errors()));
             return response()->json([
                 'message' => 'Validation failed',
                 'errors' => $validator->errors()
@@ -73,7 +109,8 @@ class TeacherApplicationController extends Controller
 
         try {
             $userId = Auth::id();
-            $application = $this->applicationService->submitApplication($userId, $request->all());
+            \Log::info('About to call submitApplication service');
+            $application = $this->applicationService->submitApplication($userId, $request->all(), $request->file('certificate_file'));
 
             return response()->json([
                 'message' => 'Application submitted successfully',
@@ -131,7 +168,9 @@ class TeacherApplicationController extends Controller
             $userId = Auth::id();
             $applications = $this->applicationService->getUserApplications($userId);
 
-            return response()->json($applications);
+            return response()->json([
+                'applications' => $applications
+            ]);
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'Failed to retrieve applications',
@@ -435,6 +474,69 @@ class TeacherApplicationController extends Controller
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'Failed to reject application',
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Download certificate file
+     * 
+     * @OA\Get(
+     *     path="/api/teacher-applications/{id}/certificate",
+     *     summary="Download certificate file",
+     *     description="Download the certificate document attached to a teacher application",
+     *     operationId="downloadCertificate",
+     *     tags={"Teacher Applications"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Certificate file",
+     *         @OA\MediaType(
+     *             mediaType="application/octet-stream"
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Application or certificate file not found"
+     *     )
+     * )
+     */
+    public function downloadCertificate($id)
+    {
+        try {
+            $application = $this->applicationService->getApplicationById($id);
+            
+            if (!$application) {
+                return response()->json([
+                    'message' => 'Application not found'
+                ], 404);
+            }
+
+            if (!$application->certificate_file_path) {
+                return response()->json([
+                    'message' => 'Certificate file not found'
+                ], 404);
+            }
+
+            // Check if file exists in storage (use 'public' disk)
+            if (!\Storage::disk('public')->exists($application->certificate_file_path)) {
+                return response()->json([
+                    'message' => 'Certificate file does not exist in storage'
+                ], 404);
+            }
+
+            // Return file download response
+            return \Storage::disk('public')->download($application->certificate_file_path);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Failed to download certificate',
                 'error' => $e->getMessage()
             ], 400);
         }
