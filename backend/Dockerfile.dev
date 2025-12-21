@@ -48,6 +48,9 @@ COPY composer.json composer.lock ./
 # Copy the rest of the application
 COPY . .
 
+# Copy custom PHP configuration for file uploads
+COPY php-custom.ini /usr/local/etc/php/conf.d/uploads.ini
+
 # Create necessary directories and set permissions
 RUN mkdir -p bootstrap/cache storage/logs storage/framework/cache storage/framework/sessions storage/framework/views \
     && chown -R www-data:www-data /var/www \

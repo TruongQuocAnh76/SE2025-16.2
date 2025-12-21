@@ -182,6 +182,9 @@ Route::middleware('auth:sanctum')->prefix('teacher-applications')->group(functio
     Route::post('/{id}/reject', [TeacherApplicationController::class, 'reject']); // Reject (Admin)
 });
 
+// Public route for certificate download (requires valid token in query string)
+Route::get('/teacher-applications/{id}/certificate', [TeacherApplicationController::class, 'downloadCertificate']);
+
 /* ========================
  * TEACHERS
  * ======================== */

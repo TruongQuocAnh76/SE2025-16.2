@@ -23,7 +23,7 @@ export const useAdminStats = () => {
   const getTeacherApplications = async (): Promise<TeacherApplication[]> => {
     try {
       const token = useCookie('auth_token').value
-      const data = await $fetch<TeacherApplication[]>('/api/admin/teacher-applications', {
+      const data = await $fetch<TeacherApplication[]>('/api/teacher-applications?status=PENDING', {
         baseURL: config.public.backendUrl as string,
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -34,6 +34,23 @@ export const useAdminStats = () => {
     } catch (error) {
       console.error('Failed to fetch teacher applications:', error)
       return []
+    }
+  }
+
+  const getTeacherApplicationDetail = async (applicationId: string): Promise<TeacherApplication | null> => {
+    try {
+      const token = useCookie('auth_token').value
+      const data = await $fetch<TeacherApplication>(`/api/teacher-applications/${applicationId}`, {
+        baseURL: config.public.backendUrl as string,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      })
+      return data
+    } catch (error) {
+      console.error('Failed to fetch teacher application detail:', error)
+      return null
     }
   }
 
@@ -145,7 +162,7 @@ export const useAdminStats = () => {
   const approveTeacher = async (applicationId: string): Promise<boolean> => {
     try {
       const token = useCookie('auth_token').value
-      await $fetch(`/api/admin/teacher-applications/${applicationId}/approve`, {
+      await $fetch(`/api/teacher-applications/${applicationId}/approve`, {
         baseURL: config.public.backendUrl as string,
         method: 'POST',
         headers: {
@@ -163,14 +180,17 @@ export const useAdminStats = () => {
   const rejectTeacher = async (applicationId: string, reason?: string): Promise<boolean> => {
     try {
       const token = useCookie('auth_token').value
-      await $fetch(`/api/admin/teacher-applications/${applicationId}/reject`, {
+      await $fetch(`/api/teacher-applications/${applicationId}/reject`, {
         baseURL: config.public.backendUrl as string,
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: { reason }
+        body: { 
+          rejection_reason: reason || 'Application rejected by admin'
+        }
       })
       return true
     } catch (error) {
@@ -182,6 +202,7 @@ export const useAdminStats = () => {
   return {
     getDashboardStats,
     getTeacherApplications,
+    getTeacherApplicationDetail,
     getCourseApplications,
     getCertificatesOverview,
     getRecentCertificates,
