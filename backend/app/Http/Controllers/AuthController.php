@@ -680,6 +680,7 @@ class AuthController extends Controller
                 'avatar' => $user->avatar,
                 'role' => $user->role,
                 'auth_provider' => $user->auth_provider,
+                'has_password' => $user->has_password,
             ])));
         } catch (\Exception $e) {
             Log::error('Google OAuth error: ' . $e->getMessage());
@@ -752,6 +753,7 @@ class AuthController extends Controller
                 'avatar' => $user->avatar,
                 'role' => $user->role,
                 'auth_provider' => $user->auth_provider,
+                'has_password' => $user->has_password,
             ])));
         } catch (\Exception $e) {
             Log::error('Facebook OAuth error: ' . $e->getMessage());

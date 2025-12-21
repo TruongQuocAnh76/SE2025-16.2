@@ -55,6 +55,13 @@ Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
 });
 
 /* ========================
+ * MEDIA UPLOAD
+ * ======================== */
+Route::middleware('auth:sanctum')->prefix('media')->group(function () {
+    Route::post('/presigned-url', [\App\Http\Controllers\MediaController::class, 'getPresignedUrl']);
+});
+
+/* ========================
  * USER MANAGEMENT
  * ======================== */
 Route::middleware('auth:sanctum')->prefix('users')->group(function () {
