@@ -50,10 +50,20 @@ class TeacherApplicationSeeder extends Seeder
                 'id' => Str::uuid()->toString(),
                 'user_id' => $student->id,
                 'status' => $status,
+                // Personal Information
+                'full_name' => $student->first_name . ' ' . $student->last_name,
+                'email' => $student->email,
+                'bio' => 'Experienced educator with passion for teaching.',
+                'gender' => rand(0, 1) ? 'MALE' : 'FEMALE',
+                'phone' => '+84' . rand(900000000, 999999999),
+                'date_of_birth' => now()->subYears(rand(25, 45))->toDateString(),
+                'country' => 'Vietnam',
+                // Certificate Information
                 'certificate_title' => 'Professional Teaching Certificate Level ' . ($counter + 1),
                 'issuer' => 'Example Institute',
                 'issue_date' => now()->subYears(2)->toDateString(),
                 'expiry_date' => now()->addYears(3)->toDateString(),
+                // Review Information
                 'reviewed_by' => $reviewedBy,
                 'reviewed_at' => $reviewedAt,
                 'rejection_reason' => $rejectionReason,
