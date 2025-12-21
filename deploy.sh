@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # -------- CONFIG --------
-APP_DIR="${APP_DIR:-/home/${VM_USER:-appuser}/app}"
+APP_DIR="${APP_DIR:-/home/${VM_USER:-appuser}/SE2025-16.2}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 BACKEND_SERVICE_NAME="${BACKEND_SERVICE_NAME:-backend}"   # compose service to wait for
 BACKEND_HEALTH_URL="${BACKEND_HEALTH_URL:-}"             # optional health endpoint (http(s) reachable from host)

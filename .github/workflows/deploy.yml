@@ -28,7 +28,7 @@ jobs:
             docker-compose.prod.yml
             init-minio.sh
             backend/nginx.conf
-            scripts/deploy.sh
+            deploy.sh
           target: /home/${{ secrets.VM_USER }}/app
           overwrite: true
 
@@ -47,6 +47,6 @@ jobs:
             export ENV_FILE="${{ secrets.ENV_FILE }}"
 
             cd /home/${{ secrets.VM_USER }}/app
-            chmod +x scripts/deploy.sh
+            chmod +x deploy.sh
             ./deploy.sh
 
