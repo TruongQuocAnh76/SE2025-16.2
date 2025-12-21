@@ -262,7 +262,16 @@ class CourseController extends Controller
                 ], 401);
             }
 
+            // Load enrollments relationship
+            $user->load('enrollments');
+            
             $recommendations = $this->courseService->getRecommendations($user);
+
+            Log::info('Recommendations fetched', [
+                'user_id' => $user->id,
+                'enrollments_count' => $user->enrollments->count(),
+                'recommendations_count' => count($recommendations)
+            ]);
 
             return response()->json([
                 'success' => true,
