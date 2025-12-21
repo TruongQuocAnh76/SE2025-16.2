@@ -135,10 +135,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useAuth } from '~/domains/auth/composables/useAuth'
+import { useMedia } from '~/composables/useMedia'
 
 const { user, getUser } = useAuth()
+const { uploadFile } = useMedia()
 const config = useRuntimeConfig()
 const isLoading = ref(false)
 const isUploading = ref(false)
@@ -155,7 +157,7 @@ const form = ref({
   avatar: ''
 })
 
-onMounted(() => {
+const initForm = () => {
   if (user.value) {
     form.value = {
       username: user.value.username || '',
@@ -167,6 +169,15 @@ onMounted(() => {
       avatar: user.value.avatar || ''
     }
   }
+}
+
+onMounted(() => {
+  initForm()
+})
+
+// Watch for user changes to keep form in sync (e.g. after refresh)
+watch(user, () => {
+  initForm()
 })
 
 const triggerFileInput = () => {
@@ -186,31 +197,26 @@ const handleFileUpload = async (event: Event) => {
     return
   }
 
+  // Validate file type
+  if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
+    $toast.error('Only JPG, PNG and GIF files are allowed')
+    return
+  }
+
   isUploading.value = true
-  const formData = new FormData()
-  formData.append('file', file)
-  formData.append('folder', 'avatars')
 
   try {
-    const token = useCookie('auth_token').value
-    
-    // Explicitly use any to avoid TS errors with FormData body in $fetch
-    const response: any = await $fetch(`${config.public.backendUrl}/api/media/upload`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-        // Content-Type is automatically set with boundary for FormData
-      },
-      body: formData
-    })
+    // Use composable to handle upload via presigned URL
+    const { url } = await uploadFile(file, 'avatars')
 
-    if (response?.url) {
-      form.value.avatar = response.url
-      $toast.success('Avatar uploaded successfully')
+    if (url) {
+      form.value.avatar = url
+      $toast.success('Avatar uploaded successfully. Click Save to apply changes.')
     }
   } catch (error: any) {
     console.error('Upload failed', error)
-    $toast.error(error.data?.message || 'Failed to upload image')
+    const message = error.message || 'Failed to upload image'
+    $toast.error(message)
   } finally {
     isUploading.value = false
     // Reset input so same file can be selected again if needed
