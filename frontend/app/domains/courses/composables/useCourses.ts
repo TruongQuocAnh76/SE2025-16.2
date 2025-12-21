@@ -87,6 +87,27 @@ export const useCourses = () => {
       // Gộp 'rating_counts' vào đối tượng 'course'
       if (response.course && response.rating_counts) {
         response.course.rating_counts = response.rating_counts;
+        
+        // Calculate average_rating and review_count from rating_counts if not set
+        const ratingCounts = response.rating_counts;
+        let totalReviews = 0;
+        let sumRatings = 0;
+        
+        for (let star = 1; star <= 5; star++) {
+          const count = ratingCounts[star] || 0;
+          totalReviews += count;
+          sumRatings += star * count;
+        }
+        
+        // Update course stats if they are missing or zero but we have reviews
+        if (totalReviews > 0) {
+          if (!response.course.review_count || response.course.review_count === 0) {
+            response.course.review_count = totalReviews;
+          }
+          if (!response.course.average_rating || response.course.average_rating === 0) {
+            response.course.average_rating = sumRatings / totalReviews;
+          }
+        }
       }
 
       // Trả về chỉ đối tượng 'course' đã được gộp

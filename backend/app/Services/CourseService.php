@@ -186,11 +186,10 @@ class CourseService {
             ['rating' => $rating, 'comment' => $comment]
         );
 
-        // Update course stats
+        // Update course stats - use query builder methods directly
         $course = $this->courseRepository->getById($courseId);
-        $allReviews = $course->reviews();
-        $course->average_rating = $allReviews->avg('rating');
-        $course->review_count = $allReviews->count();
+        $course->average_rating = $course->reviews()->avg('rating') ?? 0;
+        $course->review_count = $course->reviews()->count();
         $course->save();
 
         return $review;
