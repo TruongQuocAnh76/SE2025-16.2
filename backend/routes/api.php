@@ -58,7 +58,7 @@ Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
  * MEDIA UPLOAD
  * ======================== */
 Route::middleware('auth:sanctum')->prefix('media')->group(function () {
-    Route::post('/upload', [\App\Http\Controllers\MediaController::class, 'upload']);
+    Route::post('/presigned-url', [\App\Http\Controllers\MediaController::class, 'getPresignedUrl']);
 });
 
 /* ========================
