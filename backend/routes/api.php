@@ -55,6 +55,13 @@ Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
 });
 
 /* ========================
+ * MEDIA UPLOAD
+ * ======================== */
+Route::middleware('auth:sanctum')->prefix('media')->group(function () {
+    Route::post('/presigned-url', [\App\Http\Controllers\MediaController::class, 'getPresignedUrl']);
+});
+
+/* ========================
  * USER MANAGEMENT
  * ======================== */
 Route::middleware('auth:sanctum')->prefix('users')->group(function () {
@@ -266,6 +273,9 @@ Route::middleware('auth:sanctum')->prefix('payments')->group(function () {
     // Stripe routes
     Route::post('/{id}/stripe/create-intent', [PaymentController::class, 'createStripeIntent']); // Create Stripe payment intent
     Route::post('/{id}/stripe/complete', [PaymentController::class, 'completeStripePayment']); // Complete Stripe payment
+    
+    // PayPal routes
+    Route::post('/{id}/paypal/capture', [PaymentController::class, 'capturePayPalPayment']); // Capture PayPal payment
 });
 
 // Stripe Webhook (no auth needed)

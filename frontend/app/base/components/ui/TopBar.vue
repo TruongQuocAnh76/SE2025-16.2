@@ -79,7 +79,7 @@
               >
                 <div class="w-8 h-8 rounded-full overflow-hidden bg-white/20 flex items-center justify-center">
                   <img
-                    src="/default-profile.png"
+                    :src="user?.avatar || '/default-profile.png'"
                     :alt="user?.username"
                     class="w-full h-full object-cover"
                   />
@@ -101,11 +101,11 @@
               >
                 <div class="py-1">
                   <NuxtLink
-                    :to="`/s/${user?.username}`"
+                    to="/settings"
                     @click="isDropdownOpen = false"
                     class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
                   >
-                    <i class="fas fa-user-circle mr-2"></i>My Dashboard
+                    <i class="fas fa-cog mr-2"></i>Settings
                   </NuxtLink>
                   <template v-if="isStudent">
                     <NuxtLink
@@ -360,7 +360,7 @@ const isDropdownOpen = ref(false)
 
 const userInitials = computed(() => {
   if (user.value?.username) {
-    return user.value.username.split(' ').map(n => n[0]).join('').toUpperCase()
+    return user.value.username.split(' ').map((n: string) => n[0]).join('').toUpperCase()
   }
   return ''
 })
