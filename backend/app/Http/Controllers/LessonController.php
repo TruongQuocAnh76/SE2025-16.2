@@ -4,13 +4,258 @@ namespace App\Http\Controllers;
 
 use App\Models\Lesson;
 use App\Models\Course;
+use App\Models\Module;
 use App\Models\Enrollment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use OpenApi\Annotations as OA;
 
 class LessonController extends Controller
 {
+    /**
+     * @OA\Post(
+     *     path="/courses/{courseId}/lessons",
+     *     summary="Create a new lesson",
+     *     description="Create a new lesson for a course (teacher only)",
+     *     tags={"Lessons"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="courseId",
+     *         in="path",
+     *         required=true,
+     *         description="Course ID",
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"title"},
+     *             @OA\Property(property="title", type="string"),
+     *             @OA\Property(property="description", type="string"),
+     *             @OA\Property(property="content", type="string"),
+     *             @OA\Property(property="video", type="string", format="binary"),
+     *             @OA\Property(property="module_id", type="string"),
+     *             @OA\Property(property="order", type="integer"),
+     *             @OA\Property(property="duration", type="integer")
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Lesson created successfully"),
+     *     @OA\Response(response=403, description="Unauthorized")
+     * )
+     */
+    public function store(Request $request, $courseId)
+    {
+        try {
+            $course = Course::find($courseId);
+            
+            if (!$course) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Course not found'
+                ], 404);
+            }
+
+            // Check if user is the teacher of this course
+            $user = Auth::user();
+            if ($course->teacher_id !== $user->id && $user->role !== 'ADMIN') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized - only course teacher can add lessons'
+                ], 403);
+            }
+
+            $request->validate([
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'content' => 'nullable|string',
+                'video' => 'nullable|file|mimes:mp4,webm,mov|max:512000', // 500MB max
+                'module_id' => 'nullable|exists:modules,id',
+                'order' => 'nullable|integer|min:1',
+                'duration' => 'nullable|integer|min:1'
+            ]);
+
+            // Get or create default module
+            $moduleId = $request->module_id;
+            if (!$moduleId) {
+                $defaultModule = Module::firstOrCreate(
+                    ['course_id' => $courseId, 'title' => 'Main Content'],
+                    ['order_index' => 1]
+                );
+                $moduleId = $defaultModule->id;
+            }
+
+            // Handle video upload
+            $videoUrl = null;
+            if ($request->hasFile('video')) {
+                $videoPath = $request->file('video')->store('lessons/videos', 'public');
+                $videoUrl = Storage::url($videoPath);
+            }
+
+            // Get next order index
+            $orderIndex = $request->order ?? (Lesson::where('module_id', $moduleId)->max('order_index') + 1);
+
+            $lesson = Lesson::create([
+                'module_id' => $moduleId,
+                'title' => $request->title,
+                'description' => $request->description,
+                'content' => $request->content,
+                'video_url' => $videoUrl,
+                'order_index' => $orderIndex,
+                'duration' => $request->duration
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $lesson,
+                'message' => 'Lesson created successfully'
+            ], 201);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error creating lesson: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * @OA\Put(
+     *     path="/courses/{courseId}/lessons/{lessonId}",
+     *     summary="Update a lesson",
+     *     description="Update an existing lesson (teacher only)",
+     *     tags={"Lessons"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(response=200, description="Lesson updated successfully"),
+     *     @OA\Response(response=403, description="Unauthorized")
+     * )
+     */
+    public function update(Request $request, $courseId, $lessonId)
+    {
+        try {
+            $course = Course::find($courseId);
+            $lesson = Lesson::find($lessonId);
+            
+            if (!$course || !$lesson) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Course or lesson not found'
+                ], 404);
+            }
+
+            // Check if user is the teacher of this course
+            $user = Auth::user();
+            if ($course->teacher_id !== $user->id && $user->role !== 'ADMIN') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized'
+                ], 403);
+            }
+
+            $request->validate([
+                'title' => 'sometimes|string|max:255',
+                'description' => 'nullable|string',
+                'content' => 'nullable|string',
+                'video' => 'nullable|file|mimes:mp4,webm,mov|max:512000',
+                'module_id' => 'nullable|exists:modules,id',
+                'order' => 'nullable|integer|min:1',
+                'duration' => 'nullable|integer|min:1'
+            ]);
+
+            // Handle video upload
+            if ($request->hasFile('video')) {
+                // Delete old video if exists
+                if ($lesson->video_url) {
+                    $oldPath = str_replace('/storage/', '', $lesson->video_url);
+                    Storage::disk('public')->delete($oldPath);
+                }
+                $videoPath = $request->file('video')->store('lessons/videos', 'public');
+                $lesson->video_url = Storage::url($videoPath);
+            }
+
+            $lesson->update(array_filter([
+                'title' => $request->title,
+                'description' => $request->description,
+                'content' => $request->content,
+                'module_id' => $request->module_id,
+                'order_index' => $request->order,
+                'duration' => $request->duration
+            ]));
+
+            return response()->json([
+                'success' => true,
+                'data' => $lesson->fresh(),
+                'message' => 'Lesson updated successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating lesson: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * @OA\Delete(
+     *     path="/courses/{courseId}/lessons/{lessonId}",
+     *     summary="Delete a lesson",
+     *     description="Delete an existing lesson (teacher only)",
+     *     tags={"Lessons"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(response=200, description="Lesson deleted successfully"),
+     *     @OA\Response(response=403, description="Unauthorized")
+     * )
+     */
+    public function destroy($courseId, $lessonId)
+    {
+        try {
+            $course = Course::find($courseId);
+            $lesson = Lesson::find($lessonId);
+            
+            if (!$course || !$lesson) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Course or lesson not found'
+                ], 404);
+            }
+
+            // Check if user is the teacher of this course
+            $user = Auth::user();
+            if ($course->teacher_id !== $user->id && $user->role !== 'ADMIN') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized'
+                ], 403);
+            }
+
+            // Delete video file if exists
+            if ($lesson->video_url) {
+                $path = str_replace('/storage/', '', $lesson->video_url);
+                Storage::disk('public')->delete($path);
+            }
+
+            $lesson->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Lesson deleted successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting lesson: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     /**
      * @OA\Get(
      *     path="/lessons/{lessonId}",
