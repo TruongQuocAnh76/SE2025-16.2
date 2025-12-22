@@ -17,7 +17,6 @@ class CourseSeeder extends Seeder
         $johnTeacher = DB::table('users')->where('email', 'john.teacher@certchain.com')->first();
         $sarahTeacher = DB::table('users')->where('email', 'sarah.johnson@certchain.com')->first();
 
-        // Thoát nếu không tìm thấy giáo viên (để tránh lỗi)
         if (!$johnTeacher || !$sarahTeacher) {
             $this->command->error('Không tìm thấy giáo viên. Hãy chạy UserSeeder trước.');
             return;

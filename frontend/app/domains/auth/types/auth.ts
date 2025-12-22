@@ -10,6 +10,7 @@ export interface User {
   auth_provider: 'EMAIL' | 'GOOGLE' | 'FACEBOOK' | 'GITHUB'
   is_email_verified: boolean
   is_active: boolean
+  has_password?: boolean
 }
 
 export interface LoginRequest {

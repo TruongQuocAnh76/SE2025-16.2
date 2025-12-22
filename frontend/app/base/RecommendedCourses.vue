@@ -3,9 +3,11 @@
     <div class="max-w-7xl mx-auto px-4">
       <!-- Header -->
       <div class="mb-12">
-        <h2 class="text-4xl font-bold text-gray-900 mb-3">Recommended for You</h2>
+        <h2 class="text-4xl font-bold text-gray-900 mb-3">
+          {{ isAuthenticated ? 'Recommended for You' : 'Popular Courses' }}
+        </h2>
         <p class="text-lg text-gray-600">
-          Personalized courses based on your learning history
+          {{ isAuthenticated ? 'Personalized courses based on your learning history' : 'Explore our most popular courses' }}
         </p>
       </div>
 
@@ -42,24 +44,53 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, ref } from 'vue'
+import { computed, watch, ref, onMounted } from 'vue'
 import { useCourses } from '../domains/courses/composables/useCourses'
 import CourseCard from '../domains/courses/components/ui/CourseCard.vue'
 
-const { getRecommendations } = useCourses()
+const { getRecommendations, getCourses } = useCourses()
+const token = useCookie('auth_token')
 
 // Reactive state
 const data = ref<any>(null)
 const pending = ref(false)
 const error = ref<any>(null)
+const isAuthenticated = computed(() => !!token.value)
 
-// Fetch recommendations
+// Fetch recommendations (authenticated) or popular courses (guest)
 const fetchRecommendations = async () => {
   pending.value = true
   error.value = null
   try {
-    const recommendations = await getRecommendations()
-    data.value = { success: true, data: recommendations }
+    let courses: any[] = []
+    
+    console.log('isAuthenticated:', isAuthenticated.value, 'token:', token.value ? 'exists' : 'null')
+    
+    if (isAuthenticated.value) {
+      // User logged in - get personalized recommendations
+      try {
+        courses = await getRecommendations()
+        console.log('Recommendations fetched:', courses)
+        
+        // If no recommendations, fallback to published courses
+        if (!courses || courses.length === 0) {
+          console.log('No recommendations, falling back to published courses')
+          const allCourses = await getCourses({ status: 'PUBLISHED' })
+          courses = allCourses.slice(0, 8)
+        }
+      } catch (recError) {
+        console.error('Error fetching recommendations, falling back to published courses:', recError)
+        // Fallback to published courses if recommendations fail
+        const allCourses = await getCourses({ status: 'PUBLISHED' })
+        courses = allCourses.slice(0, 8)
+      }
+    } else {
+      // Guest - get popular/published courses
+      const allCourses = await getCourses({ status: 'PUBLISHED' })
+      courses = allCourses.slice(0, 8) // Limit to 8 courses
+    }
+    
+    data.value = { success: true, data: courses }
   } catch (err) {
     error.value = err
     console.error('Failed to fetch recommendations:', err)
@@ -69,7 +100,9 @@ const fetchRecommendations = async () => {
 }
 
 // Fetch on mount
-fetchRecommendations()
+onMounted(() => {
+  fetchRecommendations()
+})
 
 // Debug logging
 watch(() => data.value, (newData) => {

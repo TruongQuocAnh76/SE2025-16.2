@@ -93,8 +93,7 @@ class GradingController extends Controller
         try {
             $validated = $request->validate([
                 'points_awarded' => 'required|integer|min:0',
-                'is_correct' => 'nullable|boolean',
-                'feedback' => 'nullable|string'
+                'is_correct' => 'nullable|boolean'
             ]);
 
             $answer = Answer::findOrFail($answerId);
@@ -122,6 +121,89 @@ class GradingController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to grade answer',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/grading/attempts/{attemptId}/bulk-grade",
+     *     summary="Bulk grade multiple answers",
+     *     tags={"Grading"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="attemptId",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"grades"},
+     *             @OA\Property(
+     *                 property="grades",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     type="object",
+     *                     required={"answer_id", "points_awarded"},
+     *                     @OA\Property(property="answer_id", type="string", format="uuid"),
+     *                     @OA\Property(property="points_awarded", type="integer", minimum=0),
+     *                     @OA\Property(property="is_correct", type="boolean", nullable=true)
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Answers graded successfully"
+     *     )
+     * )
+     */
+    public function bulkGradeAnswers(Request $request, string $attemptId): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'grades' => 'required|array',
+                'grades.*.answer_id' => 'required|uuid|exists:answers,id',
+                'grades.*.points_awarded' => 'required|integer|min:0',
+                'grades.*.is_correct' => 'nullable|boolean',
+            ]);
+
+            // Verify attempt exists
+            $attempt = QuizAttempt::findOrFail($attemptId);
+
+            // Verify all answers belong to this attempt
+            $answerIds = collect($validated['grades'])->pluck('answer_id');
+            $count = Answer::where('attempt_id', $attemptId)
+                ->whereIn('id', $answerIds)
+                ->count();
+
+            if ($count !== count($answerIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'some answers do not belong to the specified attempt'
+                ], 400);
+            }
+
+            $results = $this->gradingService->bulkGradeAnswers($validated['grades']);
+
+            return response()->json([
+                'success' => true,
+                'data' => $results,
+                'message' => 'Bulk grading completed'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to bulk grade answers',
                 'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
             ], 500);
         }
@@ -234,6 +316,7 @@ class GradingController extends Controller
                         'time_spent' => $attempt->time_spent,
                         'started_at' => $attempt->started_at,
                         'submitted_at' => $attempt->submitted_at,
+                        'grading_status' => $attempt->grading_status,
                     ],
                     'quiz' => [
                         'id' => $attempt->quiz->id,

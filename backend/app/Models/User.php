@@ -23,7 +23,23 @@ class User extends Authenticatable
     
     protected $casts = [
         'membership_expires_at' => 'datetime',
+        'has_password' => 'boolean',
     ];
+
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = ['has_password'];
+    
+    /**
+     * Determine if the user has a password set.
+     */
+    public function getHasPasswordAttribute(): bool
+    {
+        return !empty($this->password);
+    }
 
     public $incrementing = false;
     protected $keyType = 'string';
