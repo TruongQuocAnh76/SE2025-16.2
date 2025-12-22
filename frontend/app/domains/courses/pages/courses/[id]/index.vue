@@ -468,11 +468,18 @@ const checkEnrollmentRequirement = () => {
   if (route.query.enrollment_required === 'true' && !isEnrolled.value) {
     enrollError.value = 'You need to enroll in this course to access the lessons.'
   }
-  if (route.query.payment_success === 'true') {
+  
+  // Check for payment success from localStorage (no query params needed)
+  if (localStorage.getItem('payment_success') === 'true') {
     enrollSuccess.value = 'Payment successful! You are now enrolled in this course.'
-    // Clear the query param after showing message
+    
+    // Clear the localStorage flag
+    localStorage.removeItem('payment_success')
+    localStorage.removeItem('payment_type')
+    
+    // Clear success message after showing it
     setTimeout(() => {
-      router.replace({ query: {} })
+      enrollSuccess.value = ''
     }, 3000)
   }
 }
@@ -705,7 +712,8 @@ const handleEnroll = async () => {
     } else {
       // Course has price and user is not Premium, redirect to payment
       console.log('Redirecting to payment...')
-      router.push(`/payment?type=COURSE&course_id=${courseId}`)
+      // Use window.location.href instead of router.push to create clean navigation
+      window.location.href = `/payment?type=COURSE&course_id=${courseId}`
     }
 
   } catch (err: any) {
@@ -747,30 +755,8 @@ const totalLessonCount = computed(() => {
 })
 
 const goToFirstLesson = () => {
-  console.log('goToFirstLesson called')
-  console.log('course:', course.value)
-  console.log('modules:', course.value?.modules)
-  
-  if (!course.value || !course.value.modules || course.value.modules.length === 0) {
-    console.warn('No course or modules available')
-    alert('This course has no lessons available yet.')
-    return
-  }
-  
-  // Find first lesson in first module
-  for (const module of course.value.modules) {
-    console.log('Checking module:', module)
-    if (module.lessons && module.lessons.length > 0) {
-      const firstLesson = module.lessons[0]
-      console.log('Found first lesson:', firstLesson)
-      router.push(`/courses/${courseId}/lessons/${firstLesson.id}`)
-      return
-    }
-  }
-  
-  // If no lessons found, stay on course page
-  console.warn('No lessons found in this course')
-  alert('This course has no lessons available yet.')
+  // Navigate to Open Course page
+  router.push(`/courses/${courseId}/open`)
 }
 
 // SEO

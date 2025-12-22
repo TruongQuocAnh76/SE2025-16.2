@@ -1,8 +1,8 @@
-import { Router } from 'express';
+import { Router, IRouter } from 'express';
 import { TransactionController } from '../controllers/TransactionController.js';
 import { BlockchainService } from '../services/BlockchainService.js';
 
-const router = Router();
+const router: import('express').Router = Router();
 
 // Initialize services and controllers
 let transactionController: TransactionController | null = null;
