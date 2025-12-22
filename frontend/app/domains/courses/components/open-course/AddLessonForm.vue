@@ -200,6 +200,7 @@ const handleFileSelect = (event: Event) => {
   const target = event.target as HTMLInputElement
   if (target.files?.[0]) {
     newVideo.value = target.files[0]
+    form.video_url = '' // clear old video_url so backend will replace
   }
 }
 
@@ -207,6 +208,7 @@ const handleDrop = (event: DragEvent) => {
   dragOver.value = false
   if (event.dataTransfer?.files?.[0]) {
     newVideo.value = event.dataTransfer.files[0]
+    form.video_url = '' // clear old video_url so backend will replace
   }
 }
 

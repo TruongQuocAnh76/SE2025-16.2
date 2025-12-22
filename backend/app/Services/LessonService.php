@@ -68,9 +68,11 @@ class LessonService
 
         // Handle video upload
         $videoUrl = null;
+        $contentType = $data['content_type'] ?? 'TEXT'; // Default to TEXT
         if ($videoFile) {
             $videoPath = $videoFile->store('lessons/videos', 'public');
             $videoUrl = \Illuminate\Support\Facades\Storage::url($videoPath);
+            $contentType = 'VIDEO'; // Set to VIDEO when video is uploaded
         }
 
         // Get next order index
@@ -80,8 +82,9 @@ class LessonService
             'module_id' => $moduleId,
             'title' => $data['title'],
             'description' => $data['description'] ?? null,
-            'content' => $data['content'] ?? null,
-            'video_url' => $videoUrl,
+            'text_content' => $data['content'] ?? null,
+            'content_type' => $contentType,
+            'content_url' => $videoUrl,
             'order_index' => $orderIndex,
             'duration' => $data['duration'] ?? null
         ]);
@@ -99,25 +102,32 @@ class LessonService
         }
 
         // Handle video upload
+        $contentType = $lesson->content_type;
         if ($videoFile) {
             // Delete old video if exists
-            if ($lesson->video_url) {
-                $oldPath = str_replace('/storage/', '', $lesson->video_url);
+            if ($lesson->content_url) {
+                $oldPath = str_replace('/storage/', '', $lesson->content_url);
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($oldPath);
             }
             $videoPath = $videoFile->store('lessons/videos', 'public');
-            $data['video_url'] = \Illuminate\Support\Facades\Storage::url($videoPath);
+            $data['content_url'] = \Illuminate\Support\Facades\Storage::url($videoPath);
+            $contentType = 'VIDEO';
+        } else if (isset($data['content_url']) && $data['content_url'] === '') {
+            // Nếu xóa video
+            $data['content_url'] = null;
+            $contentType = 'TEXT';
         }
 
         // Filter null values and rename order to order_index
         $updateData = array_filter([
             'title' => $data['title'] ?? null,
             'description' => $data['description'] ?? null,
-            'content' => $data['content'] ?? null,
+            'text_content' => $data['content'] ?? null,
             'module_id' => $data['module_id'] ?? null,
             'order_index' => $data['order'] ?? null,
             'duration' => $data['duration'] ?? null,
-            'video_url' => $data['video_url'] ?? null
+            'content_url' => $data['content_url'] ?? null,
+            'content_type' => $contentType
         ], fn($value) => $value !== null);
 
         return $this->lessonRepository->update($lessonId, $updateData);

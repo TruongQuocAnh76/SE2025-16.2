@@ -153,6 +153,7 @@
             :modules="modules"
             @saved="onLessonSaved"
             @cancel="closeForm"
+            @close="closeForm"
           />
         </div>
 
@@ -163,6 +164,7 @@
             :lesson="editingLesson"
             @saved="onLessonSaved"
             @cancel="closeForm"
+            @close="closeForm"
           />
         </div>
 

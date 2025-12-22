@@ -4,13 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class Lesson extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuids;
 
     protected $fillable = [
-        'id', 'title', 'content_type', 'content_url',
+        'id', 'title', 'content_type', 'content_url', 'description', 'text_content',
         'duration', 'order_index', 'is_free', 'module_id'
     ];
 
