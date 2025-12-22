@@ -128,6 +128,7 @@ class CourseController extends Controller
             'duration'    => 'nullable|integer|min:1',
             'passing_score' => 'integer|min:0|max:100',
             'long_description' => 'nullable|string',
+            'curriculum' => 'nullable|string',
             'category' => 'nullable|string',
             'language' => 'nullable|string',
             'discount' => 'nullable|numeric|min:0',
@@ -262,7 +263,16 @@ class CourseController extends Controller
                 ], 401);
             }
 
+            // Load enrollments relationship
+            $user->load('enrollments');
+            
             $recommendations = $this->courseService->getRecommendations($user);
+
+            Log::info('Recommendations fetched', [
+                'user_id' => $user->id,
+                'enrollments_count' => $user->enrollments->count(),
+                'recommendations_count' => count($recommendations)
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -305,6 +315,10 @@ class CourseController extends Controller
     public function show($id)
     {
         $course = $this->courseService->getCourseById($id);
+
+        // Tính average_rating và review_count từ reviews thực tế
+        $course->average_rating = $course->reviews_avg_rating ?? 0;
+        $course->review_count = $course->reviews->count();
 
         $ratingCounts = $course->reviews()
                            ->selectRaw('rating, count(*) as count')
@@ -538,6 +552,9 @@ class CourseController extends Controller
         $course = Course::findOrFail($id);
 
         $review = $this->courseService->addReview(Auth::id(), $id, $request->rating, $request->comment);
+
+        // Refresh course to get updated average_rating and review_count
+        $course->refresh();
 
         $ratingCounts = $course->reviews()
                                 ->selectRaw('rating, count(*) as count')

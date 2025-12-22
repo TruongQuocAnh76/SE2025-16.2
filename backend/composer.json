@@ -7,7 +7,6 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "barryvdh/laravel-dompdf": "^3.1",
         "darkaonline/l5-swagger": "*",
         "illuminate/hashing": "*",
         "laravel/framework": "^12.0",
@@ -19,9 +18,9 @@
         "paypal/paypal-checkout-sdk": "^1.0",
         "paypal/paypal-server-sdk": "^1.1",
         "paypal/rest-api-sdk-php": "^1.6",
-        "pbmedia/laravel-ffmpeg": "^8.7",
         "php-amqplib/php-amqplib": "^2.8",
-        "stripe/stripe-php": "^19.1"
+        "stripe/stripe-php": "*",
+        "pbmedia/laravel-ffmpeg": "^8.7"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

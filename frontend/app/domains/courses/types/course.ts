@@ -9,6 +9,9 @@ export interface Course {
   slug: string
   description: string
   thumbnail?: string
+  category?: string
+  language?: string
+  discount?: number
   level: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT'
   price?: number
   originalPrice?: number
@@ -16,6 +19,7 @@ export interface Course {
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
   teacher_id: string
   passing_score: number
+  tags?: Tag[]
   created_at?: string
   updated_at?: string
   teacher?: User
@@ -31,11 +35,13 @@ export interface Course {
 export interface Module {
   id: string
   title: string
+  description?: string
   order_index: number
   course_id: string
   created_at?: string
   updated_at?: string
   lessons?: Lesson[]
+  quizzes?: Quiz[]
   course?: Course
 }
 
@@ -103,12 +109,14 @@ export interface Quiz {
   quiz_type: string
   passing_score: number
   max_attempts: number
+  order_index?: number
   total_questions?: number
   total_points?: number
   is_active: boolean
   created_at?: string
   updated_at?: string
   course?: Course
+  questions?: Question[]
 }
 
 export interface QuizAttempt {

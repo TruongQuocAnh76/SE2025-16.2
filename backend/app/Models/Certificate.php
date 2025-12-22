@@ -8,7 +8,7 @@ class Certificate extends Model
 {
     protected $fillable = [
         'id', 'certificate_number', 'student_id', 'user_id', 'course_id',
-        'final_score', 'pdf_url', 'pdf_hash', 'pdf_path', 'status',
+        'final_score', 'pdf_url', 'pdf_hash', 'status',
         'issued_at', 'revoked_at', 'revocation_reason',
         'blockchain_status', 'blockchain_transaction_hash', 'blockchain_block_number', 
         'blockchain_confirmations', 'blockchain_gas_used', 'blockchain_error', 

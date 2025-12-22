@@ -26,11 +26,6 @@ use App\Http\Controllers\AdminController;
 Route::get('/', fn() => response()->json(['message' => 'CertChain API v1 is running']));
 
 /* ========================
- * PREVIEW ENDPOINTS (for development/testing)
- * ======================== */
-Route::get('/_preview/certificates', [CertificateController::class, 'preview']);
-
-/* ========================
  * AUTHENTICATION
  * ======================== */
 Route::prefix('auth')->group(function () {
@@ -85,6 +80,9 @@ Route::prefix('courses')->group(function () {
     Route::get('/search', [CourseController::class, 'search']); // Search courses by name
     Route::get('/{id}', [CourseController::class, 'show']); // Get course details
 });
+
+// Recommendations endpoint (requires authentication)
+Route::middleware('auth:sanctum')->get('/recommendations', [CourseController::class, 'getRecommendations']);
 
 // Protected course management routes (require authentication)
 Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
@@ -278,7 +276,7 @@ Route::prefix('tags')->group(function () {
 });
 
 /* ========================
- * PAYMENTS
+ * PAYMENTS (Commented out until PaymentController is implemented)
  * ======================== */
 Route::middleware('auth:sanctum')->prefix('payments')->group(function () {
     Route::post('/create', [PaymentController::class, 'createPayment']); // Create payment intent
@@ -294,4 +292,4 @@ Route::middleware('auth:sanctum')->prefix('payments')->group(function () {
 });
 
 // Stripe Webhook (no auth needed)
-Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook']);
+// Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook']);

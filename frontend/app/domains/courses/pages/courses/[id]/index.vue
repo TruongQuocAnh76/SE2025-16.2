@@ -22,7 +22,15 @@
 
         <div class="lg:col-span-2">
 
-          <h1 class="text-4xl font-bold text-text-dark mb-4">{{ course.title }}</h1>
+          <div class="flex justify-between items-start mb-4">
+            <h1 class="text-4xl font-bold text-text-dark">{{ course.title }}</h1>
+            <NuxtLink v-if="isTeacher" :to="`/courses/${courseId}/edit`" class="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-secondary transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+              </svg>
+              Edit Course
+            </NuxtLink>
+          </div>
           <p class="text-lg text-text-muted mb-6">{{ course.description }}</p>
 
           <div class="flex space-x-2 mb-6 border-b border-gray-200">
@@ -638,6 +646,47 @@ const handleSubmitReview = async () => {
     reviewError.value = err.data?.message || 'Unable to submit review.'
   }
 }
+
+// Check if current user is the teacher of this course or an admin
+const isTeacher = computed(() => {
+  // Try different cookie names
+  const userCookie = useCookie('user')
+  const userDataCookie = useCookie('user_data')
+  const authTokenCookie = useCookie('auth_token')
+  
+  console.log('=== DEBUG COOKIES ===')
+  console.log('userCookie.value:', userCookie.value)
+  console.log('userDataCookie.value:', userDataCookie.value)
+  console.log('authTokenCookie.value:', authTokenCookie.value)
+  
+  let user = null
+  
+  // Try user_data cookie first
+  if (userDataCookie.value) {
+    try {
+      user = typeof userDataCookie.value === 'string' ? JSON.parse(userDataCookie.value) : userDataCookie.value
+      console.log('Parsed from user_data cookie:', user)
+    } catch (e) {
+      console.error('Failed to parse user_data cookie:', e)
+    }
+  }
+  
+  // Fallback to user cookie
+  if (!user && userCookie.value) {
+    try {
+      user = typeof userCookie.value === 'string' ? JSON.parse(userCookie.value) : userCookie.value
+      console.log('Parsed from user cookie:', user)
+    } catch (e) {
+      console.error('Failed to parse user cookie:', e)
+    }
+  }
+  
+  console.log('isTeacher check:', { user, courseTeacherId: course.value?.teacher_id, isAdmin: user?.role === 'ADMIN' })
+  
+  if (!course.value || !user) return false
+  // Admin can edit any course, or teacher can edit their own course
+  return user.role === 'ADMIN' || course.value.teacher_id === user.id
+})
 
 const handleEnroll = async () => {
   if (!course.value) {

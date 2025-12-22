@@ -47,9 +47,6 @@ export interface Certificate {
   course_id: string
   status: 'PENDING' | 'ISSUED' | 'FAILED' | 'REVOKED'
   final_score: number
-  pdf_url?: string
-  pdf_hash?: string
-  blockchain_transaction_hash?: string
   issued_at: string
   course: {
     id: string

@@ -1,16 +1,38 @@
 ﻿<template>
   <div class="min-h-screen bg-background">
     <div class="max-w-7xl mx-auto px-4 py-12">
+      <!-- Loading State -->
+      <div v-if="loading" class="flex justify-center items-center min-h-[60vh]">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-brand-primary"></div>
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="loadError" class="text-center py-20">
+        <h2 class="text-2xl font-bold text-red-600 mb-4">Unable to load course</h2>
+        <p class="text-text-muted">{{ loadError }}</p>
+        <NuxtLink to="/courses" class="mt-4 inline-block text-brand-primary hover:underline">
+          Back to courses
+        </NuxtLink>
+      </div>
+
+      <!-- Main Content -->
+      <template v-else>
       <div class="mb-8">
-        <h1 class="text-3xl font-bold text-text-dark mb-2">Add Course</h1>
+        <h1 class="text-3xl font-bold text-text-dark mb-2">Edit Course</h1>
         
         <!-- Step Progress Indicator -->
         <div class="mt-6">
           <nav aria-label="Progress">
             <ol role="list" class="space-y-4 md:flex md:space-y-0 md:space-x-8">
               <li class="md:flex-1">
-                <div class="group flex flex-col border-l-4 border-teal-600 py-2 pl-4 md:border-l-0 md:border-t-4 md:pb-0 md:pl-0 md:pt-4">
-                  <span class="text-sm font-medium text-teal-600">Step 1</span>
+                <div :class="[
+                  'group flex flex-col border-l-4 py-2 pl-4 md:border-l-0 md:border-t-4 md:pb-0 md:pl-0 md:pt-4',
+                  currentStep === 1 ? 'border-teal-600' : 'border-gray-200'
+                ]">
+                  <span :class="[
+                    'text-sm font-medium',
+                    currentStep === 1 ? 'text-teal-600' : 'text-gray-500'
+                  ]">Step 1</span>
                   <span class="text-sm font-medium">Course Details</span>
                 </div>
               </li>
@@ -123,7 +145,11 @@
                   v-model="form.category"
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-white"
                 >
-                  <option value="">Select an Category</option>
+                  <option value="">Select a Category</option>
+                  <option value="programming">Programming</option>
+                  <option value="design">Design</option>
+                  <option value="business">Business</option>
+                  <option value="marketing">Marketing</option>
                 </select>
               </div>
               <div>
@@ -136,6 +162,8 @@
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-white"
                 >
                   <option value="">Select Language</option>
+                  <option value="english">English</option>
+                  <option value="vietnamese">Vietnamese</option>
                 </select>
               </div>
             </div>
@@ -234,6 +262,21 @@
                 />
               </div>
             </div>
+
+            <div>
+              <label for="status" class="block text-sm font-medium text-text-dark mb-2">
+                Status
+              </label>
+              <select
+                id="status"
+                v-model="form.status"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-white"
+              >
+                <option value="DRAFT">Draft</option>
+                <option value="PUBLISHED">Published</option>
+                <option value="ARCHIVED">Archived</option>
+              </select>
+            </div>
             
           </div>
 
@@ -287,7 +330,7 @@
               type="submit"
               class="w-full py-4 bg-teal-500 text-white rounded-lg font-semibold text-lg hover:bg-teal-600 transition-colors"
             >
-              Next: Add Modules & Content
+              Next: Edit Modules & Content
             </button>
           </div>
           
@@ -310,7 +353,6 @@
           </button>
         </div>
 
-        <!-- Modules List -->
         <div v-if="modules.length === 0" class="text-center py-12 text-gray-500">
           <p>No modules added yet. Click "Add Module" to get started.</p>
         </div>
@@ -332,7 +374,6 @@
               </button>
             </div>
 
-            <!-- Module Title and Description -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
               <div>
                 <label class="block text-sm font-medium text-text-dark mb-2">
@@ -359,7 +400,6 @@
               </div>
             </div>
 
-            <!-- Lessons Section -->
             <div class="mb-6">
               <div class="flex justify-between items-center mb-4">
                 <h4 class="text-md font-medium text-text-dark">Lessons</h4>
@@ -408,18 +448,22 @@
                     </div>
                     <div>
                       <label class="block text-sm font-medium text-text-dark mb-1">
-                        Video File (MP4) <span class="text-red-500">*</span>
+                        Video File (MP4)
+                        <span v-if="!lesson.id && !lesson.content_url" class="text-red-500">*</span>
                       </label>
                       <input
                         :ref="`videoFileInput_${moduleIndex}_${lessonIndex}`"
                         type="file"
                         accept="video/mp4"
-                        required
                         @change="handleVideoFileSelect($event, moduleIndex, lessonIndex)"
                         class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm"
                       />
+                      
                       <p v-if="lesson.video_file" class="mt-1 text-xs text-green-600">
                         Selected: {{ lesson.video_file.name }} ({{ formatFileSize(lesson.video_file.size) }})
+                      </p>
+                      <p v-else-if="lesson.content_url" class="mt-1 text-xs text-gray-600 truncate">
+                        Current: {{ lesson.content_url.split('/').pop() }}
                       </p>
                     </div>
                     <div class="flex items-end space-x-2">
@@ -451,7 +495,6 @@
               </div>
             </div>
 
-            <!-- Quizzes Section -->
             <div>
               <div class="flex justify-between items-center mb-4">
                 <h4 class="text-md font-medium text-text-dark">Quizzes</h4>
@@ -485,7 +528,6 @@
                     </button>
                   </div>
 
-                  <!-- Quiz Basic Info -->
                   <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
                     <div>
                       <label class="block text-sm font-medium text-text-dark mb-1">
@@ -566,7 +608,6 @@
                     ></textarea>
                   </div>
 
-                  <!-- Questions Section -->
                   <div class="mb-4">
                     <div class="flex justify-between items-center mb-3">
                       <h6 class="text-sm font-medium text-text-dark">Questions</h6>
@@ -643,7 +684,6 @@
                             </div>
                           </div>
 
-                          <!-- Options for Multiple Choice/Checkbox -->
                           <div v-if="question.question_type === 'MULTIPLE_CHOICE' || question.question_type === 'CHECKBOX'">
                             <div class="flex justify-between items-center mb-2">
                               <label class="text-xs font-medium text-text-dark">
@@ -680,7 +720,6 @@
                             </div>
                           </div>
 
-                          <!-- Correct Answer -->
                           <div>
                             <label class="block text-xs font-medium text-text-dark mb-1">
                               Correct Answer <span class="text-red-500">*</span>
@@ -718,7 +757,6 @@
                             </div>
                           </div>
 
-                          <!-- Explanation -->
                           <div>
                             <label class="block text-xs font-medium text-text-dark mb-1">
                               Explanation (Optional)
@@ -740,7 +778,6 @@
           </div>
         </div>
 
-        <!-- Form Actions for Step 2 -->
         <div class="flex justify-between mt-12">
           <button
             type="button"
@@ -756,8 +793,8 @@
             :disabled="isSubmitting"
             class="py-3 px-6 bg-teal-500 text-white rounded-lg font-semibold hover:bg-teal-600 transition-colors disabled:opacity-50"
           >
-            <span v-if="isSubmitting">Creating Course...</span>
-            <span v-else>Create Course</span>
+            <span v-if="isSubmitting">Updating Course...</span>
+            <span v-else>Update Course</span>
           </button>
         </div>
         
@@ -810,22 +847,29 @@
           </div>
         </div>
       </div>
+      </template>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import type { CreateCourseData, Tag, CreateModuleData, CreateLessonData, CreateQuizData, CreateQuestionData, CreateCourseWithModulesData } from '../../types/course'
+import type { CreateCourseData, Tag, CreateModuleData, CreateLessonData, CreateQuizData, CreateQuestionData, CreateCourseWithModulesData, Course } from '../../../types/course'
 const config = useRuntimeConfig()
 
 const LEVELS = ['BEGINNER' , 'INTERMEDIATE' , 'ADVANCED' , 'EXPERT'] as const
 
-const { createCourse, uploadCourseThumbnail, updateCourseThumbnail, getTags, createTag, uploadLessonVideo, notifyVideoUploadComplete, checkHlsProcessingStatus } = useCourses()
+const { getCourseById, updateCourse, uploadCourseThumbnail, updateCourseThumbnail, getTags, createTag, uploadLessonVideo, notifyVideoUploadComplete, checkHlsProcessingStatus } = useCourses()
 const router = useRouter()
+const route = useRoute()
+const courseId = route.params.id as string
 
 // Multi-step form state
 const currentStep = ref(1)
+
+// Loading states
+const loading = ref(true)
+const loadError = ref('')
 
 // Modules state
 const modules = ref<CreateModuleData[]>([])
@@ -966,7 +1010,7 @@ const removeOption = (question: CreateQuestionData, optionIndex: number) => {
   }
 }
 
-// Video file management
+// Video file management - modified for edit mode
 const handleVideoFileSelect = (event: Event, moduleIndex: number, lessonIndex: number) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
@@ -982,7 +1026,7 @@ const handleVideoFileSelect = (event: Event, moduleIndex: number, lessonIndex: n
     const lesson = modules.value[moduleIndex]?.lessons[lessonIndex]
     if (lesson) {
       lesson.video_file = file
-      // Clear content_url since we're using file upload
+      // Clear content_url since we're uploading new video
       lesson.content_url = undefined
       // Clear any previous errors
       delete errors.value.general
@@ -1019,11 +1063,9 @@ const selectedThumbnailFile = ref<File | null>(null)
 const thumbnailFileInput = ref<HTMLInputElement | null>(null)
 
 // Form data
-const form = ref<CreateCourseData>({
+const form = ref<CreateCourseData & { status?: string }>({
   title: '',
   description: '',
-  // long_description: '', 
-  // curriculum: '',
   category: '',
   language: '',
   discount: undefined,
@@ -1031,7 +1073,8 @@ const form = ref<CreateCourseData>({
   price: undefined,
   duration: undefined,
   passing_score: 70,
-  tags: [] 
+  tags: [],
+  status: 'DRAFT'
 })
 
 const allTags = ref<Tag[]>([])
@@ -1092,9 +1135,85 @@ const handleCreateTag = async () => {
   }
 }
 
-// Fetch all tags on mount
+// Load course data on mount
 onMounted(async () => {
-  allTags.value = await getTags()
+  loading.value = true
+  loadError.value = ''
+  
+  try {
+    // Load tags first
+    allTags.value = await getTags()
+    
+    // Load course data
+    const course = await getCourseById(courseId)
+    
+    if (course) {
+      // Load course basic info
+      form.value = {
+        title: course.title || '',
+        description: course.description || '',
+        category: course.category || '',
+        language: course.language || '',
+        discount: course.discount ?? undefined,
+        level: course.level || '',
+        price: course.price ?? undefined,
+        duration: course.duration ?? undefined,
+        passing_score: course.passing_score ?? 70,
+        tags: course.tags?.map(t => t.id) || [],
+        status: (course as Course).status || 'DRAFT'
+      }
+      
+      // Load thumbnail
+      if (course.thumbnail) {
+        thumbnailPreview.value = course.thumbnail
+      }
+      
+      // Load modules with lessons and quizzes
+      if (course.modules && course.modules.length > 0) {
+        modules.value = course.modules.map(m => ({
+          id: m.id,
+          title: m.title || '',
+          description: m.description || '',
+          order_index: m.order_index || 0,
+          lessons: m.lessons?.map(l => ({
+            id: l.id,
+            title: l.title || '',
+            content_type: 'VIDEO',
+            content_url: l.content_url || '',
+            duration: l.duration,
+            order_index: l.order_index || 0,
+            is_free: l.is_free || false
+          })) || [],
+          quizzes: m.quizzes?.map(q => ({
+            id: q.id,
+            title: q.title || '',
+            description: q.description || '',
+            quiz_type: (q.quiz_type || 'PRACTICE') as 'PRACTICE' | 'GRADED' | 'FINAL',
+            time_limit: q.time_limit,
+            passing_score: q.passing_score || 70,
+            max_attempts: q.max_attempts,
+            order_index: q.order_index || 0,
+            is_active: q.is_active ?? true,
+            questions: q.questions?.map(qu => ({
+              id: qu.id,
+              question_text: qu.question_text || '',
+              question_type: (qu.question_type || 'MULTIPLE_CHOICE') as 'MULTIPLE_CHOICE' | 'CHECKBOX' | 'SHORT_ANSWER',
+              points: qu.points || 1,
+              order_index: qu.order_index || 0,
+              options: qu.options || ['', ''],
+              correct_answer: qu.correct_answer || '',
+              explanation: qu.explanation || ''
+            })) || []
+          })) || []
+        }))
+      }
+    }
+  } catch (error: any) {
+    console.error('Failed to load course:', error)
+    loadError.value = error.message || 'Failed to load course data'
+  } finally {
+    loading.value = false
+  }
 })
 
 // Form state
@@ -1174,7 +1293,9 @@ const validateModules = (): boolean => {
         errors.value.general = `Lesson ${j + 1} in Module ${i + 1} title is required.`
         return false
       }
-      if (!lesson.video_file && !lesson.content_url?.trim()) {
+      // In edit mode, video is optional if content_url exists (keep existing video)
+      // Only require video_file if it's a new lesson (no id) or if user cleared the existing video
+      if (!lesson.video_file && !lesson.content_url?.trim() && !lesson.id) {
         errors.value.general = `Lesson ${j + 1} in Module ${i + 1} video file is required.`
         return false
       }
@@ -1215,7 +1336,7 @@ const validateModules = (): boolean => {
   return true
 }
 
-// Submit handler
+// Submit handler - modified for update
 const handleSubmit = async () => {
   // Only validate basic form for step 1, both for step 2
   if (currentStep.value === 1) {
@@ -1240,36 +1361,30 @@ const handleSubmit = async () => {
     if (courseData.price === undefined) delete courseData.price
     if (courseData.duration === undefined) delete courseData.duration
 
-    // Only request thumbnail upload if a file is selected
+    // Only request thumbnail upload if a NEW file is selected
     if (selectedThumbnailFile.value) {
       courseData.thumbnail = 'UPLOAD_REQUESTED'
     }
 
-    const result = await createCourse(courseData)
+    // Use updateCourse instead of createCourse
+    const result = await updateCourse(courseId, courseData)
 
     if (result) {
       // Upload thumbnail if provided
       if (selectedThumbnailFile.value && result.thumbnail_upload_url) {
-        const uploadSuccess = await uploadCourseThumbnail(result.thumbnail_upload_url, selectedThumbnailFile.value)
-        // if (uploadSuccess) {
-        //   const thumbnailPath = `courses/thumbnails/${result.course.id}.jpg`
-        //   const finalThumbnailUrl = `${config.public.awsEndpoint}/${config.public.awsBucket}/${thumbnailPath}`
-        // await updateCourseThumbnail(result.course.id, finalThumbnailUrl)
-        // } else {
-        //   console.warn('Thumbnail upload failed, but course was created successfully')
-        // }
+        await uploadCourseThumbnail(result.thumbnail_upload_url, selectedThumbnailFile.value)
       }
 
-      // Upload lesson videos if provided
+      // Upload lesson videos if provided (only for NEW videos)
       if (result.video_upload_urls) {
-        successMessage.value = 'Course created! Uploading videos...'
+        successMessage.value = 'Course updated! Uploading new videos...'
         
         const videoUploads = Object.entries(result.video_upload_urls)
         let uploadedCount = 0
         let failedCount = 0
         
         for (const [key, uploadInfo] of videoUploads) {
-          // Parse the key to get module and lesson indices
+          const uploadData = uploadInfo as any
           const keyParts = key.split('_')
           const moduleIndexStr = keyParts[1]
           const lessonIndexStr = keyParts[3]
@@ -1283,73 +1398,49 @@ const handleSubmit = async () => {
               try {
                 successMessage.value = `Uploading video ${uploadedCount + 1} of ${videoUploads.length}...`
                 const uploadSuccess = await uploadLessonVideo(
-                  uploadInfo.lesson_id,
-                  uploadInfo.upload_url,
+                  uploadData.lesson_id,
+                  uploadData.upload_url,
                   lesson.video_file,
-                  uploadInfo.original_video_path,
-                  uploadInfo.hls_base_path
+                  uploadData.original_video_path,
+                  uploadData.original_video_path.replace('.mp4', '')
                 )
                 if (uploadSuccess) {
                   uploadedCount++
-                  successMessage.value = `Video ${uploadedCount} of ${videoUploads.length} uploaded and processing started!`
+                  successMessage.value = `Video ${uploadedCount} of ${videoUploads.length} uploaded!`
                 } else {
                   failedCount++
-                  console.error(`Failed to upload video for lesson ${lesson.title}`)
+                  console.warn(`Failed to upload video for lesson ${lesson.title}`)
                 }
               } catch (error) {
                 failedCount++
-                console.error(`Failed to upload video for lesson ${lesson.title}:`, error)
+                console.warn(`Failed to upload video for lesson ${lesson.title}:`, error)
               }
             }
           }
         }
         
-        if (failedCount === 0) {
-          successMessage.value = `Course created successfully! All ${uploadedCount} videos uploaded and are being processed. Redirecting...`
+        if (failedCount === 0 && uploadedCount > 0) {
+          successMessage.value = `Course updated! All ${uploadedCount} new videos uploaded successfully.`
+        } else if (uploadedCount > 0) {
+          successMessage.value = `Course updated! ${uploadedCount} videos uploaded, ${failedCount} failed.`
         } else {
-          successMessage.value = `Course created! ${uploadedCount} videos uploaded, ${failedCount} failed. Check console for details. Redirecting...`
+          successMessage.value = 'Course updated successfully!'
         }
       } else {
-        successMessage.value = 'Course created successfully! Redirecting...'
+        successMessage.value = 'Course updated successfully!'
       }
 
-      successMessage.value = successMessage.value + ' Videos will be processed in background and converted to streaming format.'
-      
-      // Reset form
-      form.value = {
-        title: '',
-        description: '',
-        // long_description: '', 
-        // curriculum: '',
-        category: '',
-        language: '',
-        discount: undefined,
-        level: '' as any,
-        price: undefined,
-        duration: undefined,
-        passing_score: 70,
-        tags: []
-      }
-      modules.value = []
-      currentStep.value = 1
-      thumbnailType.value = 'upload'
-      selectedThumbnailFile.value = null
-      thumbnailPreview.value = null 
-      if (thumbnailFileInput.value) {
-        thumbnailFileInput.value.value = ''
-      }
-
-      // Redirect to courses list after a short delay
+      // Redirect to course detail page
       setTimeout(() => {
-        router.push('/courses')
-      }, 2000)
+        router.push(`/courses/${courseId}`)
+      }, 1500)
     }
   } catch (error: any) {
-    console.error('Failed to create course:', error)
+    console.error('Failed to update course:', error)
     if (error.response?.data?.errors) {
       errors.value = error.response.data.errors
     } else {
-      errors.value.general = error.message || 'Failed to create course. Please try again.'
+      errors.value.general = error.message || 'Failed to update course. Please try again.'
     }
   } finally {
     isSubmitting.value = false
@@ -1363,9 +1454,9 @@ definePageMeta({
 
 // SEO
 useHead({
-  title: 'Create Course - CertChain',
+  title: 'Edit Course - CertChain',
   meta: [
-    { name: 'description', content: 'Create a new course on CertChain platform' }
+    { name: 'description', content: 'Edit course on CertChain platform' }
   ]
 })
 </script>

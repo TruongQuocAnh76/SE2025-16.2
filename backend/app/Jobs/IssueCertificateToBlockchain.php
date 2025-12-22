@@ -144,7 +144,6 @@ class IssueCertificateToBlockchain implements ShouldQueue
                     'blockchain_transaction_hash' => $responseData['data']['transactionHash'],
                     'blockchain_status' => 'issued',
                     'blockchain_issued_at' => now(),
-                    'status' => 'ISSUED', // Update main status to ISSUED after blockchain success
                 ]);
 
                 Log::info("Certificate issued to blockchain successfully", [
