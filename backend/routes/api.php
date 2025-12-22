@@ -23,11 +23,6 @@ use App\Http\Controllers\AIChatController;
 Route::get('/', fn() => response()->json(['message' => 'CertChain API v1 is running']));
 
 /* ========================
- * PREVIEW ENDPOINTS (for development/testing)
- * ======================== */
-Route::get('/_preview/certificates', [CertificateController::class, 'preview']);
-
-/* ========================
  * AUTHENTICATION
  * ======================== */
 Route::prefix('auth')->group(function () {
@@ -49,6 +44,13 @@ Route::middleware(['web'])->prefix('auth')->group(function () {
 
 Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
+});
+
+/* ========================
+ * MEDIA UPLOAD
+ * ======================== */
+Route::middleware('auth:sanctum')->prefix('media')->group(function () {
+    Route::post('/presigned-url', [\App\Http\Controllers\MediaController::class, 'getPresignedUrl']);
 });
 
 /* ========================
@@ -75,6 +77,9 @@ Route::prefix('courses')->group(function () {
     Route::get('/search', [CourseController::class, 'search']); // Search courses by name
     Route::get('/{id}', [CourseController::class, 'show']); // Get course details
 });
+
+// Recommendations endpoint (requires authentication)
+Route::middleware('auth:sanctum')->get('/recommendations', [CourseController::class, 'getRecommendations']);
 
 // Protected course management routes (require authentication)
 Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
@@ -178,6 +183,9 @@ Route::middleware('auth:sanctum')->prefix('teacher-applications')->group(functio
     Route::post('/{id}/approve', [TeacherApplicationController::class, 'approve']); // Approve (Admin)
     Route::post('/{id}/reject', [TeacherApplicationController::class, 'reject']); // Reject (Admin)
 });
+
+// Public route for certificate download (requires valid token in query string)
+Route::get('/teacher-applications/{id}/certificate', [TeacherApplicationController::class, 'downloadCertificate']);
 
 /* ========================
  * TEACHERS

@@ -45,14 +45,14 @@
             ></span>
           </NuxtLink>
           <NuxtLink
-            to="/verify-certificate"
+            to="/blog"
             class="text-white hover:text-accent-star px-4 py-2 text-sm font-medium transition-colors duration-200 relative group whitespace-nowrap cursor-pointer"
-            :class="{ 'text-accent-star': $route.path === '/verify-certificate' }"
+            :class="{ 'text-accent-star': $route.path === '/blog' }"
           >
-            Verify Certificate
+            Blogs
             <span
               class="absolute bottom-0 left-0 w-full h-0.5 bg-accent-star transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"
-              :class="{ 'scale-x-100': $route.path === '/verify-certificate' }"
+              :class="{ 'scale-x-100': $route.path === '/blog' }"
             ></span>
           </NuxtLink>
           <NuxtLink
@@ -79,7 +79,7 @@
               >
                 <div class="w-8 h-8 rounded-full overflow-hidden bg-white/20 flex items-center justify-center">
                   <img
-                    src="/default-profile.png"
+                    :src="user?.avatar || '/default-profile.png'"
                     :alt="user?.username"
                     class="w-full h-full object-cover"
                   />
@@ -101,12 +101,21 @@
               >
                 <div class="py-1">
                   <NuxtLink
-                    :to="`/s/${user?.username}`"
+                    to="/settings"
                     @click="isDropdownOpen = false"
                     class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
                   >
-                    <i class="fas fa-user-circle mr-2"></i>My Dashboard
+                    <i class="fas fa-cog mr-2"></i>Settings
                   </NuxtLink>
+                  <template v-if="isStudent">
+                    <NuxtLink
+                      to="/teacher/my-applications"
+                      @click="isDropdownOpen = false"
+                      class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <i class="fas fa-file-alt mr-2"></i>My Applications
+                    </NuxtLink>
+                  </template>
                   <template v-if="isAdmin">
                     <div class="border-t border-gray-200 my-1"></div>
                     <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
@@ -238,12 +247,12 @@
             Membership
           </NuxtLink>
           <NuxtLink
-            to="/verify-certificate"
+            to="/blog"
             class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md"
-            :class="{ 'text-accent-star bg-accent-star/10': $route.path === '/verify-certificate' }"
+            :class="{ 'text-accent-star bg-accent-star/10': $route.path === '/blog' }"
             @click="isMobileMenuOpen = false"
           >
-            Verify Certificate
+            Blogs
           </NuxtLink>
           <NuxtLink
             to="/about"
@@ -351,7 +360,7 @@ const isDropdownOpen = ref(false)
 
 const userInitials = computed(() => {
   if (user.value?.username) {
-    return user.value.username.split(' ').map(n => n[0]).join('').toUpperCase()
+    return user.value.username.split(' ').map((n: string) => n[0]).join('').toUpperCase()
   }
   return ''
 })
@@ -359,6 +368,11 @@ const userInitials = computed(() => {
 const isAdmin = computed(() => {
   const r = user.value?.role
   return typeof r === 'string' && r.toUpperCase() === 'ADMIN'
+})
+
+const isStudent = computed(() => {
+  const r = user.value?.role
+  return typeof r === 'string' && r.toUpperCase() === 'STUDENT'
 })
 
 // Computed property để lấy tên hiển thị

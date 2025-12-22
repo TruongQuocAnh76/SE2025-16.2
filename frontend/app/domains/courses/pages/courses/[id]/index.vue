@@ -308,7 +308,7 @@
               </div>
 
               <p v-if="!isEnrolled && enrollError" class="text-red-500 text-sm mb-3">{{ enrollError }}</p>
-              <p v-if="enrollSuccess" class="text-green-500 text-sm mb-3">{{ enrollSuccess }}</p>
+              <p v-if="!isEnrolled && enrollSuccess" class="text-green-500 text-sm mb-3">{{ enrollSuccess }}</p>
 
               <!-- Enrolled Status -->
               <div v-if="isEnrolled" class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
@@ -439,7 +439,7 @@
 <script setup lang="ts">
 
 import type { Course, Review } from '../../../types/course'
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 
 const { getCourseById, addReview, enrollInCourse } = useCourses()
 const route = useRoute()
@@ -508,7 +508,10 @@ const checkUserMembershipStatus = async () => {
 const checkEnrollmentStatus = async () => {
   try {
     const token = useCookie('auth_token').value
-    if (!token) return
+    if (!token) {
+      console.log('No token found for enrollment check')
+      return
+    }
     
     const config = useRuntimeConfig()
     const response = await $fetch(`/api/courses/${courseId}/enrollment/check`, {
@@ -518,10 +521,15 @@ const checkEnrollmentStatus = async () => {
       }
     })
     
+    console.log('Enrollment check response:', response)
+    
     isEnrolled.value = response.isEnrolled
     if (response.enrollment) {
       enrollmentDate.value = response.enrollment.enrolled_at
     }
+    
+    console.log('Updated isEnrolled:', isEnrolled.value)
+    console.log('Updated enrollmentDate:', enrollmentDate.value)
   } catch (err) {
     console.error('Error checking enrollment:', err)
   }
@@ -646,14 +654,20 @@ const isTeacher = computed(() => {
   const userDataCookie = useCookie('user_data')
   const authTokenCookie = useCookie('auth_token')
   
+  console.log('=== DEBUG COOKIES ===')
+  console.log('userCookie.value:', userCookie.value)
+  console.log('userDataCookie.value:', userDataCookie.value)
+  console.log('authTokenCookie.value:', authTokenCookie.value)
+  
   let user = null
   
   // Try user_data cookie first
   if (userDataCookie.value) {
     try {
       user = typeof userDataCookie.value === 'string' ? JSON.parse(userDataCookie.value) : userDataCookie.value
+      console.log('Parsed from user_data cookie:', user)
     } catch (e) {
-      // Failed to parse user_data cookie
+      console.error('Failed to parse user_data cookie:', e)
     }
   }
   
@@ -661,10 +675,13 @@ const isTeacher = computed(() => {
   if (!user && userCookie.value) {
     try {
       user = typeof userCookie.value === 'string' ? JSON.parse(userCookie.value) : userCookie.value
+      console.log('Parsed from user cookie:', user)
     } catch (e) {
-      // Failed to parse user cookie
+      console.error('Failed to parse user cookie:', e)
     }
   }
+  
+  console.log('isTeacher check:', { user, courseTeacherId: course.value?.teacher_id, isAdmin: user?.role === 'ADMIN' })
   
   if (!course.value || !user) return false
   // Admin can edit any course, or teacher can edit their own course
@@ -685,8 +702,13 @@ const handleEnroll = async () => {
     const token = useCookie('auth_token').value
     const config = useRuntimeConfig()
     
+    console.log('Starting enrollment process...')
+    console.log('isPremiumUser:', isPremiumUser.value)
+    console.log('course.price:', course.value.price)
+    
     // If user is Premium, enroll for free
     if (isPremiumUser.value) {
+      console.log('Enrolling as premium user...')
       const response = await $fetch(`/api/courses/${courseId}/enroll-free`, {
         baseURL: config.public.backendUrl as string,
         method: 'POST',
@@ -695,32 +717,52 @@ const handleEnroll = async () => {
         }
       })
 
-      enrollSuccess.value = response.message || 'Successfully enrolled! Enjoy your premium benefits.'
-      // Reload enrollment status
+      console.log('Premium enroll response:', response)
+      
+      // Reload enrollment status first
       await checkEnrollmentStatus()
+      
+      console.log('After checkEnrollmentStatus, isEnrolled:', isEnrolled.value)
+      
+      // Clear success message immediately so UI shows enrolled status
+      enrollSuccess.value = ''
       return
     }
     
     // If course is free (price = 0), use regular enroll
     if (course.value.price === 0 || !course.value.price) {
+      console.log('Enrolling in free course...')
       const response = await enrollInCourse(courseId)
 
-      if (response.success) {
-        enrollSuccess.value = response.message || 'Successfully enrolled in the course!'
-        // Reload enrollment status
+      console.log('Free course enroll response:', response)
+
+      // Check if enroll was successful (response.success might be undefined, so check response existence)
+      if (response && (response.success === true || response.message)) {
+        // Reload enrollment status to get fresh data
         await checkEnrollmentStatus()
+        
+        console.log('After checkEnrollmentStatus, isEnrolled:', isEnrolled.value)
+        
+        // Force UI update by using nextTick
+        await nextTick()
+        
+        // Don't show success message, let the enrolled status show instead
+        enrollSuccess.value = ''
       } else {
-        enrollError.value = response.message || 'Failed to enroll in the course.'
+        enrollError.value = response?.message || 'Failed to enroll in the course.'
       }
     } else {
       // Course has price and user is not Premium, redirect to payment
+      console.log('Redirecting to payment...')
       router.push(`/payment?type=COURSE&course_id=${courseId}`)
     }
 
   } catch (err: any) {
+    console.error('Enrollment error:', err)
     enrollError.value = err.data?.message || 'Failed to enroll in the course. Please try again.'
   } finally {
     enrollLoading.value = false
+    console.log('Enrollment process finished. isEnrolled:', isEnrolled.value)
   }
 }
 

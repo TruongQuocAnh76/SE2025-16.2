@@ -87,16 +87,38 @@ function handleJoinStudent() {
 
 async function handleJoinTeacher() {
   const token = useCookie('auth_token')
+  
+  // Chưa đăng nhập -> redirect đến signup
   if (!token.value) {
     router.push('/auth/signup')
     return
   }
-  // Lấy info user qua composable
+  
+  // Đã đăng nhập -> kiểm tra role
   const { currentUser } = useUserStats()
-  if (currentUser.value?.role === 'teacher') {
-    router.push('/teacher/dashboard')
-  } else {
+  
+  // Chờ load user info
+  if (!currentUser.value) {
+    await new Promise(resolve => setTimeout(resolve, 500))
+  }
+  
+  const userRole = currentUser.value?.role?.toUpperCase()
+  
+  if (userRole === 'TEACHER') {
+    alert('You are already a teacher! You can manage your courses from the teacher dashboard.')
+    return
+  }
+  
+  if (userRole === 'ADMIN') {
+    alert('As an admin, you cannot apply to become a teacher.')
+    return
+  }
+  
+  // Chỉ STUDENT mới được apply
+  if (userRole === 'STUDENT') {
     router.push('/teacher/register')
+  } else {
+    alert('Only students can apply to become a teacher.')
   }
 }
 </script>

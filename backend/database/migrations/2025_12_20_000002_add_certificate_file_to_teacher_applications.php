@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('courses', function (Blueprint $table) {
-            $table->dropColumn('curriculum');
+        Schema::table('teacher_applications', function (Blueprint $table) {
+            $table->string('certificate_file_path')->nullable()->after('expiry_date');
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('courses', function (Blueprint $table) {
-            $table->text('curriculum')->nullable();
+        Schema::table('teacher_applications', function (Blueprint $table) {
+            $table->dropColumn('certificate_file_path');
         });
     }
 };

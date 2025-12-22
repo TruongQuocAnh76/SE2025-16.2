@@ -136,6 +136,15 @@ class UserController extends Controller
         $data = $validator->validated();
 
         if (isset($data['password'])) {
+            // If user has a password currently (not social login only), verify current password
+            if ($user->password && $user->auth_provider === 'EMAIL') {
+                if (!$request->has('current_password')) {
+                    return response()->json(['error' => 'Current password is required'], 422);
+                }
+                if (!Hash::check($request->current_password, $user->password)) {
+                    return response()->json(['error' => 'Current password is incorrect'], 422);
+                }
+            }
             $data['password'] = Hash::make($data['password']);
         }
 
