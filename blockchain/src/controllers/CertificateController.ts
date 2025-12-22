@@ -133,6 +133,7 @@ export class CertificateController {
         return res.status(400).json({
           success: false,
           error: 'Owner address is required',
+          data: [],
           pagination: { page: 1, limit: 10, total: 0, pages: 0 }
         });
       }
@@ -161,6 +162,7 @@ export class CertificateController {
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Internal server error',
+        data: [],
         pagination: { page: 1, limit: 10, total: 0, pages: 0 }
       });
     }
