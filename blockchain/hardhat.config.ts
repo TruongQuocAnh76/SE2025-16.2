@@ -1,16 +1,17 @@
 import hardhatToolboxMochaEthersPlugin from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 import { defineConfig } from "hardhat/config";
+import 'dotenv/config';
 
 export default defineConfig({
   plugins: [hardhatToolboxMochaEthersPlugin],
   paths: {
-    cache: "/app/blockchain-data/cache",
-    artifacts: "/app/blockchain-data/artifacts",
+    cache: "./blockchain-data/cache",
+    artifacts: "./blockchain-data/artifacts",
     sources: "./contracts",
     tests: "./test",
   },
   typechain: {
-    outDir: "/app/blockchain-data/types",
+    outDir: "./blockchain-data/types",
   },
   solidity: {
     profiles: {
@@ -53,5 +54,11 @@ export default defineConfig({
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 80001,
     },
+    sepolia: {
+      type: "http",
+      url: process.env.RPC_URL,
+      accounts: [process.env.PRIVATE_KEY],
+      chainId: 11155111,
+    }
   },
 });
