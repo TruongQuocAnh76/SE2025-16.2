@@ -101,6 +101,13 @@
               >
                 <div class="py-1">
                   <NuxtLink
+                    :to="`/s/${user?.username}`"
+                    @click="isDropdownOpen = false"
+                    class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                  >
+                    <i class="fas fa-chart-line mr-2"></i>Dashboard
+                  </NuxtLink>
+                  <NuxtLink
                     to="/settings"
                     @click="isDropdownOpen = false"
                     class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
@@ -270,9 +277,16 @@
               <NuxtLink
                 :to="`/s/${user?.username}`"
                 @click="isMobileMenuOpen = false"
+                class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md"
+              >
+                <i class="fas fa-chart-line mr-2"></i>Dashboard
+              </NuxtLink>
+              <NuxtLink
+                to="/settings"
+                @click="isMobileMenuOpen = false"
                 class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md mb-2"
               >
-                <i class="fas fa-user-circle mr-2"></i>My Dashboard
+                <i class="fas fa-cog mr-2"></i>Settings
               </NuxtLink>
               <template v-if="isAdmin">
                 <div class="border-t border-gray-200 my-2"></div>
