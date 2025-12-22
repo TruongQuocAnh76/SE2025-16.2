@@ -1,8 +1,5 @@
 <template>
-  <div 
-    class="bg-neutral-0 border border-neutral-50 rounded-lg p-6 shadow-md cursor-pointer hover:shadow-lg transition-shadow duration-200"
-    @click="$emit('click')"
-  >
+  <div class="bg-neutral-0 border border-neutral-50 rounded-lg p-6 shadow-md">
     <div class="flex items-center space-x-4">
       <!-- Certificate Icon -->
       <div class="flex-shrink-0">
@@ -16,13 +13,6 @@
         <h4 class="text-h4 text-neutral-900 mb-1">{{ courseName }}</h4>
         <p class="text-body-sm text-neutral-600">Issued {{ dateIssued }}</p>
       </div>
-
-      <!-- View indicator -->
-      <div class="flex-shrink-0">
-        <svg class="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-        </svg>
-      </div>
     </div>
   </div>
 </template>
@@ -31,13 +21,7 @@
 interface Props {
   courseName: string
   dateIssued: string
-  certificateId?: string
-  pdfUrl?: string
 }
 
 const props = defineProps<Props>()
-
-defineEmits<{
-  click: []
-}>()
 </script>

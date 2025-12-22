@@ -12,10 +12,7 @@ RUN apk add --no-cache \
     bash \
     ffmpeg \
     ffmpeg-dev \
-    linux-headers \
-    freetype-dev \
-    libjpeg-turbo-dev \
-    libpng-dev
+    linux-headers
 
 # Install Redis extension
 RUN apk add --no-cache autoconf g++ make \
@@ -24,8 +21,7 @@ RUN apk add --no-cache autoconf g++ make \
     && apk del autoconf g++ make
 
 # Install PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_pgsql zip bcmath pcntl sockets gd
+RUN docker-php-ext-install pdo pdo_pgsql zip bcmath pcntl sockets
 
 # Install Redis extension (pin a compatible PECL version and retry to avoid transient PECL errors)
 RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \

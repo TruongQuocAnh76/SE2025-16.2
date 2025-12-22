@@ -98,9 +98,9 @@ export const useCourses = () => {
     }
   }
 
-  const updateCourse = async (id: string, courseData: Partial<CreateCourseData>): Promise<Course | null> => {
+  const updateCourse = async (id: string, courseData: Partial<CreateCourseData>): Promise<CreateCourseResponse | null> => {
     try {
-      const data = await $fetch<{ message: string; course: Course }>(`/api/courses/${id}`, {
+      const data = await $fetch<CreateCourseResponse>(`/api/courses/${id}`, {
         baseURL: config.public.backendUrl as string,
         method: 'PUT',
         headers: {
@@ -109,7 +109,7 @@ export const useCourses = () => {
         },
         body: courseData
       })
-      return data.course
+      return data
     } catch (error) {
       console.error('Failed to update course:', error)
       throw error
