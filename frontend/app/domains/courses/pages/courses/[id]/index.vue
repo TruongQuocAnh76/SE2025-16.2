@@ -468,11 +468,18 @@ const checkEnrollmentRequirement = () => {
   if (route.query.enrollment_required === 'true' && !isEnrolled.value) {
     enrollError.value = 'You need to enroll in this course to access the lessons.'
   }
-  if (route.query.payment_success === 'true') {
+  
+  // Check for payment success from localStorage (no query params needed)
+  if (localStorage.getItem('payment_success') === 'true') {
     enrollSuccess.value = 'Payment successful! You are now enrolled in this course.'
-    // Clear the query param after showing message
+    
+    // Clear the localStorage flag
+    localStorage.removeItem('payment_success')
+    localStorage.removeItem('payment_type')
+    
+    // Clear success message after showing it
     setTimeout(() => {
-      router.replace({ query: {} })
+      enrollSuccess.value = ''
     }, 3000)
   }
 }
@@ -705,7 +712,8 @@ const handleEnroll = async () => {
     } else {
       // Course has price and user is not Premium, redirect to payment
       console.log('Redirecting to payment...')
-      router.push(`/payment?type=COURSE&course_id=${courseId}`)
+      // Use window.location.href instead of router.push to create clean navigation
+      window.location.href = `/payment?type=COURSE&course_id=${courseId}`
     }
 
   } catch (err: any) {
