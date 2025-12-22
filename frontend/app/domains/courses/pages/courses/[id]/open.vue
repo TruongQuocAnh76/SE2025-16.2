@@ -99,10 +99,10 @@
             <div 
               v-for="quiz in quizzes" 
               :key="quiz.id"
-              @click="selectQuiz(quiz)"
+              @click="goToQuiz(quiz)"
               :class="[
                 'flex items-center justify-between p-2 rounded cursor-pointer text-sm',
-                selectedQuiz?.id === quiz.id ? 'bg-yellow-500 text-white' : 'bg-yellow-400 text-gray-800 hover:bg-yellow-500'
+                'bg-yellow-400 text-gray-800 hover:bg-yellow-500'
               ]"
             >
               <div class="flex items-center flex-1 min-w-0">
@@ -149,16 +149,6 @@
             @edit="editLesson"
             @delete="deleteLesson"
             @completed="onLessonCompleted"
-          />
-        </div>
-
-        <div v-else-if="currentView === 'quiz' && selectedQuiz">
-          <QuizView 
-            :quiz="selectedQuiz" 
-            :course="course"
-            :is-teacher="isTeacher"
-            @edit="editQuiz"
-            @delete="deleteQuiz"
           />
         </div>
 
@@ -257,7 +247,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import LessonView from '../../../components/open-course/LessonView.vue'
-import QuizView from '../../../components/open-course/QuizView.vue'
 import AddLessonForm from '../../../components/open-course/AddLessonForm.vue'
 import AddQuizForm from '../../../components/open-course/AddQuizForm.vue'
 
@@ -279,9 +268,8 @@ const currentUser = ref<any>(null)
 const lessonProgress = ref<Record<string, boolean>>({})  // Track lesson completion status
 
 // View state
-const currentView = ref<'overview' | 'lesson' | 'quiz' | 'add-lesson' | 'edit-lesson' | 'add-quiz' | 'edit-quiz'>('overview')
+const currentView = ref<'overview' | 'lesson' | 'add-lesson' | 'edit-lesson' | 'add-quiz' | 'edit-quiz'>('overview')
 const selectedLesson = ref<any>(null)
-const selectedQuiz = ref<any>(null)
 const editingLesson = ref<any>(null)
 const editingQuiz = ref<any>(null)
 const showAddLesson = ref(false)
@@ -314,14 +302,12 @@ const onLessonCompleted = (lessonId: string) => {
 
 const selectLesson = (lesson: any) => {
   selectedLesson.value = lesson
-  selectedQuiz.value = null
   currentView.value = 'lesson'
 }
 
-const selectQuiz = (quiz: any) => {
-  selectedQuiz.value = quiz
-  selectedLesson.value = null
-  currentView.value = 'quiz'
+// Navigate to quiz page (existing quiz page in dev)
+const goToQuiz = (quiz: any) => {
+  router.push(`/courses/${courseId}/quizzes/${quiz.id}`)
 }
 
 const editLesson = (lesson: any) => {
@@ -370,10 +356,6 @@ const deleteQuiz = async (quiz: any) => {
       }
     })
     quizzes.value = quizzes.value.filter(q => q.id !== quiz.id)
-    if (selectedQuiz.value?.id === quiz.id) {
-      selectedQuiz.value = null
-      currentView.value = 'overview'
-    }
   } catch (err) {
     console.error('Failed to delete quiz:', err)
     alert('Failed to delete quiz')
@@ -447,7 +429,8 @@ const fetchCourseData = async () => {
           'Accept': 'application/json'
         }
       })
-      quizzes.value = quizzesResponse.quizzes || quizzesResponse || []
+      // API returns {success: true, data: [...]}
+      quizzes.value = quizzesResponse.data || quizzesResponse.quizzes || quizzesResponse || []
     } catch {
       quizzes.value = []
     }

@@ -27,4 +27,9 @@ class ModuleRepository
             ->orderBy('order_index')
             ->get();
     }
+
+    public function firstOrCreate(array $attributes, array $values = [])
+    {
+        return $this->model->firstOrCreate($attributes, $values);
+    }
 }

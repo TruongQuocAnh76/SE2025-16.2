@@ -332,43 +332,105 @@ const handleSubmit = async () => {
       alert(`Question ${i + 1} needs at least 2 options`)
       return
     }
+    // Validate that at least one option is marked correct for MC/Checkbox
+    if (q.question_type !== 'SHORT_ANSWER') {
+      const hasCorrect = q.options.some((opt: QuizOption) => opt.is_correct)
+      if (!hasCorrect) {
+        alert(`Question ${i + 1} needs at least one correct answer`)
+        return
+      }
+    }
   }
 
   submitting.value = true
 
   try {
-    const payload = {
+    // Step 1: Create or update quiz
+    const quizPayload = {
       title: form.title,
       description: form.description,
       time_limit: form.time_limit,
       passing_score: form.passing_score,
-      questions: form.questions.map((q: QuizQuestion) => ({
-        question_text: q.question_text,
-        question_type: q.question_type,
-        points: q.points,
-        options: q.question_type !== 'SHORT_ANSWER' ? q.options : undefined,
-        correct_answer: q.question_type === 'SHORT_ANSWER' ? q.correct_answer : undefined
-      }))
+      order_index: 1
     }
 
-    const url = isEditing.value 
-      ? `/api/quizzes/${props.quiz.id}`
-      : `/api/quizzes/course/${props.courseId}`
+    let quizId: string
     
-    const method = isEditing.value ? 'PUT' : 'POST'
+    if (isEditing.value) {
+      // Update quiz
+      await $fetch(`/api/quizzes/${props.quiz.id}`, {
+        baseURL: config.public.backendUrl as string,
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token.value}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: quizPayload
+      })
+      quizId = props.quiz.id
+    } else {
+      // Create quiz
+      const quizResponse = await $fetch<any>(`/api/quizzes/course/${props.courseId}`, {
+        baseURL: config.public.backendUrl as string,
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token.value}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: quizPayload
+      })
+      quizId = quizResponse.data?.id || quizResponse.id
+    }
 
-    const response = await $fetch(url, {
-      baseURL: config.public.backendUrl as string,
-      method: method,
-      headers: {
-        'Authorization': `Bearer ${token.value}`,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      body: payload
-    })
+    // Step 2: Create questions for the quiz
+    for (let i = 0; i < form.questions.length; i++) {
+      const q = form.questions[i]
+      
+      // Format options as array of strings for API
+      let options: string[] | undefined
+      let correctAnswer: string
+      
+      if (q.question_type === 'SHORT_ANSWER') {
+        correctAnswer = q.correct_answer || ''
+      } else {
+        // Convert options to array of strings
+        options = q.options.map((opt: QuizOption) => opt.option_text)
+        
+        if (q.question_type === 'CHECKBOX') {
+          // For checkbox, correct_answer is array of correct option texts (JSON)
+          const correctOptions = q.options
+            .filter((opt: QuizOption) => opt.is_correct)
+            .map((opt: QuizOption) => opt.option_text)
+          correctAnswer = JSON.stringify(correctOptions)
+        } else {
+          // For multiple choice, correct_answer is the correct option text
+          const correctOpt = q.options.find((opt: QuizOption) => opt.is_correct)
+          correctAnswer = correctOpt?.option_text || ''
+        }
+      }
 
-    emit('saved', response)
+      await $fetch(`/api/quizzes/${quizId}/questions`, {
+        baseURL: config.public.backendUrl as string,
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token.value}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: {
+          question_text: q.question_text,
+          question_type: q.question_type,
+          points: q.points,
+          order_index: i + 1,
+          options: options,
+          correct_answer: correctAnswer
+        }
+      })
+    }
+
+    emit('saved', { id: quizId })
     emit('close')
   } catch (err: any) {
     console.error('Failed to save quiz:', err)

@@ -2,18 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Lesson;
-use App\Models\Course;
-use App\Models\Module;
-use App\Models\Enrollment;
-use App\Models\LessonComment;
+use App\Services\LessonService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use OpenApi\Annotations as OA;
 
 class LessonController extends Controller
 {
+    protected $lessonService;
+
+    public function __construct(LessonService $lessonService)
+    {
+        $this->lessonService = $lessonService;
+    }
+
     /**
      * @OA\Post(
      *     path="/courses/{courseId}/lessons",
@@ -48,7 +50,7 @@ class LessonController extends Controller
     public function store(Request $request, $courseId)
     {
         try {
-            $course = Course::find($courseId);
+            $course = $this->lessonService->getCourseById($courseId);
             
             if (!$course) {
                 return response()->json([
@@ -57,9 +59,8 @@ class LessonController extends Controller
                 ], 404);
             }
 
-            // Check if user is the teacher of this course
             $user = Auth::user();
-            if ($course->teacher_id !== $user->id && $user->role !== 'ADMIN') {
+            if (!$this->lessonService->canManageLesson($courseId, $user)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized - only course teacher can add lessons'
@@ -70,41 +71,14 @@ class LessonController extends Controller
                 'title' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'content' => 'nullable|string',
-                'video' => 'nullable|file|mimes:mp4,webm,mov|max:512000', // 500MB max
+                'video' => 'nullable|file|mimes:mp4,webm,mov|max:512000',
                 'module_id' => 'nullable|exists:modules,id',
                 'order' => 'nullable|integer|min:1',
                 'duration' => 'nullable|integer|min:1'
             ]);
 
-            // Get or create default module
-            $moduleId = $request->module_id;
-            if (!$moduleId) {
-                $defaultModule = Module::firstOrCreate(
-                    ['course_id' => $courseId, 'title' => 'Main Content'],
-                    ['order_index' => 1]
-                );
-                $moduleId = $defaultModule->id;
-            }
-
-            // Handle video upload
-            $videoUrl = null;
-            if ($request->hasFile('video')) {
-                $videoPath = $request->file('video')->store('lessons/videos', 'public');
-                $videoUrl = Storage::url($videoPath);
-            }
-
-            // Get next order index
-            $orderIndex = $request->order ?? (Lesson::where('module_id', $moduleId)->max('order_index') + 1);
-
-            $lesson = Lesson::create([
-                'module_id' => $moduleId,
-                'title' => $request->title,
-                'description' => $request->description,
-                'content' => $request->content,
-                'video_url' => $videoUrl,
-                'order_index' => $orderIndex,
-                'duration' => $request->duration
-            ]);
+            $videoFile = $request->hasFile('video') ? $request->file('video') : null;
+            $lesson = $this->lessonService->createLesson($courseId, $request->all(), $videoFile);
 
             return response()->json([
                 'success' => true,
@@ -140,8 +114,8 @@ class LessonController extends Controller
     public function update(Request $request, $courseId, $lessonId)
     {
         try {
-            $course = Course::find($courseId);
-            $lesson = Lesson::find($lessonId);
+            $course = $this->lessonService->getCourseById($courseId);
+            $lesson = $this->lessonService->getLessonById($lessonId);
             
             if (!$course || !$lesson) {
                 return response()->json([
@@ -150,9 +124,8 @@ class LessonController extends Controller
                 ], 404);
             }
 
-            // Check if user is the teacher of this course
             $user = Auth::user();
-            if ($course->teacher_id !== $user->id && $user->role !== 'ADMIN') {
+            if (!$this->lessonService->canManageLesson($courseId, $user)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized'
@@ -169,29 +142,12 @@ class LessonController extends Controller
                 'duration' => 'nullable|integer|min:1'
             ]);
 
-            // Handle video upload
-            if ($request->hasFile('video')) {
-                // Delete old video if exists
-                if ($lesson->video_url) {
-                    $oldPath = str_replace('/storage/', '', $lesson->video_url);
-                    Storage::disk('public')->delete($oldPath);
-                }
-                $videoPath = $request->file('video')->store('lessons/videos', 'public');
-                $lesson->video_url = Storage::url($videoPath);
-            }
-
-            $lesson->update(array_filter([
-                'title' => $request->title,
-                'description' => $request->description,
-                'content' => $request->content,
-                'module_id' => $request->module_id,
-                'order_index' => $request->order,
-                'duration' => $request->duration
-            ]));
+            $videoFile = $request->hasFile('video') ? $request->file('video') : null;
+            $updatedLesson = $this->lessonService->updateLesson($lessonId, $request->all(), $videoFile);
 
             return response()->json([
                 'success' => true,
-                'data' => $lesson->fresh(),
+                'data' => $updatedLesson,
                 'message' => 'Lesson updated successfully'
             ]);
 
@@ -217,8 +173,8 @@ class LessonController extends Controller
     public function destroy($courseId, $lessonId)
     {
         try {
-            $course = Course::find($courseId);
-            $lesson = Lesson::find($lessonId);
+            $course = $this->lessonService->getCourseById($courseId);
+            $lesson = $this->lessonService->getLessonById($lessonId);
             
             if (!$course || !$lesson) {
                 return response()->json([
@@ -227,22 +183,15 @@ class LessonController extends Controller
                 ], 404);
             }
 
-            // Check if user is the teacher of this course
             $user = Auth::user();
-            if ($course->teacher_id !== $user->id && $user->role !== 'ADMIN') {
+            if (!$this->lessonService->canManageLesson($courseId, $user)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized'
                 ], 403);
             }
 
-            // Delete video file if exists
-            if ($lesson->video_url) {
-                $path = str_replace('/storage/', '', $lesson->video_url);
-                Storage::disk('public')->delete($path);
-            }
-
-            $lesson->delete();
+            $this->lessonService->deleteLesson($lessonId);
 
             return response()->json([
                 'success' => true,
@@ -271,29 +220,15 @@ class LessonController extends Controller
      *         description="Lesson ID",
      *         @OA\Schema(type="string")
      *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Lesson details retrieved successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="data", type="object"),
-     *             @OA\Property(property="message", type="string", example="Lesson retrieved successfully")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Lesson not found"
-     *     ),
-     *     @OA\Response(
-     *         response=403,
-     *         description="Access denied - enrollment required"
-     *     )
+     *     @OA\Response(response=200, description="Lesson details retrieved successfully"),
+     *     @OA\Response(response=404, description="Lesson not found"),
+     *     @OA\Response(response=403, description="Access denied - enrollment required")
      * )
      */
     public function show($lessonId)
     {
         try {
-            $lesson = Lesson::with(['module.course'])->find($lessonId);
+            $lesson = $this->lessonService->getLessonById($lessonId);
             
             if (!$lesson) {
                 return response()->json([
@@ -338,27 +273,14 @@ class LessonController extends Controller
      *         description="Module ID",
      *         @OA\Schema(type="string")
      *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Lessons retrieved successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="data", type="array", @OA\Items(type="object")),
-     *             @OA\Property(property="message", type="string", example="Lessons retrieved successfully")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Module not found"
-     *     )
+     *     @OA\Response(response=200, description="Lessons retrieved successfully"),
+     *     @OA\Response(response=404, description="Module not found")
      * )
      */
     public function getByModule($moduleId)
     {
         try {
-            $lessons = Lesson::where('module_id', $moduleId)
-                ->orderBy('order_index')
-                ->get();
+            $lessons = $this->lessonService->getLessonsByModuleId($moduleId);
 
             return response()->json([
                 'success' => true,
@@ -388,47 +310,26 @@ class LessonController extends Controller
      *         description="Lesson ID",
      *         @OA\Schema(type="string")
      *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Progress retrieved successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="data", type="object"),
-     *             @OA\Property(property="message", type="string", example="Progress retrieved successfully")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Lesson not found"
-     *     )
+     *     @OA\Response(response=200, description="Progress retrieved successfully"),
+     *     @OA\Response(response=404, description="Lesson not found")
      * )
      */
     public function getProgress($lessonId)
     {
         try {
             $user = Auth::user();
-            
-            $lesson = Lesson::find($lessonId);
-            if (!$lesson) {
+            $progress = $this->lessonService->getLessonProgress($lessonId, $user->id);
+
+            if ($progress === null) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Lesson not found'
                 ], 404);
             }
 
-            $progress = \App\Models\Progress::where('student_id', $user->id)
-                ->where('lesson_id', $lessonId)
-                ->first();
-
             return response()->json([
                 'success' => true,
-                'data' => $progress ?: [
-                    'lesson_id' => $lessonId,
-                    'student_id' => $user->id,
-                    'is_completed' => false,
-                    'time_spent' => 0,
-                    'completed_at' => null
-                ],
+                'data' => $progress,
                 'message' => 'Progress retrieved successfully'
             ]);
 
@@ -454,24 +355,14 @@ class LessonController extends Controller
      *         description="Course ID",
      *         @OA\Schema(type="string")
      *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Enrollment status retrieved",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="enrolled", type="boolean"),
-     *             @OA\Property(property="enrollment_date", type="string", format="date-time", nullable=true)
-     *         )
-     *     )
+     *     @OA\Response(response=200, description="Enrollment status retrieved")
      * )
      */
     public function checkEnrollment($courseId)
     {
         try {
             $user = Auth::user();
-            
-            $enrollment = Enrollment::where('student_id', $user->id)
-                ->where('course_id', $courseId)
-                ->first();
+            $enrollment = $this->lessonService->checkEnrollment($courseId, $user->id);
 
             return response()->json([
                 'enrolled' => $enrollment ? true : false,
@@ -500,29 +391,20 @@ class LessonController extends Controller
      *         description="Lesson ID",
      *         @OA\Schema(type="string")
      *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Comments retrieved successfully"
-     *     )
+     *     @OA\Response(response=200, description="Comments retrieved successfully")
      * )
      */
     public function getComments($lessonId)
     {
         try {
-            $lesson = Lesson::find($lessonId);
+            $comments = $this->lessonService->getComments($lessonId);
             
-            if (!$lesson) {
+            if ($comments === null) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Lesson not found'
                 ], 404);
             }
-
-            $comments = LessonComment::with(['user:id,first_name,last_name,avatar', 'replies.user:id,first_name,last_name,avatar'])
-                ->where('lesson_id', $lessonId)
-                ->whereNull('parent_id')
-                ->orderBy('created_at', 'desc')
-                ->get();
 
             return response()->json([
                 'success' => true,
@@ -560,10 +442,7 @@ class LessonController extends Controller
      *             @OA\Property(property="parent_id", type="string", nullable=true)
      *         )
      *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="Comment added successfully"
-     *     )
+     *     @OA\Response(response=201, description="Comment added successfully")
      * )
      */
     public function storeComment(Request $request, $lessonId)
@@ -574,23 +453,20 @@ class LessonController extends Controller
                 'parent_id' => 'nullable|exists:lesson_comments,id'
             ]);
 
-            $lesson = Lesson::find($lessonId);
+            $user = Auth::user();
+            $comment = $this->lessonService->addComment(
+                $lessonId,
+                $user->id,
+                $request->content,
+                $request->parent_id
+            );
             
-            if (!$lesson) {
+            if ($comment === null) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Lesson not found'
                 ], 404);
             }
-
-            $comment = LessonComment::create([
-                'lesson_id' => $lessonId,
-                'user_id' => Auth::id(),
-                'content' => $request->content,
-                'parent_id' => $request->parent_id
-            ]);
-
-            $comment->load('user:id,first_name,last_name,avatar');
 
             return response()->json([
                 'success' => true,
