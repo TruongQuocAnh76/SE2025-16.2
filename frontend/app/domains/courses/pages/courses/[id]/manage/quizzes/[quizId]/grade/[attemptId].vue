@@ -122,6 +122,8 @@
 </template>
 
 <script setup lang="ts">
+import { useGrading } from '../../../../../../../composables/useGrading'
+
 const route = useRoute()
 const router = useRouter()
 const config = useRuntimeConfig()
@@ -138,6 +140,8 @@ const attemptData = ref<any>(null)
 const tempGrades = ref<Record<string, { points: number }>>({})
 const gradingLoading = ref<string | null>(null)
 
+const { getAttemptReview, bulkGradeAnswers } = useGrading()
+
 // Initialize detailed view
 onMounted(async () => {
   await fetchAttemptReview()
@@ -146,18 +150,12 @@ onMounted(async () => {
 const fetchAttemptReview = async () => {
   try {
     loading.value = true
-    const response = await $fetch<any>(`/api/grading/attempts/${attemptId}/review`, {
-      baseURL: config.public.backendUrl as string,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${useCookie('auth_token').value}`
-      }
-    })
+    const data = await getAttemptReview(attemptId)
 
-    if (response.success) {
-      attemptData.value = response.data
+    if (data) {
+      attemptData.value = data
       // Initialize temp grades
-      response.data.answers.forEach((ans: any) => {
+      data.answers.forEach((ans: any) => {
         if (isManualGradingNeeded(ans.question.question_type)) {
           tempGrades.value[ans.id] = {
             points: ans.points_awarded || 0
@@ -183,9 +181,6 @@ const submitAllGrades = async () => {
     if (!answer) continue
     
     // Find max points from the answer object (it has question embedded)
-    // Note: answer.question.points might be nested differently based on API response structure.
-    // In fetchAttemptReview, we saw: 'question' => $answer->question->toReviewArray()
-    // Let's verify structure logic matches template `answer.question.points`
     const maxPoints = answer.question.points
     
     if (grade.points < 0 || grade.points > maxPoints) {
@@ -207,17 +202,7 @@ const submitAllGrades = async () => {
 
   try {
     gradingLoading.value = 'all'
-    await $fetch(`/api/grading/attempts/${attemptId}/bulk-grade`, {
-      method: 'POST',
-      baseURL: config.public.backendUrl as string,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${useCookie('auth_token').value}`
-      },
-      body: {
-        grades: gradesToSubmit
-      }
-    })
+    await bulkGradeAnswers(attemptId, gradesToSubmit)
     
     if ($toast) $toast.success('All grades submitted successfully!')
     router.push(`/courses/${courseId}/manage/quizzes/${quizId}/attempts`)
