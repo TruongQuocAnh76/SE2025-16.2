@@ -22,7 +22,6 @@ class Course extends Model
         'teacher_id', 
         'passing_score',
         'long_description',
-        'curriculum',
         'category',
         'language',
         'discount',

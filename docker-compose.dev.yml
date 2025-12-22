@@ -91,7 +91,7 @@ services:
       "
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/v1/health"]
-      interval: 60s
+      interval: 90s
       timeout: 10s
       retries: 3
       start_period: 30s

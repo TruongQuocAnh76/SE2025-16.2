@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use App\Models\Certificate;
 use App\Services\BlockchainService;
 
@@ -31,9 +32,9 @@ class CertificateVerificationController extends Controller
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"certificate_number"},
+     *             required={"certificate_number", "pdf_hash"},
      *             @OA\Property(property="certificate_number", type="string", example="CERT-WEB-2024-001"),
-     *             @OA\Property(property="pdf_hash", type="string", example="sha256hashofpdf", description="Optional PDF hash for additional verification")
+     *             @OA\Property(property="pdf_hash", type="string", example="sha256hashofpdf", description="SHA-256 hash of the PDF certificate for verification")
      *         )
      *     ),
      *     @OA\Response(
@@ -67,7 +68,7 @@ class CertificateVerificationController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'certificate_number' => 'required|string|max:255',
-            'pdf_hash' => 'nullable|string|max:255'
+            'pdf_hash' => 'required|string|max:255'
         ]);
 
         if ($validator->fails()) {
@@ -105,7 +106,8 @@ class CertificateVerificationController extends Controller
                 ], 503);
             }
 
-            $verification = $blockchainVerification['data'];
+            $blockchainResponse = $blockchainVerification['data'];
+            $verification = $blockchainResponse['data'];
 
             // Prepare response data
             $responseData = [
@@ -140,7 +142,7 @@ class CertificateVerificationController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Certificate verification error: ' . $e->getMessage());
+            Log::error('Certificate verification error: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
@@ -200,7 +202,7 @@ class CertificateVerificationController extends Controller
 
             // If we have a transaction hash, get latest status from blockchain
             if ($certificate->blockchain_transaction_hash) {
-                $blockchainStatus = $this->blockchainService->getTransactionStatus($certificate->blockchain_transaction_hash);
+                $blockchainStatus = $this->blockchainService->getBlockchainStatus($certificate->blockchain_transaction_hash);
                 
                 if ($blockchainStatus['success']) {
                     $txData = $blockchainStatus['data'];
@@ -216,7 +218,7 @@ class CertificateVerificationController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error fetching blockchain status: ' . $e->getMessage());
+            Log::error('Error fetching blockchain status: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
@@ -284,11 +286,11 @@ class CertificateVerificationController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error retrying blockchain issuance: ' . $e->getMessage());
+            Log::error('Error retrying blockchain issuance: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred while retrying certificate issuance'
+                'message' => 'An error occurred while retrying blockchain issuance'
             ], 500);
         }
     }

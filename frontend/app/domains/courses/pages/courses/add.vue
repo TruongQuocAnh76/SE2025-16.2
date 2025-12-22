@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="min-h-screen bg-background">
     <div class="max-w-7xl mx-auto px-4 py-12">
       <div class="mb-8">
@@ -86,7 +86,7 @@
               ></textarea>
             </div>
 
-            <!-- <div>
+            <div>
               <label for="curriculum" class="block text-sm font-medium text-text-dark mb-2">
                 Curriculum
               </label>
@@ -97,7 +97,7 @@
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                 placeholder="E.g. B = 8 hours"
               />
-            </div> -->
+            </div>
 
             <div>
               <label for="duration" class="block text-sm font-medium text-text-dark mb-2">
@@ -1022,8 +1022,8 @@ const thumbnailFileInput = ref<HTMLInputElement | null>(null)
 const form = ref<CreateCourseData>({
   title: '',
   description: '',
-  // long_description: '', 
-  // curriculum: '',
+  long_description: '', 
+  curriculum: '',
   category: '',
   language: '',
   discount: undefined,
@@ -1076,14 +1076,10 @@ const handleCreateTag = async () => {
     }
   } catch (error: any) {
     console.error('Failed to create tag:', error)
-    if (error.statusCode === 401 || error.status === 401) {
-      createTagError.value = 'You must be logged in to create tags.'
-    } else if (error.data?.errors?.name) {
+    if (error.data?.errors?.name) {
       createTagError.value = error.data.errors.name[0]
     } else if (error.data?.message) {
       createTagError.value = error.data.message
-    } else if (error.message) {
-      createTagError.value = error.message
     } else {
       createTagError.value = 'Failed to create tag. Please try again.'
     }
@@ -1319,8 +1315,8 @@ const handleSubmit = async () => {
       form.value = {
         title: '',
         description: '',
-        // long_description: '', 
-        // curriculum: '',
+        long_description: '', 
+        curriculum: '',
         category: '',
         language: '',
         discount: undefined,

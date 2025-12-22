@@ -26,6 +26,11 @@ use App\Http\Controllers\AdminController;
 Route::get('/', fn() => response()->json(['message' => 'CertChain API v1 is running']));
 
 /* ========================
+ * PREVIEW ENDPOINTS (for development/testing)
+ * ======================== */
+Route::get('/_preview/certificates', [CertificateController::class, 'preview']);
+
+/* ========================
  * AUTHENTICATION
  * ======================== */
 Route::prefix('auth')->group(function () {
@@ -263,7 +268,7 @@ Route::prefix('tags')->group(function () {
 });
 
 /* ========================
- * PAYMENTS (Commented out until PaymentController is implemented)
+ * PAYMENTS
  * ======================== */
 Route::middleware('auth:sanctum')->prefix('payments')->group(function () {
     Route::post('/create', [PaymentController::class, 'createPayment']); // Create payment intent
@@ -279,4 +284,4 @@ Route::middleware('auth:sanctum')->prefix('payments')->group(function () {
 });
 
 // Stripe Webhook (no auth needed)
-// Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook']);
+Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook']);

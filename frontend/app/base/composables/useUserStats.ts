@@ -32,18 +32,28 @@ export const useUserStats = () => {
 
   // Get current user certificates
   const getUserCertificates = async (): Promise<Certificate[]> => {
-    const userId = currentUser.value?.id
-    if (!userId) return []
-    
     try {
       const token = useCookie('auth_token').value
-      const data = await $fetch<Certificate[]>(`/api/users/${userId}/certificates`, {
+      console.log('Fetching certificates with token:', token ? 'present' : 'missing')
+      const data = await $fetch<Certificate[]>(`/api/certificates/mine`, {
         baseURL: config.public.backendUrl as string,
         headers: {
           'Authorization': `Bearer ${token}`
         }
       })
-      return data || []
+      console.log('Raw certificates data:', data)
+      
+      // Handle case where API returns object instead of array
+      let certificates: Certificate[] = []
+      if (Array.isArray(data)) {
+        certificates = data
+      } else if (typeof data === 'object' && data !== null) {
+        // Convert object with numeric keys to array
+        certificates = Object.values(data)
+      }
+      
+      console.log('Processed certificates:', certificates)
+      return certificates || []
     } catch (error) {
       console.error('Failed to fetch user certificates:', error)
       return []
@@ -67,11 +77,7 @@ export const useUserStats = () => {
 
   // Get certificate count for a specific user
   const getCertificateCount = async (): Promise<number> => {
-    const userId = currentUser.value?.id
-    if (!userId) return 0
-    
     try {
-      const token = useCookie('auth_token').value
       const certificates = await getUserCertificates()
       
       // Deduplicate by course_id and count unique certificates
@@ -209,14 +215,12 @@ export const useUserStats = () => {
 
   // Get recent certificates for a specific user
   const getRecentCertificates = async (): Promise<Array<{
+    id: string
     courseName: string
     dateIssued: string
+    pdfUrl?: string
   }>> => {
-    const userId = currentUser.value?.id
-    if (!userId) return []
-    
     try {
-      const token = useCookie('auth_token').value
       const certificates = await getUserCertificates()
       
       // Deduplicate certificates by course_id (keep only the most recent one per course)
@@ -234,8 +238,10 @@ export const useUserStats = () => {
       return uniqueCertificates
         .slice(0, 3) // Get only the 3 most recent unique certificates
         .map(cert => ({
-          courseName: cert.course.title,
-          dateIssued: new Date(cert.issued_at).toLocaleDateString()
+          id: cert.id,
+          courseName: cert.course?.title || 'Unknown Course',
+          dateIssued: new Date(cert.issued_at).toLocaleDateString(),
+          pdfUrl: cert.pdf_url
         }))
     } catch (error) {
       console.error('Failed to fetch recent certificates:', error)
@@ -247,7 +253,7 @@ export const useUserStats = () => {
   const getCurrentUser = async (): Promise<User | null> => {
     try {
       const token = useCookie('auth_token').value
-      const data = await $fetch<User>('/api/auth/me', {
+      const data = await $fetch<any>(`/api/auth/me`, {
         baseURL: config.public.backendUrl as string,
         headers: {
           'Authorization': `Bearer ${token}`
