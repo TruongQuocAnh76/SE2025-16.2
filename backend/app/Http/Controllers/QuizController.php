@@ -237,7 +237,9 @@ class QuizController extends Controller
                     'time_limit' => $quiz->time_limit,
                     'passing_score' => $quiz->passing_score,
                     'max_attempts' => $quiz->max_attempts,
+                    'max_attempts' => $quiz->max_attempts,
                     'total_points' => $quiz->getTotalPoints(),
+                    'total_questions' => $quiz->questions->count(),
                     'course' => $quiz->course ? [
                         'id' => $quiz->course->id,
                         'title' => $quiz->course->title,
@@ -454,7 +456,12 @@ class QuizController extends Controller
                 'success' => true,
                 'data' => [
                     'attempt' => $attempt,
-                    'questions' => $questions
+                    'questions' => $questions,
+                    'quiz' => [
+                        'title' => $quiz->title,
+                        'total_questions' => $quiz->questions->count(),
+                        'time_limit' => $quiz->time_limit,
+                    ]
                 ],
                 'message' => 'Quiz attempt started successfully'
             ]);
@@ -533,6 +540,7 @@ class QuizController extends Controller
                 'data' => [
                     'score' => $attempt->score,
                     'passed' => $attempt->is_passed,
+                    'grading_status' => $attempt->grading_status,
                     'message' => $attempt->is_passed ? 'Quiz passed!' : 'Quiz failed'
                 ],
                 'message' => 'Quiz submitted successfully'
@@ -733,6 +741,40 @@ class QuizController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve student attempts',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
+    }
+    /**
+     * Get all attempts for a quiz (Teacher only).
+     *
+     * @param string $quizId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAllAttempts(string $quizId): JsonResponse
+    {
+        try {
+            // Check if user is teacher of the course or admin
+            $user = Auth::user();
+            $quiz = Quiz::with('course')->findOrFail($quizId);
+            
+            if ($quiz->course->teacher_id !== $user->id && !$user->hasRole('ADMIN')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized'
+                ], 403);
+            }
+
+            $attempts = $this->attemptService->getAllAttemptsByQuiz($quizId);
+
+            return response()->json([
+                'success' => true,
+                'data' => $attempts
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve all attempts',
                 'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
             ], 500);
         }

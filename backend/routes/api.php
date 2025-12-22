@@ -147,6 +147,7 @@ Route::middleware('auth:sanctum')->prefix('quizzes')->group(function () {
     Route::get('/{quizId}/attempts', [QuizController::class, 'attemptsHistory']); // Get attempt history
     Route::get('/{quizId}/stats', [QuizController::class, 'getStudentStats']); // Get student stats
     Route::get('/{quizId}/student-attempts', [QuizController::class, 'getStudentAttempts']); // Get student attempts
+    Route::get('/{quizId}/all-attempts', [QuizController::class, 'getAllAttempts']); // Teacher get all attempts
 
     // Question management
     Route::get('/{quizId}/questions', [QuestionController::class, 'index']); // List questions in quiz
@@ -168,6 +169,7 @@ Route::middleware('auth:sanctum')->prefix('questions')->group(function () {
 Route::middleware('auth:sanctum')->prefix('grading')->group(function () {
     Route::post('/attempts/{attemptId}/auto-grade', [GradingController::class, 'autoGradeAttempt']); // Auto-grade attempt
     Route::post('/answers/{answerId}/manual-grade', [GradingController::class, 'manualGradeAnswer']); // Manual grade answer
+    Route::post('/attempts/{attemptId}/bulk-grade', [GradingController::class, 'bulkGradeAnswers']); // Bulk grade answers
     Route::get('/attempts/{attemptId}/pending', [GradingController::class, 'getPendingAnswers']); // Get pending answers
     Route::get('/attempts/{attemptId}/review', [GradingController::class, 'getAttemptReview']); // Get attempt review
 });
