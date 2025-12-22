@@ -63,6 +63,7 @@ class TeacherApplicationSeeder extends Seeder
                 'issuer' => 'Example Institute',
                 'issue_date' => now()->subYears(2)->toDateString(),
                 'expiry_date' => now()->addYears(3)->toDateString(),
+                'certificate_file_path' => null,
                 // Review Information
                 'reviewed_by' => $reviewedBy,
                 'reviewed_at' => $reviewedAt,

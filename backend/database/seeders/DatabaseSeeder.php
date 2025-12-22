@@ -31,6 +31,7 @@ class DatabaseSeeder extends Seeder
             BlockchainTransactionSeeder::class,
             ReviewSeeder::class,
             SystemLogSeeder::class,
+            QuizTestSeeder::class,
         ]);
     }
 }

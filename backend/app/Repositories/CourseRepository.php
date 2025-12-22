@@ -61,7 +61,10 @@ class CourseRepository
                       ->orderBy('order_index');
             },
             'reviews.student:id,first_name,last_name',
-            'tags:id,name,slug'
+            'tags:id,name,slug',
+            'quizzes' => function ($query) {
+                $query->orderBy('order_index');
+            }
         ])
         ->withCount('enrollments')
         ->withAvg('reviews', 'rating')

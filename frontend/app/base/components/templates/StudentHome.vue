@@ -2,7 +2,7 @@
   <div class="p-12">
     <div class="welcome-card bg-white p-6 rounded-lg shadow-md flex items-center mb-6">
       <div class="avatar mr-4">
-        <img :src="currentUser?.avatar || '/placeholder-avatar.png'" alt="User Avatar" class="w-16 h-16 rounded-full object-cover">
+        <img :src="currentUser?.avatar || '/default-avatar.png'" alt="User Avatar" class="w-16 h-16 rounded-full object-cover">
       </div>
       <div class="text">
         <h2 class="text-2xl font-bold text-gray-800">Welcome Back, {{ displayName }}</h2>

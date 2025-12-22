@@ -45,14 +45,14 @@
             ></span>
           </NuxtLink>
           <NuxtLink
-            to="/blog"
+            to="/verify-certificate"
             class="text-white hover:text-accent-star px-4 py-2 text-sm font-medium transition-colors duration-200 relative group whitespace-nowrap cursor-pointer"
-            :class="{ 'text-accent-star': $route.path === '/blog' }"
+            :class="{ 'text-accent-star': $route.path === '/verify-certificate' }"
           >
-            Blogs
+            Verify Certificate
             <span
               class="absolute bottom-0 left-0 w-full h-0.5 bg-accent-star transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"
-              :class="{ 'scale-x-100': $route.path === '/blog' }"
+              :class="{ 'scale-x-100': $route.path === '/verify-certificate' }"
             ></span>
           </NuxtLink>
           <NuxtLink
@@ -247,12 +247,12 @@
             Membership
           </NuxtLink>
           <NuxtLink
-            to="/blog"
+            to="/verify-certificate"
             class="block px-3 py-2 text-base font-medium text-text-dark hover:text-accent-star hover:bg-accent-star/10 rounded-md"
-            :class="{ 'text-accent-star bg-accent-star/10': $route.path === '/blog' }"
+            :class="{ 'text-accent-star bg-accent-star/10': $route.path === '/verify-certificate' }"
             @click="isMobileMenuOpen = false"
           >
-            Blogs
+            Verify Certificate
           </NuxtLink>
           <NuxtLink
             to="/about"

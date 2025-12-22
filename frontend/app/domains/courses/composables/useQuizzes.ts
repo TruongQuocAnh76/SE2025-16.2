@@ -3,7 +3,7 @@ import type { Quiz, Question, QuizAttempt, QuizAnswer, QuizStats } from '../type
 
 export const useQuizzes = () => {
   const config = useRuntimeConfig()
-  const { $fetch } = useNuxtApp()
+
 
   // Reactive state
   const quizzes = ref<Quiz[]>([])
@@ -93,7 +93,7 @@ export const useQuizzes = () => {
         currentAttempt.value = response.data.attempt
         questions.value = response.data.questions || []
         userAnswers.value = {}
-        
+
         return {
           attempt: response.data.attempt,
           questions: response.data.questions || []
@@ -112,8 +112,8 @@ export const useQuizzes = () => {
 
   // Submit quiz attempt
   const submitQuizAttempt = async (
-    attemptId: string, 
-    answers: string[], 
+    attemptId: string,
+    answers: string[],
     timeSpent?: number
   ): Promise<{ score: number, passed: boolean } | null> => {
     try {
@@ -138,7 +138,7 @@ export const useQuizzes = () => {
         // Clear current attempt state
         currentAttempt.value = null
         userAnswers.value = {}
-        
+
         return {
           score: response.data.score,
           passed: response.data.passed
@@ -175,6 +175,31 @@ export const useQuizzes = () => {
       }
     } catch (err: any) {
       console.error('Error fetching quiz attempts:', err)
+      attempts.value = []
+      return []
+    }
+  }
+
+  // Get all attempts for a quiz (Teacher)
+  const fetchAllAttempts = async (quizId: string): Promise<QuizAttempt[]> => {
+    try {
+      const response = await $fetch<any>(`/api/quizzes/${quizId}/all-attempts`, {
+        baseURL: config.public.backendUrl as string,
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${useCookie('auth_token').value}`
+        }
+      })
+
+      if (response.success) {
+        attempts.value = response.data || []
+        return response.data || []
+      } else {
+        attempts.value = []
+        return []
+      }
+    } catch (err: any) {
+      console.error('Error fetching all attempts:', err)
       attempts.value = []
       return []
     }
@@ -239,12 +264,12 @@ export const useQuizzes = () => {
   // Check if all questions are answered
   const isQuizComplete = (): boolean => {
     if (!questions.value.length) return false
-    
+
     return questions.value.every(question => {
       if (!question.id) return false
       const answer = userAnswers.value[question.id]
-      return answer !== undefined && answer !== null && answer !== '' && 
-             (Array.isArray(answer) ? answer.length > 0 : true)
+      return answer !== undefined && answer !== null && answer !== '' &&
+        (Array.isArray(answer) ? answer.length > 0 : true)
     })
   }
 
@@ -252,8 +277,8 @@ export const useQuizzes = () => {
   const getAnsweredQuestionsCount = (): number => {
     return Object.keys(userAnswers.value).filter(questionId => {
       const answer = userAnswers.value[questionId]
-      return answer !== undefined && answer !== null && answer !== '' && 
-             (Array.isArray(answer) ? answer.length > 0 : true)
+      return answer !== undefined && answer !== null && answer !== '' &&
+        (Array.isArray(answer) ? answer.length > 0 : true)
     }).length
   }
 
@@ -289,19 +314,19 @@ export const useQuizzes = () => {
   // Get quiz status for user
   const getQuizStatus = (quiz: Quiz, attempts: QuizAttempt[]): 'not_attempted' | 'in_progress' | 'passed' | 'failed' | 'max_attempts_reached' => {
     if (!attempts.length) return 'not_attempted'
-    
+
     const completedAttempts = attempts.filter(attempt => attempt.submitted_at)
     if (!completedAttempts.length) return 'in_progress'
-    
+
     const bestScore = Math.max(...completedAttempts.map(attempt => attempt.score || 0))
     const hasPassed = completedAttempts.some(attempt => attempt.passed)
-    
+
     if (hasPassed) return 'passed'
-    
+
     if (quiz.max_attempts && attempts.length >= quiz.max_attempts) {
       return 'max_attempts_reached'
     }
-    
+
     return 'failed'
   }
 
@@ -321,11 +346,11 @@ export const useQuizzes = () => {
     return questions.value.map(question => {
       if (!question.id) return ''
       const answer = userAnswers.value[question.id]
-      
+
       if (question.question_type === 'CHECKBOX' && Array.isArray(answer)) {
         return answer.join(',')
       }
-      
+
       return answer || ''
     })
   }
@@ -348,6 +373,7 @@ export const useQuizzes = () => {
     startQuizAttempt,
     submitQuizAttempt,
     getQuizAttempts,
+    fetchAllAttempts,
     getQuizStats,
     getQuizQuestions,
     saveAnswer,

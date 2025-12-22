@@ -24,4 +24,13 @@ class QuizAttemptRepository {
     public function getHistoryByQuiz($studentId, $quizId) {
         return $this->model->where('student_id', $studentId)->where('quiz_id', $quizId)->orderByDesc('created_at')->get();
     }
+    public function getAllAttemptsByQuiz($quizId) {
+        // Get all attempts ordered by newest first, then keep only the latest per student
+        return $this->model->where('quiz_id', $quizId)
+            ->with('student')
+            ->orderByDesc('created_at')
+            ->get()
+            ->unique('student_id')
+            ->values();
+    }
 }
