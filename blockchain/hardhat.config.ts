@@ -2,6 +2,12 @@ import hardhatToolboxMochaEthersPlugin from "@nomicfoundation/hardhat-toolbox-mo
 import { defineConfig } from "hardhat/config";
 import 'dotenv/config';
 
+// Use relative paths during build, absolute paths at runtime
+const isProduction = process.env.NODE_ENV === "production";
+const basePath = isProduction && process.env.RUNTIME_PATH === "true" 
+  ? "/app/blockchain-data" 
+  : "./blockchain-data";
+
 export default defineConfig({
   plugins: [hardhatToolboxMochaEthersPlugin],
   paths: {

@@ -2,21 +2,20 @@
 FROM node:22-alpine AS build
 
 ENV NODE_ENV=production
-WORKDIR /app
+ENV HOME=/home/blockchain
 
-# Build deps needed for native modules + hardhat
-RUN apk add --no-cache \
-    git \
-    python3 \
-    build-base \
-    curl
+# System dependencies
+RUN apk add --no-cache git python3 build-base curl
 
-# Enable pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Enable fixed pnpm version
+RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
 
 # Create non-root user
 RUN addgroup -S nodejs -g 1001 \
- && adduser -S blockchain -u 1001 -G nodejs -h /home/blockchain
+ && adduser -S blockchain -u 1001 -G nodejs -h /home/blockchain \
+ && mkdir -p /home/blockchain/app \
+ && mkdir -p /home/blockchain/.cache/node/corepack/v1 \
+ && chown -R blockchain:nodejs /home/blockchain
 
 # Fix ownership of /app
 RUN chown -R blockchain:nodejs /app
@@ -24,23 +23,25 @@ RUN chown -R blockchain:nodejs /app
 # Switch to non-root user AFTER fixing ownership
 USER blockchain
 
-# Copy manifests first (cache)
+# Copy root manifests for caching
 COPY --chown=blockchain:nodejs package.json pnpm-lock.yaml ./
 
-# Install ALL deps (build + runtime)
+# Install root dependencies
 RUN pnpm install --frozen-lockfile
 
-# Copy source
+# Copy source files
 COPY --chown=blockchain:nodejs . .
 
-# Build TypeScript
+# Build root scripts
 RUN pnpm run build
 
 # ---------- Production stage ----------
 FROM node:22-alpine AS production
 
 ENV NODE_ENV=production
-WORKDIR /app
+ENV HOME=/home/blockchain
+
+WORKDIR /home/blockchain/app
 
 # Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate

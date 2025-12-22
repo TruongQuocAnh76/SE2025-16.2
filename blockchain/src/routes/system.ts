@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, IRouter } from 'express';
 import { SystemController } from '../controllers/SystemController.js';
 import { BlockchainService } from '../services/BlockchainService.js';
 
