@@ -23,6 +23,7 @@ class QuizAttempt extends Model
         'quiz_id',
         'score',
         'is_passed',
+        'grading_status',
         'attempt_number',
         'time_spent',
         'started_at',
