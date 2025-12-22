@@ -21,9 +21,13 @@ return new class extends Migration
 
             $table->foreign('lesson_id')->references('id')->on('lessons')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('parent_id')->references('id')->on('lesson_comments')->onDelete('cascade');
             
             $table->index(['lesson_id', 'created_at']);
+        });
+
+        // Add self-referencing foreign key in separate statement for PostgreSQL compatibility
+        Schema::table('lesson_comments', function (Blueprint $table) {
+            $table->foreign('parent_id')->references('id')->on('lesson_comments')->onDelete('cascade');
         });
     }
 
@@ -32,6 +36,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::table('lesson_comments', function (Blueprint $table) {
+            $table->dropForeign(['parent_id']);
+        });
         Schema::dropIfExists('lesson_comments');
     }
 };
