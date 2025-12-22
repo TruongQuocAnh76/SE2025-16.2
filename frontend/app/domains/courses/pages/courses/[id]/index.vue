@@ -747,30 +747,8 @@ const totalLessonCount = computed(() => {
 })
 
 const goToFirstLesson = () => {
-  console.log('goToFirstLesson called')
-  console.log('course:', course.value)
-  console.log('modules:', course.value?.modules)
-  
-  if (!course.value || !course.value.modules || course.value.modules.length === 0) {
-    console.warn('No course or modules available')
-    alert('This course has no lessons available yet.')
-    return
-  }
-  
-  // Find first lesson in first module
-  for (const module of course.value.modules) {
-    console.log('Checking module:', module)
-    if (module.lessons && module.lessons.length > 0) {
-      const firstLesson = module.lessons[0]
-      console.log('Found first lesson:', firstLesson)
-      router.push(`/courses/${courseId}/lessons/${firstLesson.id}`)
-      return
-    }
-  }
-  
-  // If no lessons found, stay on course page
-  console.warn('No lessons found in this course')
-  alert('This course has no lessons available yet.')
+  // Navigate to Open Course page
+  router.push(`/courses/${courseId}/open`)
 }
 
 // SEO

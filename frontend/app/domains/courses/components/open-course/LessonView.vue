@@ -65,6 +65,29 @@
         <p class="text-gray-600 text-sm">{{ lesson.description || lesson.text_content || 'No description provided' }}</p>
       </div>
 
+      <!-- Mark Complete Button -->
+      <div v-if="!isTeacher" class="mb-6">
+        <button 
+          @click="markAsComplete"
+          :disabled="isCompleted || markingComplete"
+          :class="[
+            'w-full py-3 rounded-lg font-semibold transition',
+            isCompleted 
+              ? 'bg-green-100 text-green-700 cursor-default' 
+              : 'bg-teal-500 text-white hover:bg-teal-600'
+          ]"
+        >
+          <span v-if="markingComplete">Marking...</span>
+          <span v-else-if="isCompleted" class="flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            Completed
+          </span>
+          <span v-else>Mark as Complete</span>
+        </button>
+      </div>
+
       <!-- Comments Section -->
       <div class="mt-6">
         <h4 class="font-semibold mb-4">Comments</h4>
@@ -120,13 +143,15 @@ const props = defineProps<{
   isTeacher: boolean
 }>()
 
-const emit = defineEmits(['edit', 'delete'])
+const emit = defineEmits(['edit', 'delete', 'completed'])
 
 const config = useRuntimeConfig()
 const token = useCookie('auth_token')
 
 const newComment = ref('')
 const comments = ref<any[]>([])
+const isCompleted = ref(false)
+const markingComplete = ref(false)
 
 const teacherName = computed(() => {
   if (!props.course?.teacher) return 'Unknown'
@@ -145,9 +170,48 @@ const formatDate = (date: string) => {
   return `${days} days ago`
 }
 
-const onVideoEnded = () => {
-  // Mark lesson as completed
-  console.log('Video ended')
+const onVideoEnded = async () => {
+  // Auto mark as complete when video ends
+  if (!props.isTeacher && !isCompleted.value) {
+    await markAsComplete()
+  }
+}
+
+const markAsComplete = async () => {
+  if (markingComplete.value || isCompleted.value) return
+  
+  markingComplete.value = true
+  try {
+    await $fetch(`/api/learning/lesson/${props.lesson.id}/complete`, {
+      baseURL: config.public.backendUrl as string,
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token.value}`,
+        'Accept': 'application/json'
+      }
+    })
+    isCompleted.value = true
+    emit('completed', props.lesson.id)
+  } catch (err) {
+    console.error('Failed to mark lesson as complete:', err)
+  } finally {
+    markingComplete.value = false
+  }
+}
+
+const checkProgress = async () => {
+  try {
+    const response = await $fetch<any>(`/api/learning/lesson/${props.lesson.id}/progress`, {
+      baseURL: config.public.backendUrl as string,
+      headers: {
+        'Authorization': `Bearer ${token.value}`,
+        'Accept': 'application/json'
+      }
+    })
+    isCompleted.value = response.is_completed || response.progress?.is_completed || false
+  } catch {
+    isCompleted.value = false
+  }
 }
 
 const submitComment = async () => {
@@ -188,5 +252,10 @@ const fetchComments = async () => {
   }
 }
 
-onMounted(fetchComments)
+onMounted(() => {
+  fetchComments()
+  if (!props.isTeacher) {
+    checkProgress()
+  }
+})
 </script>

@@ -36,7 +36,7 @@
             <NuxtLink 
               v-for="enrollment in enrolledCourses.slice(0, 5)"
               :key="enrollment.id"
-              :to="`/courses/${enrollment.course?.id}`"
+              :to="`/courses/${enrollment.course?.id}/open`"
               class="block"
             >
               <div class="flex gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">

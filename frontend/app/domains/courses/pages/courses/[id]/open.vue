@@ -50,11 +50,17 @@
               @click="selectLesson(lesson)"
               :class="[
                 'flex items-center justify-between p-2 rounded cursor-pointer text-sm',
-                selectedLesson?.id === lesson.id ? 'bg-teal-500 text-white' : 'bg-teal-400 text-white hover:bg-teal-500'
+                selectedLesson?.id === lesson.id ? 'bg-teal-500 text-white' : 
+                  lessonProgress[lesson.id] ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-teal-400 text-white hover:bg-teal-500'
               ]"
             >
               <div class="flex items-center flex-1 min-w-0">
-                <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <!-- Checkmark icon for completed lessons -->
+                <svg v-if="lessonProgress[lesson.id]" class="w-4 h-4 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <!-- Play icon for incomplete lessons -->
+                <svg v-else class="w-4 h-4 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
                 </svg>
                 <span class="truncate">{{ lesson.title }}</span>
@@ -142,6 +148,7 @@
             :is-teacher="isTeacher"
             @edit="editLesson"
             @delete="deleteLesson"
+            @completed="onLessonCompleted"
           />
         </div>
 
@@ -269,6 +276,7 @@ const modules = ref<any[]>([])
 const lessons = ref<any[]>([])
 const quizzes = ref<any[]>([])
 const currentUser = ref<any>(null)
+const lessonProgress = ref<Record<string, boolean>>({})  // Track lesson completion status
 
 // View state
 const currentView = ref<'overview' | 'lesson' | 'quiz' | 'add-lesson' | 'edit-lesson' | 'add-quiz' | 'edit-quiz'>('overview')
@@ -298,6 +306,10 @@ const totalDuration = computed(() => {
 // Methods
 const goBack = () => {
   router.push(`/courses/${courseId}`)
+}
+
+const onLessonCompleted = (lessonId: string) => {
+  lessonProgress.value[lessonId] = true
 }
 
 const selectLesson = (lesson: any) => {
@@ -461,9 +473,40 @@ const fetchCurrentUser = async () => {
   }
 }
 
+const fetchCourseProgress = async () => {
+  try {
+    const response = await $fetch<any>(`/api/learning/course/${courseId}`, {
+      baseURL: config.public.backendUrl as string,
+      headers: {
+        'Authorization': `Bearer ${token.value}`,
+        'Accept': 'application/json'
+      }
+    })
+    
+    // Build progress map from response
+    const progressMap: Record<string, boolean> = {}
+    if (response.modules) {
+      for (const module of response.modules) {
+        if (module.lessons) {
+          for (const lesson of module.lessons) {
+            progressMap[lesson.id] = lesson.is_completed === true || lesson.is_completed === 1
+          }
+        }
+      }
+    }
+    lessonProgress.value = progressMap
+  } catch (err) {
+    console.error('Failed to fetch course progress:', err)
+  }
+}
+
 onMounted(async () => {
   loading.value = true
   await Promise.all([fetchCurrentUser(), fetchCourseData()])
+  // Fetch progress after course data is loaded (only for students)
+  if (currentUser.value && currentUser.value.role !== 'TEACHER') {
+    await fetchCourseProgress()
+  }
   loading.value = false
 })
 </script>
