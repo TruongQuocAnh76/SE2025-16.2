@@ -8,6 +8,8 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
+    networks:
+      - app_network
 
   backend:
     build:
@@ -16,6 +18,8 @@ services:
     volumes:
       - ./backend:/var/www
       - ./backend/.env.production:/var/www/.env
+    env_file:
+      - ./backend/.env
     environment:
       - BLOCKCHAIN_SERVICE_URL=http://blockchain:3001
     networks:
@@ -30,9 +34,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3001:3001"
-    environment:
-      - NODE_ENV=production
-      - PORT=3001
+    env_file:
+      - ./blockchain/.env
     volumes:
       - blockchain_data:/app/logs
     networks:
@@ -63,9 +66,102 @@ services:
     networks:
       - app_network
 
+  minio:
+    image: minio/minio:latest
+    container_name: se2025-162-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - app_network
+
+  minio-init:
+    image: minio/mc
+    container_name: se2025-162-minio-init
+    volumes:
+      - ./init-minio.sh:/init-minio.sh:ro
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+      - STORAGE_BUCKET=certchain-dev
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: ["/bin/sh", "/init-minio.sh"]
+    networks:
+      - app_network
+
+  queue-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./backend:/var/www
+    env_file: ./backend/.env
+    environment:
+      # Override for Docker network
+      - BLOCKCHAIN_SERVICE_URL=http://blockchain:3001
+    command: php artisan queue:work redis --tries=3 --timeout=3600 --sleep=3
+    depends_on:
+      - backend
+      - redis
+      - blockchain
+    networks:
+      - app_network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app_network
+
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - app_network
+
+  rabbitmq-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    command: >
+      sh -c "
+        echo 'Waiting for RabbitMQ to be ready...' &&
+        sleep 10 &&
+        php artisan rabbitmq:consume-reset-email
+      "
+    env_file: ./backend/.env
+    depends_on:
+      - backend
+      - rabbitmq
+    volumes:
+      - ./backend:/var/www
+    networks:
+      - app_network
+
 volumes:
   redis_data:
   blockchain_data:
+  minio_data:
 
 networks:
   app_network:
