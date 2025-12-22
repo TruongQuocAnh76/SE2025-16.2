@@ -111,14 +111,8 @@ Route::middleware('auth:sanctum')->prefix('lessons')->group(function () {
     Route::get('/{lessonId}', [LessonController::class, 'show']); // Get lesson details
     
     // Lesson comments
-    Route::get('/{lessonId}/comments', [\App\Http\Controllers\LessonCommentController::class, 'index']); // Get comments
-    Route::post('/{lessonId}/comments', [\App\Http\Controllers\LessonCommentController::class, 'store']); // Add comment
-});
-
-// Comments management
-Route::middleware('auth:sanctum')->prefix('comments')->group(function () {
-    Route::put('/{commentId}', [\App\Http\Controllers\LessonCommentController::class, 'update']); // Update comment
-    Route::delete('/{commentId}', [\App\Http\Controllers\LessonCommentController::class, 'destroy']); // Delete comment
+    Route::get('/{lessonId}/comments', [LessonController::class, 'getComments']); // Get comments
+    Route::post('/{lessonId}/comments', [LessonController::class, 'storeComment']); // Add comment
 });
 
 Route::middleware('auth:sanctum')->prefix('modules')->group(function () {

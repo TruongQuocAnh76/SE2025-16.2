@@ -6,6 +6,7 @@ use App\Models\Lesson;
 use App\Models\Course;
 use App\Models\Module;
 use App\Models\Enrollment;
+use App\Models\LessonComment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -482,6 +483,132 @@ class LessonController extends Controller
                 'enrolled' => false,
                 'enrollment_date' => null
             ]);
+        }
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/lessons/{lessonId}/comments",
+     *     summary="Get comments for a lesson",
+     *     description="Get all comments for a specific lesson",
+     *     tags={"Lesson Comments"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="lessonId",
+     *         in="path",
+     *         required=true,
+     *         description="Lesson ID",
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Comments retrieved successfully"
+     *     )
+     * )
+     */
+    public function getComments($lessonId)
+    {
+        try {
+            $lesson = Lesson::find($lessonId);
+            
+            if (!$lesson) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Lesson not found'
+                ], 404);
+            }
+
+            $comments = LessonComment::with(['user:id,first_name,last_name,avatar', 'replies.user:id,first_name,last_name,avatar'])
+                ->where('lesson_id', $lessonId)
+                ->whereNull('parent_id')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'comments' => $comments,
+                'message' => 'Comments retrieved successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error retrieving comments: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/lessons/{lessonId}/comments",
+     *     summary="Add a comment to a lesson",
+     *     description="Add a new comment to a specific lesson",
+     *     tags={"Lesson Comments"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="lessonId",
+     *         in="path",
+     *         required=true,
+     *         description="Lesson ID",
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"content"},
+     *             @OA\Property(property="content", type="string"),
+     *             @OA\Property(property="parent_id", type="string", nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Comment added successfully"
+     *     )
+     * )
+     */
+    public function storeComment(Request $request, $lessonId)
+    {
+        try {
+            $request->validate([
+                'content' => 'required|string|max:1000',
+                'parent_id' => 'nullable|exists:lesson_comments,id'
+            ]);
+
+            $lesson = Lesson::find($lessonId);
+            
+            if (!$lesson) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Lesson not found'
+                ], 404);
+            }
+
+            $comment = LessonComment::create([
+                'lesson_id' => $lessonId,
+                'user_id' => Auth::id(),
+                'content' => $request->content,
+                'parent_id' => $request->parent_id
+            ]);
+
+            $comment->load('user:id,first_name,last_name,avatar');
+
+            return response()->json([
+                'success' => true,
+                'comment' => $comment,
+                'message' => 'Comment added successfully'
+            ], 201);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error adding comment: ' . $e->getMessage()
+            ], 500);
         }
     }
 }
