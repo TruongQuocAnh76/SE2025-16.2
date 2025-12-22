@@ -86,28 +86,49 @@
             <template v-if="teacherApplications.length > 0">
               <!-- Teacher Application Card -->
               <div 
-                v-for="app in teacherApplications.slice(0, 2)" 
+                v-for="app in teacherApplications.slice(0, 3)" 
                 :key="app.id"
                 class="bg-white p-6 rounded-2xl shadow-md"
               >
               <div class="flex items-center justify-between mb-4">
                 <span class="px-3 py-1 bg-accent-purple/10 text-accent-purple text-caption font-medium rounded-full">
-                  Teacher Application
+                  {{ app.status === 'PENDING' ? 'Pending Review' : app.status }}
                 </span>
               </div>
-              <div class="space-y-2 mb-4">
-                <p class="text-body text-text-dark"><span class="text-text-muted">User:</span> {{ app.user_name }}</p>
-                <p class="text-body-sm text-text-muted">{{ app.user_email }}</p>
-                <p class="text-body-sm"><span class="text-text-muted">Current Role:</span> {{ app.current_role }}</p>
-                <p class="text-body-sm"><span class="text-text-muted">Requested Role:</span> {{ app.requested_role }}</p>
-                <p class="text-caption text-text-muted mt-2">Submitted: {{ app.submitted_at }}</p>
+              <div class="flex items-start gap-4 mb-4">
+                <!-- Avatar -->
+                <div class="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 bg-gray-200">
+                  <img v-if="app.avatar_url" :src="app.avatar_url" alt="Avatar" class="w-full h-full object-cover" />
+                  <div v-else class="w-full h-full flex items-center justify-center text-gray-600 font-semibold">
+                    {{ getInitials(app.full_name) }}
+                  </div>
+                </div>
+                <!-- Personal Info -->
+                <div class="flex-1 space-y-2">
+                  <p class="text-body font-semibold text-text-dark">{{ app.full_name }}</p>
+                  <p class="text-body-sm text-text-muted">{{ app.email }}</p>
+                  <div v-if="app.bio" class="text-caption text-text-muted line-clamp-2">{{ app.bio }}</div>
+                  <div class="flex flex-wrap gap-2 text-caption text-text-muted">
+                    <span v-if="app.country">📍 {{ app.country }}</span>
+                    <span v-if="app.phone">📞 {{ app.phone }}</span>
+                    <span v-if="app.gender">{{ app.gender }}</span>
+                  </div>
+                </div>
               </div>
+              <!-- Certificate Info -->
+              <div class="bg-gray-50 p-3 rounded-lg space-y-1 mb-4">
+                <p class="text-body-sm font-medium text-text-dark">📜 {{ app.certificate_title }}</p>
+                <p class="text-caption text-text-muted">Issued by: {{ app.issuer }}</p>
+                <p class="text-caption text-text-muted">Date: {{ app.issue_date }}</p>
+                <p v-if="app.expiry_date" class="text-caption text-text-muted">Expires: {{ app.expiry_date }}</p>
+              </div>
+              <p class="text-caption text-text-muted mb-4">Submitted: {{ new Date(app.created_at).toLocaleDateString() }}</p>
               <div class="flex items-center gap-2 flex-wrap">
                 <button 
                   @click="openTeacherModal(app)"
                   class="px-3 py-1.5 text-brand-primary border border-brand-primary text-caption font-medium rounded-lg hover:bg-brand-primary/5 transition-colors"
                 >
-                  View Submission
+                  View Details
                 </button>
                 <button 
                   @click="handleApproveTeacher(app.id)"
@@ -120,13 +141,6 @@
                   class="px-3 py-1.5 border border-accent-red text-accent-red text-caption font-medium rounded-lg hover:bg-accent-red/5 transition-colors"
                 >
                   Reject
-                </button>
-              </div>
-              <div class="text-center mt-4">
-                <button class="text-text-muted hover:text-text-dark">
-                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                  </svg>
                 </button>
               </div>
               </div>
@@ -275,7 +289,8 @@ import TeacherApplicationModal from '../../components/ui/TeacherApplicationModal
 const { currentUser } = useUserStats()
 const { 
   getDashboardStats, 
-  getTeacherApplications, 
+  getTeacherApplications,
+  getTeacherApplicationDetail, 
   getCertificatesOverview, 
   getRecentCertificates, 
   getSystemLogs,
@@ -372,7 +387,13 @@ const handleApproveTeacher = async (applicationId: string) => {
 }
 
 const handleRejectTeacher = async (applicationId: string) => {
-  const success = await rejectTeacher(applicationId)
+  const reason = prompt('Please provide a reason for rejection:')
+  if (!reason || reason.trim() === '') {
+    alert('Rejection reason is required')
+    return
+  }
+  
+  const success = await rejectTeacher(applicationId, reason)
   if (success) {
     teacherApplications.value = await getTeacherApplications()
     const newStats = await getDashboardStats()

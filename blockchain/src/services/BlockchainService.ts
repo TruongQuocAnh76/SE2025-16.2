@@ -67,17 +67,7 @@ export class BlockchainService {
   }
 
   private getContractAddress(networkName: string): string {
-    switch (networkName) {
-      case 'hardhat':
-      case 'localhost':
-        return process.env.CERTIFICATE_CONTRACT_ADDRESS_HARDHAT || '';
-      case 'polygon':
-        return process.env.CERTIFICATE_CONTRACT_ADDRESS_POLYGON || '';
-      case 'polygonMumbai':
-        return process.env.CERTIFICATE_CONTRACT_ADDRESS_MUMBAI || '';
-      default:
-        return '';
-    }
+    return process.env.CERTIFICATE_CONTRACT || '';
   }
 
   /**

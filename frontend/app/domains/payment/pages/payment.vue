@@ -20,7 +20,23 @@
     <!-- Main Content -->
     <div class="container mx-auto px-6 py-12">
       <div class="max-w-6xl mx-auto">
-        <div class="grid lg:grid-cols-3 gap-8">
+        
+        <!-- Loading state while checking enrollment -->
+        <div v-if="checkingEnrollment" class="text-center py-20">
+          <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+          <p class="text-slate-600">Checking enrollment status...</p>
+        </div>
+
+        <!-- Already enrolled message -->
+        <div v-else-if="isAlreadyEnrolled" class="text-center py-20">
+          <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg max-w-md mx-auto">
+            <h3 class="font-bold text-lg mb-2">Already Enrolled</h3>
+            <p>You are already enrolled in this course. Redirecting you to the course page...</p>
+          </div>
+        </div>
+
+        <!-- Payment form (only show if not enrolled) -->
+        <div v-else class="grid lg:grid-cols-3 gap-8">
           <!-- Left Side - Payment Form -->
           <div class="lg:col-span-2">
             <div class="bg-white rounded-2xl shadow-xl p-8">
@@ -63,7 +79,29 @@
                       <path d="M24 6.4c-2.8 2.4-4.5 5.9-4.5 9.6s1.7 7.2 4.5 9.6c2.8-2.4 4.5-5.9 4.5-9.6s-1.7-7.2-4.5-9.6z" fill="#FF5F00"/>
                     </svg>
                   </button>
+
+                  <!-- PayPal -->
+                  <button
+                    @click="selectedCardType = 'PAYPAL'"
+                    :class="[
+                      'p-4 rounded-lg border-2 transition-all flex items-center justify-center',
+                      selectedCardType === 'PAYPAL'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-slate-200 hover:border-slate-300'
+                    ]"
+                  >
+                    <svg class="w-10 h-8" viewBox="0 0 24 24" fill="none">
+                        <path d="M18.8 6.5C18.4 4.1 16.4 2.5 14 2.5H6.5C5.8 2.5 5.2 3 5.1 3.7L3 17.2C2.9 17.6 3.2 18 3.6 18H7.2L7.7 21.2C7.8 21.7 8.2 22 8.7 22H13C13.5 22 13.9 21.7 14 21.2L14.2 19.8L14.3 19.3L14.4 18.5C14.4 18.5 17.3 18.2 18.8 14.8C18.8 14.8 21.2 11.2 18.8 6.5Z" fill="#003087"/>
+                        <path d="M8.9 17.9C9 17.7 9.2 17.5 9.4 17.5H9.9H9.6C9.4 17.5 9.2 17.7 9.2 17.9L8.7 20.8C8.7 21 8.6 21.1 8.4 21.1H6.2C5.9 21.1 5.7 20.9 5.8 20.6L6.2 18.4L6.7 15.6C6.7 15.3 6.5 15.1 6.3 15.1H2.9L3.8 3.8C3.8 3.4 4.2 3.1 4.6 3.1H9.1C12 3.1 15.2 3.1 15.9 7.5C16.1 8.8 15.9 9.9 15.2 10.7C15.7 11.4 15.9 12.2 15.7 13.2C15.4 15.1 14.3 16.1 12.4 16.1H10.2C9.9 16.1 9.7 16.3 9.7 16.6L8.9 17.9Z" fill="#009CDE"/>
+                    </svg>
+                    <span class="ml-2 font-bold text-slate-700">PayPal</span>
+                  </button>
                 </div>
+              </div>
+
+              <!-- PayPal Buttons Container -->
+              <div v-show="selectedCardType === 'PAYPAL'" class="w-full mb-6">
+                  <div id="paypal-button-container" class="w-full mt-4"></div>
               </div>
 
               <!-- Stripe Elements Card Form -->
@@ -186,15 +224,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Footer -->
-    <footer class="bg-white border-t border-slate-200 mt-20">
-      <div class="container mx-auto px-6 py-8">
-        <div class="text-center text-slate-600">
-          <p>&copy; 2025 CertChain. All rights reserved.</p>
-        </div>
-      </div>
-    </footer>
   </div>
 </template>
 
@@ -218,27 +247,22 @@ onMounted(() => {
     router.replace({ path: '/auth/login', query: { redirect: route.fullPath } })
     return
   }
+  
+  // Check enrollment status first to prevent double payment
+  checkEnrollmentStatus()
+  
+  console.log('Payment page mounted, selectedCardType:', selectedCardType.value)
+  console.log('checkingEnrollment:', checkingEnrollment.value)
+  console.log('isAlreadyEnrolled:', isAlreadyEnrolled.value)
+  
   loadCourseData()
-  // Mount Stripe Elements nếu mặc định là VISA/MASTERCARD
-  if (!STRIPE_TEST_MODE && (selectedCardType.value === 'VISA' || selectedCardType.value === 'MASTERCARD')) {
-    nextTick().then(async () => {
-      if (!stripeInstance) {
-        stripeInstance = await loadStripe(config.public.stripePublishableKey)
-      }
-      if (stripeInstance) {
-        elements = stripeInstance.elements()
-        cardElement = elements.create('card')
-        cardElement.mount('#stripe-card-element')
-        cardElement.on('change', (event) => {
-          const errorDiv = document.getElementById('stripe-card-errors')
-          if (event.error) {
-            errorDiv.textContent = event.error.message
-          } else {
-            errorDiv.textContent = ''
-          }
-        })
-      }
-    })
+  
+  // Initialize Stripe immediately for card payments
+  if (selectedCardType.value === 'VISA' || selectedCardType.value === 'MASTERCARD') {
+    console.log('💳 Initializing Stripe for card type:', selectedCardType.value)
+    initializeStripe()
+  } else if (selectedCardType.value === 'PAYPAL') {
+      loadPayPal()
   }
 })
 
@@ -250,60 +274,144 @@ const paymentType = computed(() => route.query.type || 'MEMBERSHIP')
 const courseId = computed(() => route.query.course_id || null)
 const selectedCardType = ref('VISA')
 const loading = ref(false)
+const currentPaymentId = ref<string | null>(null)
+
+// Enrollment check
+const isAlreadyEnrolled = ref(false)
+const checkingEnrollment = ref(false)
+
+// Check if user is already enrolled in the course
+const checkEnrollmentStatus = async () => {
+  console.log('🔍 Checking enrollment, paymentType:', paymentType.value, 'courseId:', courseId.value)
+  
+  if (paymentType.value !== 'COURSE' || !courseId.value) {
+    console.log('⚡ Not course payment or no courseId, skipping enrollment check')
+    return
+  }
+  
+  checkingEnrollment.value = true
+  try {
+    const tokenCookie = useCookie('auth_token')
+    const token = tokenCookie.value
+    
+    if (!token) {
+      console.log('❌ No auth token found')
+      return
+    }
+    
+    const config = useRuntimeConfig()
+    const response = await $fetch(`/api/courses/${courseId.value}/enrollment/check`, {
+      baseURL: config.public.backendUrl as string,
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    console.log('Enrollment check response:', response)
+    
+    if (response.isEnrolled) {
+      isAlreadyEnrolled.value = true
+      console.log('User already enrolled, redirecting...')
+      // Redirect to course page if already enrolled - use window.location.replace for clean navigation
+      window.location.replace(`/courses/${courseId.value}`)
+      return
+    }
+  } catch (error) {
+    console.error(' Error checking enrollment status:', error)
+  } finally {
+    checkingEnrollment.value = false
+    console.log(' Enrollment check finished, checkingEnrollment:', checkingEnrollment.value)
+  }
+}
 
 // Stripe instance
 let stripeInstance: any = null
 
-
-// Stripe Elements chỉ mount khi chọn VISA/MASTERCARD
-
-onMounted(() => {
-  loadCourseData()
-  // Mount Stripe Elements nếu mặc định là VISA/MASTERCARD
-  if (!STRIPE_TEST_MODE && (selectedCardType.value === 'VISA' || selectedCardType.value === 'MASTERCARD')) {
-    nextTick().then(async () => {
-      if (!stripeInstance) {
-        stripeInstance = await loadStripe(config.public.stripePublishableKey)
-      }
-      if (stripeInstance) {
-        elements = stripeInstance.elements()
-        cardElement = elements.create('card')
-        cardElement.mount('#stripe-card-element')
-        cardElement.on('change', (event) => {
-          const errorDiv = document.getElementById('stripe-card-errors')
+// Function to initialize Stripe Elements
+const initializeStripe = async () => {
+  try {
+    console.log('🔄 Initializing Stripe...')
+    
+    // Load Stripe if not already loaded
+    if (!stripeInstance) {
+      stripeInstance = await loadStripe(config.public.stripePublishableKey)
+      console.log('✅ Stripe instance loaded:', !!stripeInstance)
+    }
+    
+    if (!stripeInstance) {
+      console.error('❌ Failed to load Stripe instance')
+      return
+    }
+    
+    // Wait for DOM to be ready
+    await nextTick()
+    
+    // Check if element exists before mounting
+    const stripeElementContainer = document.getElementById('stripe-card-element')
+    console.log('🎯 Stripe card element container found:', !!stripeElementContainer)
+    
+    if (stripeElementContainer) {
+      // Clear any existing content
+      stripeElementContainer.innerHTML = ''
+      
+      // Create new elements
+      elements = stripeInstance.elements()
+      cardElement = elements.create('card', {
+        style: {
+          base: {
+            fontSize: '16px',
+            color: '#424770',
+            '::placeholder': {
+              color: '#aab7c4',
+            },
+          },
+        },
+      })
+      
+      cardElement.mount('#stripe-card-element')
+      console.log('🎉 Stripe card element mounted successfully!')
+      
+      cardElement.on('change', (event: any) => {
+        const errorDiv = document.getElementById('stripe-card-errors')
+        if (errorDiv) {
           if (event.error) {
             errorDiv.textContent = event.error.message
           } else {
             errorDiv.textContent = ''
           }
-        })
-      }
-    })
-  }
-})
-
-watch(selectedCardType, async (val, oldVal) => {
-  if (!STRIPE_TEST_MODE && (val === 'VISA' || val === 'MASTERCARD')) {
-    // Đợi DOM render xong
-    await nextTick()
-    if (!stripeInstance) {
-      stripeInstance = await loadStripe(config.public.stripePublishableKey)
-    }
-    if (stripeInstance) {
-      elements = stripeInstance.elements()
-      cardElement = elements.create('card')
-      cardElement.mount('#stripe-card-element')
-      cardElement.on('change', (event: any) => {
-        const errorDiv = document.getElementById('stripe-card-errors')
-        if (event.error) {
-          errorDiv.textContent = event.error.message
-        } else {
-          errorDiv.textContent = ''
         }
       })
+    } else {
+      console.log('❌ Stripe card element not found in DOM - retrying in 500ms')
+      // Retry after a short delay
+      setTimeout(() => {
+        initializeStripe()
+      }, 500)
     }
-    console.log('Stripe initialized:', stripeInstance ? 'success' : 'failed')
-  } else if (oldVal === 'VISA' || oldVal === 'MASTERCARD') {
+  } catch (error) {
+    console.error('❌ Error initializing Stripe:', error)
+  }
+}
+
+
+
+
+watch(selectedCardType, async (val, oldVal) => {
+  console.log('Card type changed from', oldVal, 'to', val)
+  
+  if (val === 'PAYPAL') {
+      // Unmount Stripe
+      if (cardElement && cardElement.unmount) {
+          cardElement.unmount()
+          cardElement = null
+      }
+      await nextTick()
+      loadPayPal()
+  } else if (val === 'VISA' || val === 'MASTERCARD') {
+    // Initialize Stripe for card payments
+    console.log('Switching to Stripe for card type:', val)
+    await initializeStripe()
+  } else if ((oldVal === 'VISA' || oldVal === 'MASTERCARD') && val !== 'PAYPAL') {
     // Unmount Stripe Elements khi chuyển sang loại khác
     if (cardElement && cardElement.unmount) {
       cardElement.unmount()
@@ -311,6 +419,127 @@ watch(selectedCardType, async (val, oldVal) => {
     }
   }
 })
+
+// PAYPAL LOGIC
+const loadPayPal = () => {
+    const PAYPAL_CLIENT_ID = config.public.paypalClientId; 
+    const scriptSrc = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD&intent=capture`;
+
+    const existingScript = document.getElementById('paypal-sdk') as HTMLScriptElement;
+    if (existingScript) {
+        if (existingScript.src === scriptSrc) {
+            renderPayPalButtons();
+            return;
+        } else {
+            existingScript.remove();
+            (window as any).paypal = undefined;
+        }
+    }
+
+    const script = document.createElement('script');
+    script.src = scriptSrc;
+    script.id = 'paypal-sdk';
+    script.onload = () => {
+        renderPayPalButtons();
+    };
+    script.onerror = (err) => {
+        console.error('PayPal SDK failed to load', err);
+        alert('Could not load PayPal SDK');
+    };
+    document.body.appendChild(script);
+}
+
+const renderPayPalButtons = () => {
+    if ((window as any).paypal) {
+        // Clear previous buttons if any
+        const container = document.getElementById('paypal-button-container');
+        if (container) container.innerHTML = '';
+
+        (window as any).paypal.Buttons({
+            fundingSource: (window as any).paypal.FUNDING.PAYPAL,
+            createOrder: async (data: any, actions: any) => {
+                try {
+                    const tokenCookie = useCookie('auth_token')
+                    const token = tokenCookie.value
+                    
+                    const paymentData: any = {
+                        payment_type: paymentType.value,
+                        payment_method: 'PAYPAL',
+                        amount: totalAmount.value 
+                    }
+                    if (paymentType.value === 'COURSE') {
+                        paymentData.course_id = courseId.value
+                    } else {
+                        paymentData.membership_plan = 'PREMIUM'
+                    }
+
+                    const response: any = await $fetch('http://localhost:8000/api/payments/create', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: paymentData
+                    })
+
+                    if (response.success) {
+                        currentPaymentId.value = response.payment.id;
+                        console.log('PayPal Order ID:', response.paypal_order_id);
+                        return response.paypal_order_id;
+                    } else {
+                        throw new Error(response.message || 'Failed to create PayPal order');
+                    }
+                } catch (error) {
+                    console.error('Create PayPal Order Error:', error);
+                    alert('Could not initiate PayPal payment');
+                }
+            },
+            onApprove: async (data: any, actions: any) => {
+                try {
+                     const tokenCookie = useCookie('auth_token')
+                     const token = tokenCookie.value
+                     
+                     if (!currentPaymentId.value) {
+                       // Should be set by createOrder
+                     }
+
+                     const response: any = await $fetch(`http://localhost:8000/api/payments/${currentPaymentId.value}/paypal/capture`, {
+                         method: 'POST',
+                         headers: {
+                             'Authorization': `Bearer ${token}`,
+                             'Content-Type': 'application/json',
+                         },
+                         body: {
+                             paypal_order_id: data.orderID
+                         }
+                     })
+
+                     if (response.success) {
+                         // Store payment success in localStorage
+                         localStorage.setItem('payment_success', 'true')
+                         localStorage.setItem('payment_type', paymentType.value)
+                         
+                         alert('Payment successful!');
+                         
+                         // Navigate back to the previous page (course or membership page)
+                         window.history.back()
+                     } else {
+                         alert('Payment capture failed: ' + response.message);
+                     }
+                } catch (error) {
+                   console.error('PayPal Capture Error:', error);
+                   alert('Payment capture failed');
+                }
+            },
+            onError: (err: any) => {
+                console.error('PayPal Button Error:', err);
+                alert('An error occurred with PayPal');
+            }
+        }).render('#paypal-button-container');
+    }
+}
+
+
 
 // Card form data
 const cardDetails = ref({
@@ -418,15 +647,16 @@ const handlePayment = async () => {
         }
       })
       console.log('Payment created:', response.payment)
+      
+      // Store payment success in localStorage
+      localStorage.setItem('payment_success', 'true')
+      localStorage.setItem('payment_type', paymentType.value)
+      
       alert('Payment thành công!')
-      // Redirect hoặc xử lý tiếp
-      if (paymentType.value === 'COURSE' && courseId.value) {
-        router.push(`/courses/${courseId.value}`)
-      } else if (paymentType.value === 'MEMBERSHIP') {
-        router.push('/membership')
-      } else {
-        router.push('/')
-      }
+      
+      // Navigate back to the previous page (course or membership page)
+      // This is cleaner than replacing with a new URL
+      window.history.back()
     }
   } catch (error) {
     console.error('Payment failed:', error)
@@ -462,16 +692,15 @@ const handleStripePayment = async (paymentId: string) => {
       })
 
       console.log('Stripe payment completed (TEST):', response)
+      
+      // Store payment success in localStorage
+      localStorage.setItem('payment_success', 'true')
+      localStorage.setItem('payment_type', paymentType.value)
+      
       alert('Payment successful! You can now access the course content.')
       
-      // Redirect
-      if (paymentType.value === 'COURSE' && courseId.value) {
-        router.push(`/courses/${courseId.value}?payment_success=true`)
-      } else if (paymentType.value === 'MEMBERSHIP') {
-        router.push('/membership?payment_success=true')
-      } else {
-        router.push('/')
-      }
+      // Navigate back to the previous page (course or membership page)
+      window.history.back()
   } else {
     // PRODUCTION MODE: Gửi dữ liệu thẻ lên backend để xử lý với Stripe PHP SDK
     try {
@@ -537,16 +766,15 @@ const completeStripePayment = async (paymentId: string, paymentIntentId: string)
     })
 
     console.log('Stripe payment completed:', response)
+    
+    // Store payment success in localStorage
+    localStorage.setItem('payment_success', 'true')
+    localStorage.setItem('payment_type', paymentType.value)
+    
     alert('Payment successful! You can now access the course content.')
     
-    // Redirect based on payment type
-    if (paymentType.value === 'COURSE' && courseId.value) {
-      router.push(`/courses/${courseId.value}?payment_success=true`)
-    } else if (paymentType.value === 'MEMBERSHIP') {
-      router.push('/membership?payment_success=true')
-    } else {
-      router.push('/')
-    }
+    // Navigate back to the previous page (course or membership page)
+    window.history.back()
   } catch (error) {
     console.error('Failed to complete Stripe payment:', error)
     alert('Failed to complete payment')

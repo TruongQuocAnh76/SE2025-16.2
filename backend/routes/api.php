@@ -55,6 +55,13 @@ Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
 });
 
 /* ========================
+ * MEDIA UPLOAD
+ * ======================== */
+Route::middleware('auth:sanctum')->prefix('media')->group(function () {
+    Route::post('/presigned-url', [\App\Http\Controllers\MediaController::class, 'getPresignedUrl']);
+});
+
+/* ========================
  * USER MANAGEMENT
  * ======================== */
 Route::middleware('auth:sanctum')->prefix('users')->group(function () {
@@ -79,6 +86,9 @@ Route::prefix('courses')->group(function () {
     Route::get('/{id}', [CourseController::class, 'show']); // Get course details
 });
 
+// Recommendations endpoint (requires authentication)
+Route::middleware('auth:sanctum')->get('/recommendations', [CourseController::class, 'getRecommendations']);
+
 // Protected course management routes (require authentication)
 Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
     Route::post('/', [CourseController::class, 'store']); // Teacher/Admin create course (supports modules)
@@ -92,6 +102,11 @@ Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
     Route::post('/{id}/enroll', [CourseController::class, 'enroll']); // Student enroll
     Route::post('/{id}/enroll-free', [CourseController::class, 'enrollFree']); // Premium members enroll for free
     Route::post('/{id}/review', [CourseController::class, 'addReview']); // Add review
+    
+    // Lesson management within courses
+    Route::post('/{id}/lessons', [LessonController::class, 'store']); // Teacher create lesson
+    Route::put('/{courseId}/lessons/{lessonId}', [LessonController::class, 'update']); // Teacher update lesson
+    Route::delete('/{courseId}/lessons/{lessonId}', [LessonController::class, 'destroy']); // Teacher delete lesson
 });
 
 /* ========================
@@ -99,6 +114,10 @@ Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
  * ======================== */
 Route::middleware('auth:sanctum')->prefix('lessons')->group(function () {
     Route::get('/{lessonId}', [LessonController::class, 'show']); // Get lesson details
+    
+    // Lesson comments
+    Route::get('/{lessonId}/comments', [LessonController::class, 'getComments']); // Get comments
+    Route::post('/{lessonId}/comments', [LessonController::class, 'storeComment']); // Add comment
 });
 
 Route::middleware('auth:sanctum')->prefix('modules')->group(function () {
@@ -133,6 +152,7 @@ Route::middleware('auth:sanctum')->prefix('quizzes')->group(function () {
     Route::get('/{quizId}/attempts', [QuizController::class, 'attemptsHistory']); // Get attempt history
     Route::get('/{quizId}/stats', [QuizController::class, 'getStudentStats']); // Get student stats
     Route::get('/{quizId}/student-attempts', [QuizController::class, 'getStudentAttempts']); // Get student attempts
+    Route::get('/{quizId}/all-attempts', [QuizController::class, 'getAllAttempts']); // Teacher get all attempts
 
     // Question management
     Route::get('/{quizId}/questions', [QuestionController::class, 'index']); // List questions in quiz
@@ -154,6 +174,7 @@ Route::middleware('auth:sanctum')->prefix('questions')->group(function () {
 Route::middleware('auth:sanctum')->prefix('grading')->group(function () {
     Route::post('/attempts/{attemptId}/auto-grade', [GradingController::class, 'autoGradeAttempt']); // Auto-grade attempt
     Route::post('/answers/{answerId}/manual-grade', [GradingController::class, 'manualGradeAnswer']); // Manual grade answer
+    Route::post('/attempts/{attemptId}/bulk-grade', [GradingController::class, 'bulkGradeAnswers']); // Bulk grade answers
     Route::get('/attempts/{attemptId}/pending', [GradingController::class, 'getPendingAnswers']); // Get pending answers
     Route::get('/attempts/{attemptId}/review', [GradingController::class, 'getAttemptReview']); // Get attempt review
 });
@@ -181,6 +202,9 @@ Route::middleware('auth:sanctum')->prefix('teacher-applications')->group(functio
     Route::post('/{id}/approve', [TeacherApplicationController::class, 'approve']); // Approve (Admin)
     Route::post('/{id}/reject', [TeacherApplicationController::class, 'reject']); // Reject (Admin)
 });
+
+// Public route for certificate download (requires valid token in query string)
+Route::get('/teacher-applications/{id}/certificate', [TeacherApplicationController::class, 'downloadCertificate']);
 
 /* ========================
  * TEACHERS
@@ -263,6 +287,9 @@ Route::middleware('auth:sanctum')->prefix('payments')->group(function () {
     // Stripe routes
     Route::post('/{id}/stripe/create-intent', [PaymentController::class, 'createStripeIntent']); // Create Stripe payment intent
     Route::post('/{id}/stripe/complete', [PaymentController::class, 'completeStripePayment']); // Complete Stripe payment
+    
+    // PayPal routes
+    Route::post('/{id}/paypal/capture', [PaymentController::class, 'capturePayPalPayment']); // Capture PayPal payment
 });
 
 // Stripe Webhook (no auth needed)

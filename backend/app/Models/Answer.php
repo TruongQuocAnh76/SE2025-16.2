@@ -22,6 +22,7 @@ class Answer extends Model
         'points_awarded',
         'attempt_id',
         'question_id',
+
     ];
 
     /**

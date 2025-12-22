@@ -2,7 +2,7 @@
   <div class="p-12">
     <div class="welcome-card bg-white p-6 rounded-lg shadow-md flex items-center mb-6">
       <div class="avatar mr-4">
-        <img src="/placeholder-avatar.png" alt="User Avatar" class="w-16 h-16 rounded-full object-cover">
+        <img :src="currentUser?.avatar || '/default-avatar.png'" alt="User Avatar" class="w-16 h-16 rounded-full object-cover">
       </div>
       <div class="text">
         <h2 class="text-2xl font-bold text-gray-800">Welcome Back, {{ displayName }}</h2>
@@ -30,17 +30,65 @@
 
     <div class="grid grid-cols-7 gap-6 mt-8">
       <div class="col-span-5 bg-white p-6 rounded-lg shadow-lg">
-        <h3 class="text-xl font-semibold mb-4">Recent Enrollment Course</h3>
+        <h3 class="text-xl font-semibold mb-4">Enrolled Courses</h3>
         <div class="space-y-6">
-          <RecentCourseCard
-            v-for="course in coursesProgress.slice(0, 5)"
-            :key="course.course_id"
-            :thumbnail="'/placeholder-course.jpg'"
-            :name="course.course_title"
-            :author="'Instructor'"
-            :rating="4.5"
-            :studentsCount="100"
-          />
+          <template v-if="enrolledCourses.length > 0">
+            <NuxtLink 
+              v-for="enrollment in enrolledCourses.slice(0, 5)"
+              :key="enrollment.id"
+              :to="`/courses/${enrollment.course?.id}/open`"
+              class="block"
+            >
+              <div class="flex gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                <img 
+                  :src="enrollment.course?.thumbnail || '/placeholder-course.jpg'" 
+                  :alt="enrollment.course?.title"
+                  class="w-32 h-20 object-cover rounded"
+                />
+                <div class="flex-1">
+                  <h4 class="font-semibold text-lg text-gray-800 mb-1">{{ enrollment.course?.title }}</h4>
+                  <p class="text-sm text-gray-600 line-clamp-2 mb-2">{{ enrollment.course?.description }}</p>
+                  <div class="flex items-center gap-4 text-sm text-gray-500">
+                    <span class="flex items-center gap-1">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                      </svg>
+                      {{ enrollment.course?.teacher?.first_name }} {{ enrollment.course?.teacher?.last_name }}
+                    </span>
+                    <span class="flex items-center gap-1">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      {{ enrollment.course?.duration || 'N/A' }} hours
+                    </span>
+                    <span class="px-2 py-1 text-xs rounded" :class="{
+                      'bg-green-100 text-green-800': enrollment.status === 'ACTIVE',
+                      'bg-blue-100 text-blue-800': enrollment.status === 'COMPLETED',
+                      'bg-gray-100 text-gray-800': enrollment.status === 'EXPIRED'
+                    }">
+                      {{ enrollment.status }}
+                    </span>
+                  </div>
+                </div>
+                <div class="flex flex-col justify-center items-end">
+                  <div class="text-sm text-gray-500 mb-2">Progress</div>
+                  <div class="text-2xl font-bold text-brand-primary">{{ enrollment.progress || 0 }}%</div>
+                </div>
+              </div>
+            </NuxtLink>
+          </template>
+          <template v-else>
+            <div class="text-center py-12 text-gray-500">
+              <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+              </svg>
+              <p class="text-lg font-medium mb-2">No enrolled courses yet</p>
+              <p class="text-sm text-gray-400 mb-4">Start learning by enrolling in courses</p>
+              <NuxtLink to="/courses" class="inline-block px-6 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-secondary transition">
+                Browse Courses
+              </NuxtLink>
+            </div>
+          </template>
         </div>
       </div>
       <div class="col-span-2 bg-white p-6 rounded-lg shadow-lg">
@@ -80,20 +128,44 @@
 </template>
 
 <script setup lang="ts">
-import CourseInfoCard from '../../components/ui/CourseInfoCard.vue'
-import RecentCourseCard from '../../components/ui/RecentCourseCard.vue'
-import CertificateCard from '../../components/ui/CertificateCard.vue'
-import CertificateModal from '../../components/ui/CertificateModal.vue'
+import { computed, watch } from 'vue'
+import CourseInfoCard from '../ui/CourseInfoCard.vue'
+import CertificateCard from '../ui/CertificateCard.vue'
+import CertificateModal from '../ui/CertificateModal.vue'
 import { useUserStats } from '../../composables/useUserStats'
 
-const route = useRoute()
-const username = route.params.username as string
+const auth = useAuth()
+const { currentUser, setCurrentUser } = useUserStats()
 
-const { currentUser } = useUserStats()
+// Sync auth user to userStats whenever it changes
+watch(() => auth.user?.value, (newUser) => {
+  if (newUser && !currentUser.value) {
+    setCurrentUser(newUser)
+  }
+}, { immediate: true })
+
+function getDisplayName(user: any, fallback: string) {
+  if (!user) {
+    if (fallback && fallback.includes('@')) {
+      return fallback.split('@')[0]
+    }
+    return fallback
+  }
+  if (user.username && !user.username.includes('@')) return user.username
+  if (user.first_name || user.last_name) return `${user.first_name || ''} ${user.last_name || ''}`.trim()
+  if (user.email && typeof user.email === 'string') return user.email.split('@')[0]
+  if (user.username && user.username.includes('@')) return user.username.split('@')[0]
+  if (fallback && fallback.includes('@')) {
+    return fallback.split('@')[0]
+  }
+  return fallback
+}
 
 const displayName = computed(() => {
-  const user = currentUser.value
-  return user ? `${user.first_name} ${user.last_name}` : username
+  // Prefer auth.user, fallback to currentUser
+  const user = auth.user?.value || currentUser.value
+  const fallback = user ? (user.username || user.email || '') : ''
+  return getDisplayName(user, fallback)
 })
 
 // Reactive state
@@ -111,6 +183,7 @@ const continueLearningCourses = ref<Array<{
 }>>([])
 
 const coursesProgress = ref<Array<any>>([])
+const enrolledCourses = ref<Array<any>>([])
 
 const recentCertificates = ref<Array<{
   id: string
@@ -151,9 +224,11 @@ const closeCertificateModal = () => {
   selectedCertificateId.value = null
 }
 
-// TODO: Replace mock data with actual API calls
+// Fetch all data on mount
 onMounted(async () => {
   const {
+    getCurrentUser,
+    setCurrentUser,
     getEnrollmentCount,
     getCertificateCount,
     getUserLearningHours,
@@ -161,10 +236,23 @@ onMounted(async () => {
     getContinueLearningCourses,
     getRecentCertificates,
     getQuizAttemptsCount,
-    getCoursesProgress
+    getCoursesProgress,
+    getUserEnrollments
   } = useUserStats()
 
-
+  // ⭐ CRITICAL: Fetch current user and set it to global state
+  // This ensures other pages (like Course Detail) can access membership_tier for payment logic
+  try {
+    const user = await getCurrentUser()
+    setCurrentUser(user)
+    console.log('✅ StudentHome: Current user fetched and set:', {
+      id: user?.id,
+      membership_tier: user?.membership_tier,
+      membership_expires_at: user?.membership_expires_at
+    })
+  } catch (error) {
+    console.error('❌ StudentHome: Failed to fetch current user:', error)
+  }
 
   // Fetch enrollment count
   try {
@@ -218,6 +306,14 @@ onMounted(async () => {
     console.error('Failed to load courses progress:', error)
   }
 
+  // Fetch enrolled courses
+  try {
+    enrolledCourses.value = await getUserEnrollments()
+    console.log('Enrolled courses:', enrolledCourses.value)
+  } catch (error) {
+    console.error('Failed to load enrolled courses:', error)
+  }
+
   // Fetch continue learning courses
   try {
     continueLearningCourses.value = await getContinueLearningCourses()
@@ -266,10 +362,5 @@ onMounted(async () => {
       }
     ]
   }, 1500)
-})
-
-// Set page title
-useSeoMeta({
-  title: `${displayName.value} - Dashboard`
 })
 </script>

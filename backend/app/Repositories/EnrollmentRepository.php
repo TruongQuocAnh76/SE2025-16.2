@@ -38,4 +38,8 @@ class EnrollmentRepository {
     public function getByStudentId($studentId) {
         return $this->model->where('student_id', $studentId)->with('course:id,title')->get();
     }
+
+    public function getByStudentAndCourse($studentId, $courseId) {
+        return $this->model->where('student_id', $studentId)->where('course_id', $courseId)->first();
+    }
 }

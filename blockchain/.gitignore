@@ -13,8 +13,9 @@ artifacts
 # Hardhat compilation (v2) support directory
 cache
 
-# Typechain output
-types
+# Typechain output (root level only, not src/types)
+/types
+typechain-types
 
 # Hardhat coverage reports
 coverage
@@ -22,7 +23,8 @@ coverage
 # Hardhat
 artifacts
 cache
-types
+/types
+typechain-types
 ignition/deployments
 
 .env

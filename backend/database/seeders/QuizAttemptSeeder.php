@@ -35,6 +35,7 @@ class QuizAttemptSeeder extends Seeder
                 'submitted_at' => now()->subDays(5)->addMinutes(24),
                 'created_at' => now()->subDays(5),
                 'updated_at' => now()->subDays(5)->addMinutes(24),
+                'grading_status' => 'graded',
             ],
             [
                 'id' => Str::uuid(),
@@ -48,6 +49,7 @@ class QuizAttemptSeeder extends Seeder
                 'submitted_at' => now()->subDays(3)->addMinutes(16),
                 'created_at' => now()->subDays(3),
                 'updated_at' => now()->subDays(3)->addMinutes(16),
+                'grading_status' => 'graded',
             ],
             [
                 'id' => Str::uuid(),
@@ -61,6 +63,7 @@ class QuizAttemptSeeder extends Seeder
                 'submitted_at' => now()->subDays(1)->addMinutes(12),
                 'created_at' => now()->subDays(1),
                 'updated_at' => now()->subDays(1)->addMinutes(12),
+                'grading_status' => 'graded',
             ],
             [
                 'id' => Str::uuid(),
@@ -74,6 +77,7 @@ class QuizAttemptSeeder extends Seeder
                 'submitted_at' => now()->subDays(2)->addMinutes(20),
                 'created_at' => now()->subDays(2),
                 'updated_at' => now()->subDays(2)->addMinutes(20),
+                'grading_status' => 'graded',
             ],
             [
                 'id' => Str::uuid(),
@@ -87,6 +91,22 @@ class QuizAttemptSeeder extends Seeder
                 'submitted_at' => now()->subHours(6)->addMinutes(28),
                 'created_at' => now()->subHours(6),
                 'updated_at' => now()->subHours(6)->addMinutes(28),
+                'grading_status' => 'graded',
+            ],
+            // New Attempt: Pending Manual Grading (To test UI hiding logic)
+            [
+                'id' => Str::uuid(),
+                'student_id' => $alice->id,
+                'quiz_id' => $webKnowledgeCheck->id,
+                'score' => null,
+                'is_passed' => false,
+                'attempt_number' => 2,
+                'time_spent' => 600,
+                'started_at' => now()->subMinutes(30),
+                'submitted_at' => now()->subMinutes(10),
+                'created_at' => now()->subMinutes(30),
+                'updated_at' => now()->subMinutes(10),
+                'grading_status' => 'pending_manual',
             ],
         ]);
     }

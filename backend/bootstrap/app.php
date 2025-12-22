@@ -14,14 +14,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Add API logging middleware globally
         $middleware->append(\App\Http\Middleware\LogApiRequests::class);
+        $middleware->trimStrings(except: [
+            'login',
+            'current_password',
+            'password',
+            'password_confirmation',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (AuthenticationException $e, Request $request) {
-            // Nếu request là một API (bắt đầu bằng api/)
             if ($request->is('api/*')) {
-                // Trả về lỗi 401 dạng JSON (thay vì chuyển hướng)
                 return response()->json([
                     'message' => 'Unauthenticated.'
                 ], 401);
