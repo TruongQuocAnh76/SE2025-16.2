@@ -1,10 +1,5 @@
 <template>
   <div class="min-h-screen bg-gray-100">
-    <!-- Header -->
-    <div class="bg-gray-600 text-white py-2 px-4">
-      <span class="text-sm">Open Course {{ isTeacher ? '(Teacher Mode)' : '(Student Mode)' }}</span>
-    </div>
-
     <div v-if="loading" class="flex justify-center items-center min-h-[60vh]">
       <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-teal-500"></div>
     </div>
