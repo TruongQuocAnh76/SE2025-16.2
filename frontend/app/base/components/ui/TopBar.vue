@@ -107,6 +107,13 @@
                   >
                     <i class="fas fa-cog mr-2"></i>Settings
                   </NuxtLink>
+                  <NuxtLink
+                    :to="`/s/${user?.username}`"
+                    @click="isDropdownOpen = false"
+                    class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                  >
+                    <i class="fas fa-chart-line mr-2"></i>My Dashboard
+                  </NuxtLink>
                   <template v-if="isStudent">
                     <NuxtLink
                       to="/teacher/my-applications"
