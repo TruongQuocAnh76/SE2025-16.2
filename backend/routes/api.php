@@ -86,6 +86,9 @@ Route::prefix('courses')->group(function () {
     Route::get('/{id}', [CourseController::class, 'show']); // Get course details
 });
 
+// Recommendations endpoint (requires authentication)
+Route::middleware('auth:sanctum')->get('/recommendations', [CourseController::class, 'getRecommendations']);
+
 // Protected course management routes (require authentication)
 Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
     Route::post('/', [CourseController::class, 'store']); // Teacher/Admin create course (supports modules)
