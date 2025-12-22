@@ -239,6 +239,22 @@ class GradingService
             }
         }
 
+        // Check if all answers are now graded
+        $attemptId = Answer::find($gradingData[0]['answer_id'])->attempt_id;
+        $attempt = QuizAttempt::find($attemptId);
+        
+        $pendingAnswersCount = Answer::where('attempt_id', $attemptId)
+            ->whereIn('question_id', function ($query) {
+                $query->select('id')->from('questions')->whereIn('question_type', ['SHORT_ANSWER', 'ESSAY']);
+            })
+            ->whereNull('is_correct') // Assuming is_correct null means ungraded
+            ->count();
+            
+        if ($pendingAnswersCount === 0) {
+           $attempt->grading_status = 'graded';
+           $attempt->save();
+        }
+
         return $results;
     }
 
