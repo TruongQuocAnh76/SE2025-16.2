@@ -315,6 +315,10 @@ class CourseController extends Controller
     {
         $course = $this->courseService->getCourseById($id);
 
+        // Tính average_rating và review_count từ reviews thực tế
+        $course->average_rating = $course->reviews_avg_rating ?? 0;
+        $course->review_count = $course->reviews->count();
+
         $ratingCounts = $course->reviews()
                            ->selectRaw('rating, count(*) as count')
                            ->groupBy('rating')
@@ -547,6 +551,9 @@ class CourseController extends Controller
         $course = Course::findOrFail($id);
 
         $review = $this->courseService->addReview(Auth::id(), $id, $request->rating, $request->comment);
+
+        // Refresh course to get updated average_rating and review_count
+        $course->refresh();
 
         $ratingCounts = $course->reviews()
                                 ->selectRaw('rating, count(*) as count')
