@@ -53,17 +53,7 @@ services:
     command: php-fpm
     env_file:
       - ./backend/.env
-    environment:
-      # Override for Docker network
-      - DB_HOST=db
-      - REDIS_HOST=redis
-      - RABBITMQ_HOST=rabbitmq
-      - STORAGE_ENDPOINT=http://minio:9000
-      - AWS_ENDPOINT=http://minio:9000
-      - BLOCKCHAIN_SERVICE_URL=http://blockchain:3001
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_started
       minio:
@@ -82,14 +72,6 @@ services:
     command: php artisan queue:work redis --tries=3 --timeout=3600 --sleep=3
     env_file:
       - ./backend/.env
-    environment:
-      # Override for Docker network
-      - DB_HOST=db
-      - REDIS_HOST=redis
-      - RABBITMQ_HOST=rabbitmq
-      - STORAGE_ENDPOINT=http://minio:9000
-      - AWS_ENDPOINT=http://minio:9000
-      - BLOCKCHAIN_SERVICE_URL=http://blockchain:3001
     depends_on:
       - backend
       - redis
@@ -111,11 +93,6 @@ services:
       "
     env_file:
       - ./backend/.env
-    environment:
-      # Override for Docker network
-      - DB_HOST=db
-      - REDIS_HOST=redis
-      - RABBITMQ_HOST=rabbitmq
     depends_on:
       - backend
       - rabbitmq
@@ -147,25 +124,25 @@ services:
   # ---------------------------------------------------------------------------
   # PostgreSQL Database
   # ---------------------------------------------------------------------------
-  db:
-    image: postgres:15-alpine
-    env_file:
-      - ./backend/.env
-    environment:
-      - POSTGRES_DB=${DB_DATABASE:-certchain}
-      - POSTGRES_USER=${DB_USERNAME:-postgres}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-password}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - app_network
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d certchain"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+  # db:
+  #   image: postgres:15-alpine
+  #   env_file:
+  #     - ./backend/.env
+  #   environment:
+  #     - POSTGRES_DB=${DB_DATABASE:-certchain}
+  #     - POSTGRES_USER=${DB_USERNAME:-postgres}
+  #     - POSTGRES_PASSWORD=${DB_PASSWORD:-password}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - app_network
+  #   restart: always
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres -d certchain"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 10s
 
   # ---------------------------------------------------------------------------
   # Redis - Cache & Queue Backend
@@ -190,9 +167,6 @@ services:
     image: rabbitmq:3-management
     env_file:
       - ./backend/.env
-    environment:
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-guest}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-guest}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
@@ -215,9 +189,6 @@ services:
       - "9001:9001"
     env_file:
       - ./backend/.env
-    environment:
-      - MINIO_ROOT_USER=${STORAGE_ACCESS_KEY:-minioadmin}
-      - MINIO_ROOT_PASSWORD=${STORAGE_SECRET_KEY:-minioadmin}
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
@@ -238,9 +209,6 @@ services:
     image: minio/mc:latest
     env_file:
       - ./backend/.env
-    environment:
-      - MINIO_ROOT_USER=${STORAGE_ACCESS_KEY:-minioadmin}
-      - MINIO_ROOT_PASSWORD=${STORAGE_SECRET_KEY:-minioadmin}
     depends_on:
       minio:
         condition: service_started

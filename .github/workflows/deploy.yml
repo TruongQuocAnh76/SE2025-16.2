@@ -47,6 +47,6 @@ jobs:
             export ENV_FILE="${{ secrets.ENV_FILE }}"
 
             cd /home/${{ secrets.VM_USER }}/app
-            chmod +x deploy.sh
+            chmod +x ./deploy.sh
             ./deploy.sh
 

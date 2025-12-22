@@ -15,7 +15,7 @@ import systemRoutes from './routes/system.js';
 // Load environment variables
 dotenv.config();
 
-const app: Express = express();
+const app: express.Express = express();
 const PORT = process.env.PORT || 3001;
 
 // Security middleware

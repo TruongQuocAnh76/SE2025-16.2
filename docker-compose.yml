@@ -1,72 +1,232 @@
+# =============================================================================
+# CertChain Production Docker Compose Configuration
+# =============================================================================
+# Usage: docker compose -f docker-compose.prod.yml up -d
+# Requires: 
+#   - ./backend/.env (copy from backend/.env.example)
+#   - ./frontend/.env (copy from frontend/.env.example)
+#   - ./blockchain/.env (copy from blockchain/.env.example)
+# =============================================================================
+
 services:
+  # ---------------------------------------------------------------------------
+  # Frontend - Nuxt.js Application
+  # ---------------------------------------------------------------------------
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: production
     ports:
       - "3000:3000"
+    env_file:
+      - ./frontend/.env
     environment:
       - NODE_ENV=production
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    volumes:
-      - ./backend:/var/www
-      - ./backend/.env.production:/var/www/.env
-    environment:
-      - BLOCKCHAIN_SERVICE_URL=http://blockchain:3001
     networks:
       - app_network
-    depends_on:
-      - redis
-      - blockchain
-
-  blockchain:
-    build:
-      context: ./blockchain
-      dockerfile: Dockerfile
-    ports:
-      - "3001:3001"
-    environment:
-      - NODE_ENV=production
-      - PORT=3001
-    volumes:
-      - blockchain_data:/app/logs
-    networks:
-      - app_network
+    restart: always
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/v1/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
 
+  # ---------------------------------------------------------------------------
+  # Nginx - Reverse Proxy for Backend
+  # ---------------------------------------------------------------------------
   nginx:
     image: nginx:alpine
     ports:
       - "8000:80"
     volumes:
-      - ./backend:/var/www
-      - ./backend/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./backend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - backend
     networks:
       - app_network
+    restart: always
 
+  # ---------------------------------------------------------------------------
+  # Backend - Laravel PHP-FPM Application
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: php-fpm
+    env_file:
+      - ./backend/.env
+    depends_on:
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    networks:
+      - app_network
+    restart: always
+
+  # ---------------------------------------------------------------------------
+  # Queue Worker - Laravel Queue Processing
+  # ---------------------------------------------------------------------------
+  queue-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: php artisan queue:work redis --tries=3 --timeout=3600 --sleep=3
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - backend
+      - redis
+      - blockchain
+    networks:
+      - app_network
+    restart: always
+
+  # ---------------------------------------------------------------------------
+  # RabbitMQ Worker - Email Queue Processing
+  # ---------------------------------------------------------------------------
+  rabbitmq-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: >
+      sh -c "
+        echo 'Waiting for RabbitMQ to be ready...' &&
+        sleep 10 &&
+        php artisan rabbitmq:consume-reset-email
+      "
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - backend
+      - rabbitmq
+    networks:
+      - app_network
+    restart: always
+
+  # ---------------------------------------------------------------------------
+  # Blockchain - Hardhat Node & Certificate Service
+  # ---------------------------------------------------------------------------
+  blockchain:
+    build:
+      context: ./blockchain
+      dockerfile: Dockerfile
+    env_file:
+      - ./blockchain/.env
+    volumes:
+      - blockchain_data:/app/blockchain-data
+    environment:
+      - NODE_ENV=production
+    networks:
+      - app_network
+    restart: always
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/v1/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ---------------------------------------------------------------------------
+  # Redis - Cache & Queue Backend
+  # ---------------------------------------------------------------------------
   redis:
     image: redis:7-alpine
     volumes:
       - redis_data:/data
     networks:
       - app_network
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # ---------------------------------------------------------------------------
+  # RabbitMQ - Message Queue
+  # ---------------------------------------------------------------------------
+  rabbitmq:
+    image: rabbitmq:3-management
+    env_file:
+      - ./backend/.env
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - app_network
+    restart: always
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # MinIO - S3-Compatible Object Storage
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    env_file:
+      - ./backend/.env
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - app_network
+    restart: always
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # MinIO Init - Bucket Creation & Configuration
+  # ---------------------------------------------------------------------------
+  minio-init:
+    image: minio/mc:latest
+    env_file:
+      - ./backend/.env
+    depends_on:
+      minio:
+        condition: service_started
+    volumes:
+      - ./init-minio.sh:/scripts/init-minio.sh:ro
+    entrypoint: ["/bin/sh", "/scripts/init-minio.sh"]
+    networks:
+      - app_network
+    restart: "no"
+
+  
+
+# =============================================================================
+# Volumes
+# =============================================================================
 volumes:
+  postgres_data:
+    driver: local
   redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
   blockchain_data:
+    driver: local
+  minio_data:
+    driver: local
 
+# =============================================================================
+# Networks
+# =============================================================================
 networks:
   app_network:
     driver: bridge
+

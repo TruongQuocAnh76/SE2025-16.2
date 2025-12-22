@@ -102,6 +102,11 @@ Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
     Route::post('/{id}/enroll', [CourseController::class, 'enroll']); // Student enroll
     Route::post('/{id}/enroll-free', [CourseController::class, 'enrollFree']); // Premium members enroll for free
     Route::post('/{id}/review', [CourseController::class, 'addReview']); // Add review
+    
+    // Lesson management within courses
+    Route::post('/{id}/lessons', [LessonController::class, 'store']); // Teacher create lesson
+    Route::put('/{courseId}/lessons/{lessonId}', [LessonController::class, 'update']); // Teacher update lesson
+    Route::delete('/{courseId}/lessons/{lessonId}', [LessonController::class, 'destroy']); // Teacher delete lesson
 });
 
 /* ========================
@@ -109,6 +114,10 @@ Route::middleware('auth:sanctum')->prefix('courses')->group(function () {
  * ======================== */
 Route::middleware('auth:sanctum')->prefix('lessons')->group(function () {
     Route::get('/{lessonId}', [LessonController::class, 'show']); // Get lesson details
+    
+    // Lesson comments
+    Route::get('/{lessonId}/comments', [LessonController::class, 'getComments']); // Get comments
+    Route::post('/{lessonId}/comments', [LessonController::class, 'storeComment']); // Add comment
 });
 
 Route::middleware('auth:sanctum')->prefix('modules')->group(function () {

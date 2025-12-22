@@ -134,6 +134,7 @@ export class CertificateController {
           success: false,
           data: [],
           error: 'Owner address is required',
+          data: [],
           pagination: { page: 1, limit: 10, total: 0, pages: 0 }
         });
       }
@@ -163,6 +164,7 @@ export class CertificateController {
         success: false,
         data: [],
         error: error instanceof Error ? error.message : 'Internal server error',
+        data: [],
         pagination: { page: 1, limit: 10, total: 0, pages: 0 }
       });
     }

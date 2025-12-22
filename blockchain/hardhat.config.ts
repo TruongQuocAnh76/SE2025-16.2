@@ -1,5 +1,6 @@
 import hardhatToolboxMochaEthersPlugin from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 import { defineConfig } from "hardhat/config";
+import 'dotenv/config';
 
 // Use relative paths during build, absolute paths at runtime
 const isProduction = process.env.NODE_ENV === "production";
@@ -10,13 +11,13 @@ const basePath = isProduction && process.env.RUNTIME_PATH === "true"
 export default defineConfig({
   plugins: [hardhatToolboxMochaEthersPlugin],
   paths: {
-    cache: `${basePath}/cache`,
-    artifacts: `${basePath}/artifacts`,
+    cache: "./blockchain-data/cache",
+    artifacts: "./blockchain-data/artifacts",
     sources: "./contracts",
     tests: "./test",
   },
   typechain: {
-    outDir: `${basePath}/types`,
+    outDir: "./blockchain-data/types",
   },
   solidity: {
     profiles: {
@@ -59,5 +60,11 @@ export default defineConfig({
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 80001,
     },
+    sepolia: {
+      type: "http",
+      url: process.env.RPC_URL,
+      accounts: [process.env.PRIVATE_KEY],
+      chainId: 11155111,
+    }
   },
 });
