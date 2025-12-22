@@ -52,7 +52,7 @@
           <label class="block text-sm font-medium text-gray-700 mb-2">Video</label>
           
           <!-- Current Video -->
-          <div v-if="form.video_url && !newVideo" class="mb-4 bg-gray-100 rounded-lg p-4">
+          <div v-if="form.content_url && !newVideo" class="mb-4 bg-gray-100 rounded-lg p-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <svg class="w-8 h-8 text-teal-500" fill="currentColor" viewBox="0 0 20 20">
@@ -189,8 +189,8 @@ const modules = ref(props.modules || [])
 const form = reactive({
   title: props.lesson?.title || '',
   description: props.lesson?.description || '',
-  content: props.lesson?.content || '',
-  video_url: props.lesson?.video_url || '',
+  content: props.lesson?.text_content || '',
+  content_url: props.lesson?.content_url || '',
   module_id: props.lesson?.module_id || null,
   order: props.lesson?.order || 1,
   duration: props.lesson?.duration || null
@@ -211,7 +211,7 @@ const handleDrop = (event: DragEvent) => {
 }
 
 const removeVideo = () => {
-  form.video_url = ''
+  form.content_url = ''
   newVideo.value = null
 }
 
