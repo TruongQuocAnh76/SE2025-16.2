@@ -290,7 +290,7 @@ class AuthController extends Controller
     } catch (\Throwable $e) {
         Log::error('RabbitMQ send failed, falling back to direct mail', ['error' => $e->getMessage()]);
         // Fallback: send email directly
-        $frontend = env('FRONTEND_URL', 'http://localhost:3000');
+        $frontend = env('FRONTEND_URL');
         $link = rtrim($frontend, '/') . '/auth/reset-password?token=' . $token;
         $body = "Click the link to reset your password: $link";
         try {

@@ -47,12 +47,13 @@ app.use(limiter);
 // CORS configuration
 const corsOptions = {
   origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
-    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:8000'];
+    // Get allowed origins from environment, with empty array as default (no hardcoded localhost)
+    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [];
     
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (allowedOrigins.length === 0 || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
