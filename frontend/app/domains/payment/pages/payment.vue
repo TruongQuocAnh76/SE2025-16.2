@@ -473,7 +473,7 @@ const renderPayPalButtons = () => {
                         paymentData.membership_plan = 'PREMIUM'
                     }
 
-                    const response: any = await $fetch('http://localhost:8000/api/payments/create', {
+                    const response: any = await $fetch(`${config.public.backendUrl}/api/payments/create`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${token}`,
@@ -503,7 +503,7 @@ const renderPayPalButtons = () => {
                        // Should be set by createOrder
                      }
 
-                     const response: any = await $fetch(`http://localhost:8000/api/payments/${currentPaymentId.value}/paypal/capture`, {
+                     const response: any = await $fetch(`${config.public.backendUrl}/api/payments/${currentPaymentId.value}/paypal/capture`, {
                          method: 'POST',
                          headers: {
                              'Authorization': `Bearer ${token}`,
@@ -558,7 +558,7 @@ const loadCourseData = async () => {
   if (paymentType.value === 'COURSE' && courseId.value) {
     try {
       console.log('Loading course:', courseId.value)
-      const response = await $fetch(`http://localhost:8000/api/courses/${courseId.value}`)
+      const response = await $fetch(`${config.public.backendUrl}/api/courses/${courseId.value}`)
       console.log('Course response:', response)
       courseData.value = response.course // API returns { course: {...}, rating_counts: {...} }
       totalAmount.value = parseFloat(response.course.price) || 0
@@ -626,7 +626,7 @@ const handlePayment = async () => {
       
       console.log('Sending payment request with token:', token)
       
-      const response = await $fetch('http://localhost:8000/api/payments/create', {
+      const response = await $fetch(`${config.public.backendUrl}/api/payments/create`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -680,7 +680,7 @@ const handleStripePayment = async (paymentId: string) => {
       await new Promise(resolve => setTimeout(resolve, 1500))
       
       // Mark as completed with test transaction ID
-      const response = await $fetch(`http://localhost:8000/api/payments/${paymentId}/stripe/complete`, {
+      const response = await $fetch(`${config.public.backendUrl}/api/payments/${paymentId}/stripe/complete`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -719,7 +719,7 @@ const handleStripePayment = async (paymentId: string) => {
       }
       const tokenCookie = useCookie('auth_token')
       const token = tokenCookie.value
-      const response = await $fetch('http://localhost:8000/api/payments/create', {
+      const response = await $fetch(`${config.public.backendUrl}/api/payments/create`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -754,7 +754,7 @@ const completeStripePayment = async (paymentId: string, paymentIntentId: string)
     const tokenCookie = useCookie('auth_token')
     const token = tokenCookie.value
     
-    const response = await $fetch(`http://localhost:8000/api/payments/${paymentId}/stripe/complete`, {
+    const response = await $fetch(`${config.public.backendUrl}/api/payments/${paymentId}/stripe/complete`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
