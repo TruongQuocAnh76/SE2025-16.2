@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import { BlockchainService } from '../services/BlockchainService.js';
-import { 
-  IssueCertificateRequest, 
-  RevokeCertificateRequest, 
+import {
+  IssueCertificateRequest,
+  RevokeCertificateRequest,
   VerifyCertificateRequest,
   ApiResponse,
   PaginatedResponse
@@ -105,7 +105,7 @@ export class CertificateController {
       });
     } catch (error) {
       console.error('Error in getCertificate:', error);
-      
+
       if (error instanceof Error && error.message.includes('Certificate not found')) {
         return res.status(404).json({
           success: false,
@@ -134,7 +134,6 @@ export class CertificateController {
           success: false,
           data: [],
           error: 'Owner address is required',
-          data: [],
           pagination: { page: 1, limit: 10, total: 0, pages: 0 }
         });
       }
@@ -164,7 +163,6 @@ export class CertificateController {
         success: false,
         data: [],
         error: error instanceof Error ? error.message : 'Internal server error',
-        data: [],
         pagination: { page: 1, limit: 10, total: 0, pages: 0 }
       });
     }
