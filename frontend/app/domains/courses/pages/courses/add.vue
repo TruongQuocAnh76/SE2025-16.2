@@ -124,6 +124,10 @@
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-white"
                 >
                   <option value="">Select an Category</option>
+                  <option value="programming">Programming</option>
+                  <option value="design">Design</option>
+                  <option value="business">Business</option>
+                  <option value="marketing">Marketing</option>
                 </select>
               </div>
               <div>
@@ -136,6 +140,8 @@
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-white"
                 >
                   <option value="">Select Language</option>
+                  <option value="english">English</option>
+                  <option value="vietnamese">Vietnamese</option>
                 </select>
               </div>
             </div>
