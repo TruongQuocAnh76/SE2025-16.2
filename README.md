@@ -1,7 +1,7 @@
 # **Certchain \- nền tảng học tập trực tuyến**
 Link demo: http://34.172.129.94/
 
-Link Figma: https://www.figma.com/design/BQg0K7wF3kNGfa25L6iQtI/E-Learning-Site-Ver-3.0?node-id=0-1&t=lpyeaJypU8Tp89Nf-1
+Link Figma: https://www.figma.com/design/BQg0K7wF3kNGfa25L6iQtI/E-Learning-Site-Ver-3.0
 # Mục tiêu và Phạm vi dự án
 
 ## Goal
