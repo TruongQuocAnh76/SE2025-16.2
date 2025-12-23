@@ -69,20 +69,11 @@ const { user } = useAuth()
 const navigation = [
   { name: 'Profile', id: 'general', icon: 'fas fa-user-circle' },
   { name: 'Security', id: 'security', icon: 'fas fa-key' },
-  { name: 'My Dashboard', id: 'dashboard', icon: 'fas fa-chart-line' },
 ]
 
 const currentTab = ref('general')
 
 const handleTabChange = (item: any) => {
-  if (item.id === 'dashboard') {
-    if (user.value?.username) {
-      navigateTo(`/s/${user.value.username}`)
-    } else {
-      navigateTo('/')
-    }
-    return
-  }
   currentTab.value = item.id
 }
 

@@ -139,7 +139,7 @@ const { currentUser, setCurrentUser } = useUserStats()
 
 // Sync auth user to userStats whenever it changes
 watch(() => auth.user?.value, (newUser) => {
-  if (newUser && !currentUser.value) {
+  if (newUser) {
     setCurrentUser(newUser)
   }
 }, { immediate: true })
@@ -151,10 +151,17 @@ function getDisplayName(user: any, fallback: string) {
     }
     return fallback
   }
+  
+  // Prioritize Full Name (First Name + Last Name)
+  if (user.first_name || user.last_name) {
+    return `${user.first_name || ''} ${user.last_name || ''}`.trim()
+  }
+
+  // Fallback to username/email logic
   if (user.username && !user.username.includes('@')) return user.username
-  if (user.first_name || user.last_name) return `${user.first_name || ''} ${user.last_name || ''}`.trim()
   if (user.email && typeof user.email === 'string') return user.email.split('@')[0]
   if (user.username && user.username.includes('@')) return user.username.split('@')[0]
+  
   if (fallback && fallback.includes('@')) {
     return fallback.split('@')[0]
   }
