@@ -357,7 +357,8 @@ const mapCourseForCard = (course: Course) => {
     name: course.title,
     description: course.description,
     author: `${course.teacher?.first_name || ''} ${course.teacher?.last_name || ''}`.trim() || 'Unknown Author',
-    price: course.price
+    price: course.price,
+    discount: course.discount // truyền discount sang CourseCard
   }
 }
 

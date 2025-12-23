@@ -297,9 +297,13 @@
 
             <div class="bg-white rounded-lg shadow-lg p-6">
               <div class="flex items-baseline gap-3 mb-4">
-                <span class="text-4xl font-bold text-teal-600">${{ course.price }}</span>
-                <span v-if="course.originalPrice" class="text-2xl text-gray-400 line-through">${{ course.originalPrice
-                  }}</span>
+                <template v-if="course.discount && course.discount > 0 && course.discount < 100 && course.price">
+                  <span class="text-2xl text-gray-400 line-through mr-2">${{ course.price }}</span>
+                  <span class="text-4xl font-bold text-teal-600">${{ Math.round(course.price * (1 - course.discount / 100)) }}</span>
+                </template>
+                <template v-else>
+                  <span class="text-4xl font-bold text-teal-600">${{ course.price }}</span>
+                </template>
               </div>
 
               <p v-if="!isEnrolled && enrollError" class="text-red-500 text-sm mb-3">{{ enrollError }}</p>
