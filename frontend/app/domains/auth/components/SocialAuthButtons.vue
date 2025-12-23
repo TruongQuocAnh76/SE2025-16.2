@@ -45,16 +45,16 @@ const props = defineProps({
 })
 
 const config = useRuntimeConfig()
-const backendUrl = config.public.backendUrl || 'http://localhost:8000'
+const backendUrl = computed(() => config.public.backendUrl || '')
 
 const loginWithGoogle = () => {
   // Redirect to backend OAuth endpoint
-  window.location.href = `${backendUrl}/api/auth/google`
+  window.location.href = `${backendUrl.value}/api/auth/google`
 }
 
 const loginWithFacebook = () => {
   // Redirect to backend OAuth endpoint
-  window.location.href = `${backendUrl}/api/auth/facebook`
+  window.location.href = `${backendUrl.value}/api/auth/facebook`
 }
 </script>
 

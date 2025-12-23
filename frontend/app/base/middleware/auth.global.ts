@@ -15,11 +15,21 @@ export default defineNuxtRouteMiddleware((to) => {
     '/forgot-password',
     '/reset-password',
     '/auth/oauth-callback',
+    '/auth/reset-password',
     '/privacy',
     '/terms'
   ]
 
-  const isPublic = publicRoutes.some(route => to.path === route || to.path.startsWith(route + '/'))
+  // Regex patterns for public routes that have dynamic segments or need specific matching
+  const publicPatterns = [
+    /^\/courses\/?$/,                 // Course catalog
+    /^\/courses\/[a-f0-9-]{36}\/?$/,  // Course detail (UUID only)
+    /^\/verify-certificate\/?$/       // Certificate verification
+  ]
+
+  const isPublic = publicRoutes.some(route => to.path === route || to.path.startsWith(route + '/')) ||
+    publicPatterns.some(pattern => pattern.test(to.path))
+
   if (isPublic) return
 
   // Check token exists

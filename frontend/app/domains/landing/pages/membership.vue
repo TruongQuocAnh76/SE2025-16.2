@@ -142,8 +142,8 @@ const handleUpgradePremium = () => {
     return
   }
 
-  // Redirect to payment page for Premium membership
-  router.push('/payment?type=MEMBERSHIP')
+  // Redirect to payment page for Premium membership - use window.location.href for clean navigation
+  window.location.href = '/payment?type=MEMBERSHIP'
 }
 
 const pricingPlans = computed(() => [

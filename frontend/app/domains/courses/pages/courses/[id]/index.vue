@@ -230,10 +230,13 @@
                   <div v-for="quiz in course.quizzes" :key="quiz.id"
                     class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div class="flex justify-between items-start mb-2">
-                      <NuxtLink :to="`/courses/${course.id}/quizzes/${quiz.id}`"
-                        class="flex-1 text-lg font-medium text-brand-primary hover:text-brand-secondary">
+                      <button
+                        @click="handleQuizClick(quiz.id)"
+                        class="flex-1 text-left text-lg font-medium text-brand-primary hover:text-brand-secondary cursor-pointer"
+                        :class="{ 'cursor-not-allowed opacity-50': !isEnrolled }"
+                      >
                         {{ quiz.title }}
-                      </NuxtLink>
+                      </button>
                       <span class="ml-4 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
                         Quiz
                       </span>
@@ -468,11 +471,18 @@ const checkEnrollmentRequirement = () => {
   if (route.query.enrollment_required === 'true' && !isEnrolled.value) {
     enrollError.value = 'You need to enroll in this course to access the lessons.'
   }
-  if (route.query.payment_success === 'true') {
+  
+  // Check for payment success from localStorage (no query params needed)
+  if (localStorage.getItem('payment_success') === 'true') {
     enrollSuccess.value = 'Payment successful! You are now enrolled in this course.'
-    // Clear the query param after showing message
+    
+    // Clear the localStorage flag
+    localStorage.removeItem('payment_success')
+    localStorage.removeItem('payment_type')
+    
+    // Clear success message after showing it
     setTimeout(() => {
-      router.replace({ query: {} })
+      enrollSuccess.value = ''
     }, 3000)
   }
 }
@@ -705,7 +715,8 @@ const handleEnroll = async () => {
     } else {
       // Course has price and user is not Premium, redirect to payment
       console.log('Redirecting to payment...')
-      router.push(`/payment?type=COURSE&course_id=${courseId}`)
+      // Use window.location.href instead of router.push to create clean navigation
+      window.location.href = `/payment?type=COURSE&course_id=${courseId}`
     }
 
   } catch (err: any) {

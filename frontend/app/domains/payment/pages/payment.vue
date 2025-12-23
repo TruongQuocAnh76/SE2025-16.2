@@ -20,7 +20,23 @@
     <!-- Main Content -->
     <div class="container mx-auto px-6 py-12">
       <div class="max-w-6xl mx-auto">
-        <div class="grid lg:grid-cols-3 gap-8">
+        
+        <!-- Loading state while checking enrollment -->
+        <div v-if="checkingEnrollment" class="text-center py-20">
+          <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+          <p class="text-slate-600">Checking enrollment status...</p>
+        </div>
+
+        <!-- Already enrolled message -->
+        <div v-else-if="isAlreadyEnrolled" class="text-center py-20">
+          <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg max-w-md mx-auto">
+            <h3 class="font-bold text-lg mb-2">Already Enrolled</h3>
+            <p>You are already enrolled in this course. Redirecting you to the course page...</p>
+          </div>
+        </div>
+
+        <!-- Payment form (only show if not enrolled) -->
+        <div v-else class="grid lg:grid-cols-3 gap-8">
           <!-- Left Side - Payment Form -->
           <div class="lg:col-span-2">
             <div class="bg-white rounded-2xl shadow-xl p-8">
@@ -208,15 +224,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Footer -->
-    <footer class="bg-white border-t border-slate-200 mt-20">
-      <div class="container mx-auto px-6 py-8">
-        <div class="text-center text-slate-600">
-          <p>&copy; 2025 CertChain. All rights reserved.</p>
-        </div>
-      </div>
-    </footer>
   </div>
 </template>
 
@@ -240,27 +247,20 @@ onMounted(() => {
     router.replace({ path: '/auth/login', query: { redirect: route.fullPath } })
     return
   }
+  
+  // Check enrollment status first to prevent double payment
+  checkEnrollmentStatus()
+  
+  console.log('Payment page mounted, selectedCardType:', selectedCardType.value)
+  console.log('checkingEnrollment:', checkingEnrollment.value)
+  console.log('isAlreadyEnrolled:', isAlreadyEnrolled.value)
+  
   loadCourseData()
-  // Mount Stripe Elements nếu mặc định là VISA/MASTERCARD
-  if (!STRIPE_TEST_MODE && (selectedCardType.value === 'VISA' || selectedCardType.value === 'MASTERCARD')) {
-    nextTick().then(async () => {
-      if (!stripeInstance) {
-        stripeInstance = await loadStripe(config.public.stripePublishableKey)
-      }
-      if (stripeInstance) {
-        elements = stripeInstance.elements()
-        cardElement = elements.create('card')
-        cardElement.mount('#stripe-card-element')
-        cardElement.on('change', (event) => {
-          const errorDiv = document.getElementById('stripe-card-errors')
-          if (event.error) {
-            errorDiv.textContent = event.error.message
-          } else {
-            errorDiv.textContent = ''
-          }
-        })
-      }
-    })
+  
+  // Initialize Stripe immediately for card payments
+  if (selectedCardType.value === 'VISA' || selectedCardType.value === 'MASTERCARD') {
+    console.log('💳 Initializing Stripe for card type:', selectedCardType.value)
+    initializeStripe()
   } else if (selectedCardType.value === 'PAYPAL') {
       loadPayPal()
   }
@@ -276,13 +276,129 @@ const selectedCardType = ref('VISA')
 const loading = ref(false)
 const currentPaymentId = ref<string | null>(null)
 
+// Enrollment check
+const isAlreadyEnrolled = ref(false)
+const checkingEnrollment = ref(false)
+
+// Check if user is already enrolled in the course
+const checkEnrollmentStatus = async () => {
+  console.log('🔍 Checking enrollment, paymentType:', paymentType.value, 'courseId:', courseId.value)
+  
+  if (paymentType.value !== 'COURSE' || !courseId.value) {
+    console.log('⚡ Not course payment or no courseId, skipping enrollment check')
+    return
+  }
+  
+  checkingEnrollment.value = true
+  try {
+    const tokenCookie = useCookie('auth_token')
+    const token = tokenCookie.value
+    
+    if (!token) {
+      console.log('❌ No auth token found')
+      return
+    }
+    
+    const config = useRuntimeConfig()
+    const response = await $fetch(`/api/courses/${courseId.value}/enrollment/check`, {
+      baseURL: config.public.backendUrl as string,
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    console.log('Enrollment check response:', response)
+    
+    if (response.isEnrolled) {
+      isAlreadyEnrolled.value = true
+      console.log('User already enrolled, redirecting...')
+      // Redirect to course page if already enrolled - use window.location.replace for clean navigation
+      window.location.replace(`/courses/${courseId.value}`)
+      return
+    }
+  } catch (error) {
+    console.error(' Error checking enrollment status:', error)
+  } finally {
+    checkingEnrollment.value = false
+    console.log(' Enrollment check finished, checkingEnrollment:', checkingEnrollment.value)
+  }
+}
+
 // Stripe instance
 let stripeInstance: any = null
+
+// Function to initialize Stripe Elements
+const initializeStripe = async () => {
+  try {
+    console.log('🔄 Initializing Stripe...')
+    
+    // Load Stripe if not already loaded
+    if (!stripeInstance) {
+      stripeInstance = await loadStripe(config.public.stripePublishableKey)
+      console.log('✅ Stripe instance loaded:', !!stripeInstance)
+    }
+    
+    if (!stripeInstance) {
+      console.error('❌ Failed to load Stripe instance')
+      return
+    }
+    
+    // Wait for DOM to be ready
+    await nextTick()
+    
+    // Check if element exists before mounting
+    const stripeElementContainer = document.getElementById('stripe-card-element')
+    console.log('🎯 Stripe card element container found:', !!stripeElementContainer)
+    
+    if (stripeElementContainer) {
+      // Clear any existing content
+      stripeElementContainer.innerHTML = ''
+      
+      // Create new elements
+      elements = stripeInstance.elements()
+      cardElement = elements.create('card', {
+        style: {
+          base: {
+            fontSize: '16px',
+            color: '#424770',
+            '::placeholder': {
+              color: '#aab7c4',
+            },
+          },
+        },
+      })
+      
+      cardElement.mount('#stripe-card-element')
+      console.log('🎉 Stripe card element mounted successfully!')
+      
+      cardElement.on('change', (event: any) => {
+        const errorDiv = document.getElementById('stripe-card-errors')
+        if (errorDiv) {
+          if (event.error) {
+            errorDiv.textContent = event.error.message
+          } else {
+            errorDiv.textContent = ''
+          }
+        }
+      })
+    } else {
+      console.log('❌ Stripe card element not found in DOM - retrying in 500ms')
+      // Retry after a short delay
+      setTimeout(() => {
+        initializeStripe()
+      }, 500)
+    }
+  } catch (error) {
+    console.error('❌ Error initializing Stripe:', error)
+  }
+}
 
 
 
 
 watch(selectedCardType, async (val, oldVal) => {
+  console.log('Card type changed from', oldVal, 'to', val)
+  
   if (val === 'PAYPAL') {
       // Unmount Stripe
       if (cardElement && cardElement.unmount) {
@@ -291,26 +407,10 @@ watch(selectedCardType, async (val, oldVal) => {
       }
       await nextTick()
       loadPayPal()
-  } else if (!STRIPE_TEST_MODE && (val === 'VISA' || val === 'MASTERCARD')) {
-    // Đợi DOM render xong
-    await nextTick()
-    if (!stripeInstance) {
-      stripeInstance = await loadStripe(config.public.stripePublishableKey)
-    }
-    if (stripeInstance) {
-      elements = stripeInstance.elements()
-      cardElement = elements.create('card')
-      cardElement.mount('#stripe-card-element')
-      cardElement.on('change', (event: any) => {
-        const errorDiv = document.getElementById('stripe-card-errors')
-        if (event.error) {
-          errorDiv.textContent = event.error.message
-        } else {
-          errorDiv.textContent = ''
-        }
-      })
-    }
-    console.log('Stripe initialized:', stripeInstance ? 'success' : 'failed')
+  } else if (val === 'VISA' || val === 'MASTERCARD') {
+    // Initialize Stripe for card payments
+    console.log('Switching to Stripe for card type:', val)
+    await initializeStripe()
   } else if ((oldVal === 'VISA' || oldVal === 'MASTERCARD') && val !== 'PAYPAL') {
     // Unmount Stripe Elements khi chuyển sang loại khác
     if (cardElement && cardElement.unmount) {
@@ -373,7 +473,7 @@ const renderPayPalButtons = () => {
                         paymentData.membership_plan = 'PREMIUM'
                     }
 
-                    const response: any = await $fetch('http://localhost:8000/api/payments/create', {
+                    const response: any = await $fetch(`${config.public.backendUrl}/api/payments/create`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${token}`,
@@ -403,7 +503,7 @@ const renderPayPalButtons = () => {
                        // Should be set by createOrder
                      }
 
-                     const response: any = await $fetch(`http://localhost:8000/api/payments/${currentPaymentId.value}/paypal/capture`, {
+                     const response: any = await $fetch(`${config.public.backendUrl}/api/payments/${currentPaymentId.value}/paypal/capture`, {
                          method: 'POST',
                          headers: {
                              'Authorization': `Bearer ${token}`,
@@ -415,14 +515,14 @@ const renderPayPalButtons = () => {
                      })
 
                      if (response.success) {
+                         // Store payment success in localStorage
+                         localStorage.setItem('payment_success', 'true')
+                         localStorage.setItem('payment_type', paymentType.value)
+                         
                          alert('Payment successful!');
-                         if (paymentType.value === 'COURSE' && courseId.value) {
-                             router.push(`/courses/${courseId.value}`)
-                         } else if (paymentType.value === 'MEMBERSHIP') {
-                             router.push('/membership')
-                         } else {
-                             router.push('/')
-                         }
+                         
+                         // Navigate back to the previous page (course or membership page)
+                         window.history.back()
                      } else {
                          alert('Payment capture failed: ' + response.message);
                      }
@@ -458,7 +558,7 @@ const loadCourseData = async () => {
   if (paymentType.value === 'COURSE' && courseId.value) {
     try {
       console.log('Loading course:', courseId.value)
-      const response = await $fetch(`http://localhost:8000/api/courses/${courseId.value}`)
+      const response = await $fetch(`${config.public.backendUrl}/api/courses/${courseId.value}`)
       console.log('Course response:', response)
       courseData.value = response.course // API returns { course: {...}, rating_counts: {...} }
       totalAmount.value = parseFloat(response.course.price) || 0
@@ -526,7 +626,7 @@ const handlePayment = async () => {
       
       console.log('Sending payment request with token:', token)
       
-      const response = await $fetch('http://localhost:8000/api/payments/create', {
+      const response = await $fetch(`${config.public.backendUrl}/api/payments/create`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -547,15 +647,16 @@ const handlePayment = async () => {
         }
       })
       console.log('Payment created:', response.payment)
+      
+      // Store payment success in localStorage
+      localStorage.setItem('payment_success', 'true')
+      localStorage.setItem('payment_type', paymentType.value)
+      
       alert('Payment thành công!')
-      // Redirect hoặc xử lý tiếp
-      if (paymentType.value === 'COURSE' && courseId.value) {
-        router.push(`/courses/${courseId.value}`)
-      } else if (paymentType.value === 'MEMBERSHIP') {
-        router.push('/membership')
-      } else {
-        router.push('/')
-      }
+      
+      // Navigate back to the previous page (course or membership page)
+      // This is cleaner than replacing with a new URL
+      window.history.back()
     }
   } catch (error) {
     console.error('Payment failed:', error)
@@ -579,7 +680,7 @@ const handleStripePayment = async (paymentId: string) => {
       await new Promise(resolve => setTimeout(resolve, 1500))
       
       // Mark as completed with test transaction ID
-      const response = await $fetch(`http://localhost:8000/api/payments/${paymentId}/stripe/complete`, {
+      const response = await $fetch(`${config.public.backendUrl}/api/payments/${paymentId}/stripe/complete`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -591,16 +692,15 @@ const handleStripePayment = async (paymentId: string) => {
       })
 
       console.log('Stripe payment completed (TEST):', response)
+      
+      // Store payment success in localStorage
+      localStorage.setItem('payment_success', 'true')
+      localStorage.setItem('payment_type', paymentType.value)
+      
       alert('Payment successful! You can now access the course content.')
       
-      // Redirect
-      if (paymentType.value === 'COURSE' && courseId.value) {
-        router.push(`/courses/${courseId.value}?payment_success=true`)
-      } else if (paymentType.value === 'MEMBERSHIP') {
-        router.push('/membership?payment_success=true')
-      } else {
-        router.push('/')
-      }
+      // Navigate back to the previous page (course or membership page)
+      window.history.back()
   } else {
     // PRODUCTION MODE: Gửi dữ liệu thẻ lên backend để xử lý với Stripe PHP SDK
     try {
@@ -619,7 +719,7 @@ const handleStripePayment = async (paymentId: string) => {
       }
       const tokenCookie = useCookie('auth_token')
       const token = tokenCookie.value
-      const response = await $fetch('http://localhost:8000/api/payments/create', {
+      const response = await $fetch(`${config.public.backendUrl}/api/payments/create`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -654,7 +754,7 @@ const completeStripePayment = async (paymentId: string, paymentIntentId: string)
     const tokenCookie = useCookie('auth_token')
     const token = tokenCookie.value
     
-    const response = await $fetch(`http://localhost:8000/api/payments/${paymentId}/stripe/complete`, {
+    const response = await $fetch(`${config.public.backendUrl}/api/payments/${paymentId}/stripe/complete`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -666,16 +766,15 @@ const completeStripePayment = async (paymentId: string, paymentIntentId: string)
     })
 
     console.log('Stripe payment completed:', response)
+    
+    // Store payment success in localStorage
+    localStorage.setItem('payment_success', 'true')
+    localStorage.setItem('payment_type', paymentType.value)
+    
     alert('Payment successful! You can now access the course content.')
     
-    // Redirect based on payment type
-    if (paymentType.value === 'COURSE' && courseId.value) {
-      router.push(`/courses/${courseId.value}?payment_success=true`)
-    } else if (paymentType.value === 'MEMBERSHIP') {
-      router.push('/membership?payment_success=true')
-    } else {
-      router.push('/')
-    }
+    // Navigate back to the previous page (course or membership page)
+    window.history.back()
   } catch (error) {
     console.error('Failed to complete Stripe payment:', error)
     alert('Failed to complete payment')
