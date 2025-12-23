@@ -301,8 +301,11 @@
                   <span class="text-2xl text-gray-400 line-through mr-2">${{ course.price }}</span>
                   <span class="text-4xl font-bold text-teal-600">${{ Math.round(course.price * (1 - course.discount / 100)) }}</span>
                 </template>
-                <template v-else>
+                <template v-else-if="course.price && Number(course.price) > 0">
                   <span class="text-4xl font-bold text-teal-600">${{ course.price }}</span>
+                </template>
+                <template v-else>
+                  <span class="text-4xl font-bold text-teal-600">Free</span>
                 </template>
               </div>
 
@@ -694,8 +697,10 @@ const handleEnroll = async () => {
       return
     }
     
-    // If course is free (price = 0), use regular enroll
-    if (course.value.price === 0 || !course.value.price) {
+    // If course is free (price = 0 or null or undefined), use regular enroll
+    // Convert to number to handle string "0" cases, and check <= 0 to catch negative values too
+    const coursePrice = Number(course.value.price)
+    if (!course.value.price || coursePrice === 0 || isNaN(coursePrice)) {
       console.log('Enrolling in free course...')
       const response = await enrollInCourse(courseId)
 
