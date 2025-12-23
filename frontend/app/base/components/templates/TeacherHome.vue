@@ -328,8 +328,19 @@
 import { useUserStats } from '../../composables/useUserStats'
 import { useTeacherStats, type TeacherCourse, type PendingSubmission, type PendingCertificate, type TeacherStatistics } from '../../composables/useTeacherStats'
 
+import { useAuth } from '~/domains/auth/composables/useAuth'
+
 const router = useRouter()
-const { currentUser } = useUserStats()
+const auth = useAuth()
+const { currentUser, setCurrentUser } = useUserStats()
+
+// Sync auth user to userStats whenever it changes
+watch(() => auth.user?.value, (newUser) => {
+  if (newUser) {
+    setCurrentUser(newUser)
+  }
+}, { immediate: true })
+
 const { 
   getTeacherCourses, 
   getTeacherStatistics, 
@@ -364,7 +375,9 @@ const loading = ref(true)
 // Computed properties
 const displayName = computed(() => {
   const user = currentUser.value
-  return user ? user.first_name : 'Instructor'
+  if (!user) return 'Instructor'
+  if (user.first_name || user.last_name) return `${user.first_name || ''} ${user.last_name || ''}`.trim()
+  return user.first_name || 'Instructor'
 })
 
 const topCourse = computed(() => {

@@ -285,8 +285,16 @@ import { useUserStats } from '../../composables/useUserStats'
 import { useAdminStats, type DashboardStats, type TeacherApplication, type CertificatesOverview, type RecentCertificate, type SystemLogEntry } from '../../composables/useAdminStats'
 import CertificateModal from '../../components/ui/CertificateModal.vue'
 import TeacherApplicationModal from '../../components/ui/TeacherApplicationModal.vue'
+import { useAuth } from '~/domains/auth/composables/useAuth'
 
-const { currentUser } = useUserStats()
+const auth = useAuth()
+// Sync auth user to userStats whenever it changes
+const { currentUser, setCurrentUser } = useUserStats()
+watch(() => auth.user?.value, (newUser) => {
+  if (newUser) {
+    setCurrentUser(newUser)
+  }
+}, { immediate: true })
 const { 
   getDashboardStats, 
   getTeacherApplications,
@@ -302,6 +310,7 @@ const {
 const displayName = computed(() => {
   const user = currentUser.value
   if (!user) return 'Admin'
+  if (user.first_name || user.last_name) return `${user.first_name || ''} ${user.last_name || ''}`.trim()
   return user.first_name || user.username || 'Admin'
 })
 
