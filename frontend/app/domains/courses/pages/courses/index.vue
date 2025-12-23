@@ -351,14 +351,20 @@ const mapCourseForCard = (course: Course) => {
   if (course.thumbnail) {
     thumbnailUrl = `${course.thumbnail}`
   }
+  // Discount > 100 là Free, xử lý như khoá học giá 0 đồng
+  let price = course.price;
+  let discount = course.discount;
+  if (Number(discount) >= 100) {
+    price = 0;
+  }
   return {
     thumbnail: thumbnailUrl,
     duration: typeof course.duration === 'number' ? `${course.duration}h` : (course.duration || '2h 30m'),
     name: course.title,
     description: course.description,
     author: `${course.teacher?.first_name || ''} ${course.teacher?.last_name || ''}`.trim() || 'Unknown Author',
-    price: course.price,
-    discount: course.discount // truyền discount sang CourseCard
+    price,
+    discount
   }
 }
 

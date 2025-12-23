@@ -30,7 +30,10 @@
         </span>
         
         <span class="text-lg font-bold text-brand-primary">
-          <template v-if="hasValidDiscount">
+          <template v-if="Number(course.price) === 0">
+            <span class="text-600 font-semibold">Free</span>
+          </template>
+          <template v-else-if="hasValidDiscount">
             <span class="line-through text-gray-400 mr-2 text-sm">
               ${{ formatPrice(course.price) }}
             </span>
@@ -38,7 +41,6 @@
               ${{ formatPrice(discountedPrice) }}
             </span>
           </template>
-          
           <template v-else>
             {{ course.price ? `$${formatPrice(course.price)}` : 'Free' }}
           </template>

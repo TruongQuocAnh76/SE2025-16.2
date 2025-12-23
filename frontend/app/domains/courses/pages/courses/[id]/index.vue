@@ -301,6 +301,12 @@
                   <span class="text-2xl text-gray-400 line-through mr-2">${{ course.price }}</span>
                   <span class="text-4xl font-bold text-teal-600">${{ Math.round(course.price * (1 - course.discount / 100)) }}</span>
                 </template>
+                <template v-else-if="course.discount && course.discount >= 100">
+                  <span class="text-4xl font-bold text-green-600">Free</span>
+                </template>
+                <template v-else-if="course.price === 0">
+                  <span class="text-4xl font-bold text-green-600">Free</span>
+                </template>
                 <template v-else>
                   <span class="text-4xl font-bold text-teal-600">${{ course.price }}</span>
                 </template>

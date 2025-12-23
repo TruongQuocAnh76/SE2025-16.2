@@ -589,10 +589,15 @@ const loadCourseData = async () => {
       originalPrice.value = price
       discountPercent.value = discount
 
-      // 2. Tính toán Total Amount (Số tiền thực phải trả)
-      if (discount > 0 && discount < 100) {
+      // 2. Xử lý các trường hợp đặc biệt cho discount
+      if (discount === 100) {
+        // 100% giảm giá: miễn phí
+        totalAmount.value = 0
+      } else if (discount === 200) {
+        // 200: tặng khoá học (giá 0, hiển thị đặc biệt)
+        totalAmount.value = 0
+      } else if (discount > 0 && discount < 100) {
         // Công thức: Giá gốc * (1 - %giảm/100)
-        // Dùng Math.round để làm tròn số nguyên như bạn muốn
         totalAmount.value = Math.round(price * (1 - discount / 100))
       } else {
         totalAmount.value = price
