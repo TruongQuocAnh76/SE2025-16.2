@@ -26,6 +26,7 @@ export interface Course {
   rating_counts?: { [key: number]: number };
   average_rating?: number
   review_count?: number
+  discount?: number // phần trăm giảm giá (0-100)
 }
 
 export interface Module {

@@ -77,6 +77,11 @@ class CourseController extends Controller
         if ($request->has('keyword')) $filters['keyword'] = $request->keyword;
 
         $courses = $this->courseService->getAllCourses($filters);
+        // Thêm trường discounted_price vào từng khoá học
+        $courses->getCollection()->transform(function ($course) {
+            $course->discounted_price = $course->getDiscountedPrice();
+            return $course;
+        });
         return response()->json($courses);
     }
 
@@ -180,7 +185,10 @@ class CourseController extends Controller
             $data['teacher_id'] = Auth::id();
 
             $result = $this->courseService->createCourseWithModules($data);
-
+            // Thêm discounted_price và discount vào response
+            $result['course']->discounted_price = $result['course']->getDiscountedPrice();
+            // Đảm bảo discount luôn có trong response
+            $result['course']->discount = $result['course']->discount ?? 0;
             return response()->json([
                 'message' => 'Course created successfully',
                 'course' => $result['course'],
@@ -397,6 +405,8 @@ class CourseController extends Controller
 
         $course = $this->courseService->updateCourse($id, $validator->validated());
 
+        // Thêm discounted_price vào response update
+        $course->discounted_price = $course->getDiscountedPrice();
         return response()->json(['message' => 'Course updated successfully', 'course' => $course]);
     }
 

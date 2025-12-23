@@ -200,17 +200,32 @@
 
               <!-- Price Breakdown -->
               <div class="mt-6 pt-6 border-t border-slate-200 space-y-3">
+                
                 <div class="flex justify-between text-slate-600">
                   <span>Subtotal</span>
-                  <span>${{ totalAmount }}</span>
+                  <div class="text-right">
+                    <template v-if="paymentType === 'COURSE' && discountPercent > 0">
+                      <span class="block text-xs line-through text-gray-400">
+                          ${{ originalPrice }}
+                      </span>
+                    </template>
+                    <span>${{ totalAmount }}</span>
+                  </div>
                 </div>
+
                 <div class="flex justify-between text-slate-600">
                   <span>Tax</span>
                   <span>$0.00</span>
                 </div>
-                <div class="flex justify-between text-xl font-bold text-slate-900 pt-3 border-t border-slate-200">
-                  <span>Total</span>
-                  <span>${{ totalAmount }}</span>
+
+                <div class="flex justify-between items-end pt-3 border-t border-slate-200">
+                  <span class="text-xl font-bold text-slate-900">Total</span>
+                  <div class="flex flex-col items-end">
+                      <span v-if="paymentType === 'COURSE' && discountPercent > 0" class="text-xs text-green-600 font-medium mb-1">
+                        (Discount {{ discountPercent }}%)
+                      </span>
+                      <span class="text-xl font-bold text-slate-900">${{ totalAmount }}</span>
+                  </div>
                 </div>
               </div>
 
@@ -554,20 +569,46 @@ const saveInfo = ref(false)
 const courseData = ref(null)
 const totalAmount = ref(0)
 
+const originalPrice = ref(0)
+const discountPercent = ref(0)
+
 const loadCourseData = async () => {
   if (paymentType.value === 'COURSE' && courseId.value) {
     try {
       console.log('Loading course:', courseId.value)
-      const response = await $fetch(`${config.public.backendUrl}/api/courses/${courseId.value}`)
+      const response: any = await $fetch(`${config.public.backendUrl}/api/courses/${courseId.value}`)
       console.log('Course response:', response)
-      courseData.value = response.course // API returns { course: {...}, rating_counts: {...} }
-      totalAmount.value = parseFloat(response.course.price) || 0
-      console.log('Total amount:', totalAmount.value)
+      
+      courseData.value = response.course
+      
+      // 1. Lấy giá gốc và phần trăm giảm giá
+      const price = parseFloat(response.course.price) || 0
+      const discount = parseFloat(response.course.discount) || 0
+      
+      // Lưu lại giá gốc và % để hiển thị ở template
+      originalPrice.value = price
+      discountPercent.value = discount
+
+      // 2. Tính toán Total Amount (Số tiền thực phải trả)
+      if (discount > 0 && discount < 100) {
+        // Công thức: Giá gốc * (1 - %giảm/100)
+        // Dùng Math.round để làm tròn số nguyên như bạn muốn
+        totalAmount.value = Math.round(price * (1 - discount / 100))
+      } else {
+        totalAmount.value = price
+      }
+
+      console.log('Original Price:', originalPrice.value)
+      console.log('Discount:', discount)
+      console.log('Total amount to pay:', totalAmount.value)
+
     } catch (error) {
       console.error('Failed to load course:', error)
     }
   } else if (paymentType.value === 'MEMBERSHIP') {
     totalAmount.value = 24.00 // Premium membership price
+    originalPrice.value = 24.00
+    discountPercent.value = 0
   }
 }
 

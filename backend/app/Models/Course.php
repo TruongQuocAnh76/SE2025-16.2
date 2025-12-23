@@ -7,6 +7,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Course extends Model
 {
+    /**
+     * Tính giá sau giảm giá dựa trên phần trăm discount (0-100)
+     * Nếu discount null hoặc <=0 thì trả về giá gốc
+     */
+    public function getDiscountedPrice()
+    {
+        if (isset($this->discount) && $this->discount > 0 && $this->discount < 100) {
+            return round($this->price * (1 - $this->discount / 100), 2);
+        }
+        return $this->price;
+    }
     use HasFactory;
 
     protected $fillable = [

@@ -62,7 +62,8 @@ class PaymentController extends Controller
         // Calculate amount
         if ($request->payment_type === 'COURSE') {
             $course = Course::findOrFail($request->course_id);
-            $amount = $course->price ?? 0;
+            // Sử dụng giá sau giảm giá nếu có discount
+            $amount = $course->getDiscountedPrice() ?? 0;
             if ($amount == 0) {
                 return response()->json([
                     'message' => 'This course is free'
