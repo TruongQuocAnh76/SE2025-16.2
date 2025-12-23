@@ -15,8 +15,8 @@ export default defineNuxtConfig({
       backendUrl: process.env.BACKEND_URL || process.env.APP_URL,
       awsEndpoint: process.env.STORAGE_ENDPOINT,
       awsBucket: process.env.STORAGE_BUCKET,
-      stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
-      paypalClientId: process.env.PAYPAL_CLIENT_ID
+      stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
+      paypalClientId: process.env.PAYPAL_CLIENT_ID || ''
     }
   },
 
