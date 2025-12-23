@@ -230,10 +230,13 @@
                   <div v-for="quiz in course.quizzes" :key="quiz.id"
                     class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div class="flex justify-between items-start mb-2">
-                      <NuxtLink :to="`/courses/${course.id}/quizzes/${quiz.id}`"
-                        class="flex-1 text-lg font-medium text-brand-primary hover:text-brand-secondary">
+                      <button
+                        @click="handleQuizClick(quiz.id)"
+                        class="flex-1 text-left text-lg font-medium text-brand-primary hover:text-brand-secondary cursor-pointer"
+                        :class="{ 'cursor-not-allowed opacity-50': !isEnrolled }"
+                      >
                         {{ quiz.title }}
-                      </NuxtLink>
+                      </button>
                       <span class="ml-4 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
                         Quiz
                       </span>
