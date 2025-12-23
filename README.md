@@ -1,5 +1,5 @@
 # **Certchain \- nền tảng học tập trực tuyến**
-Link demo: https://certchain-se2025.duckdns.org
+Link demo: http://34.172.129.94/
 # Mục tiêu và Phạm vi dự án
 
 ## Goal
