@@ -1,52 +1,104 @@
-name: CD Pipeline
+name: Deploy to Production
 
 on:
-  workflow_run:
-    workflows: ["CI Pipeline"]
-    types: [completed]
-    branches: [main]
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Cho phép manual deploy
 
 permissions:
   contents: read
-  packages: read
 
 jobs:
   deploy:
+    name: Deploy to Server
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Copy deployment files to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          source: |
-            docker-compose.prod.yml
-            init-minio.sh
-            backend/nginx.conf
-            deploy.sh
-          target: /home/${{ secrets.VM_USER }}/app
-          overwrite: true
-
-      - name: Deploy to VM
+      - name: Deploy to production server
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
-          envs: VM_USER,GITHUB_TOKEN,GITHUB_ACTOR,ENV_FILE
           script: |
-            export VM_USER="${{ secrets.VM_USER }}"
-            export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
-            export GITHUB_ACTOR="${{ github.actor }}"
-            export ENV_FILE="${{ secrets.ENV_FILE }}"
+            set -e
+            
+            echo "🚀 Starting deployment..."
+            
+            # Navigate to project directory
+            cd ~/certchain
+            
+            # Pull latest code
+            echo "📥 Pulling latest code from main branch..."
+            git fetch origin
+            git reset --hard origin/main
+            
+            # Stop containers
+            echo "🛑 Stopping containers..."
+            sudo docker-compose -f docker-compose.prod.yml down
+            
+            # Start containers
+            echo "🐳 Starting containers..."
+            sudo docker-compose -f docker-compose.prod.yml up -d --build
+            
+            # Wait for services to be ready
+            echo "⏳ Waiting for services to start..."
+            sleep 20
+            
+            # Run migrations
+            echo "📊 Running database migrations..."
+            sudo docker-compose -f docker-compose.prod.yml exec -T backend php artisan migrate --force
+            
+            # Clear and cache configs
+            echo "🔄 Clearing and caching configs..."
+            sudo docker-compose -f docker-compose.prod.yml exec -T backend php artisan config:clear
+            sudo docker-compose -f docker-compose.prod.yml exec -T backend php artisan cache:clear
+            sudo docker-compose -f docker-compose.prod.yml exec -T backend php artisan config:cache
+            
+            # Show container status
+            echo "✅ Deployment completed! Container status:"
+            sudo docker-compose -f docker-compose.prod.yml ps
+            
+            echo "🎉 Deployment successful!"
 
-            cd /home/${{ secrets.VM_USER }}/app
-            chmod +x ./deploy.sh
+      - name: Verify deployment
+        run: |
+          echo "🔍 Verifying deployment..."
+          
+          # Check frontend
+          if curl -f -s -o /dev/null -w "%{http_code}" http://${{ secrets.SERVER_IP }} | grep -q "200"; then
+            echo "✅ Frontend is responding"
+          else
+            echo "❌ Frontend check failed"
+            exit 1
+          fi
+          
+          # Check API
+          if curl -f -s -o /dev/null -w "%{http_code}" http://${{ secrets.SERVER_IP }}/api | grep -q "200"; then
+            echo "✅ Backend API is responding"
+          else
+            echo "❌ Backend API check failed"
+            exit 1
+          fi
+          
+          # Check health endpoint
+          if curl -f -s http://${{ secrets.SERVER_IP }}/health | grep -q "OK"; then
+            echo "✅ Health check passed"
+          else
+            echo "❌ Health check failed"
+            exit 1
+          fi
+          
+          echo "🎊 All checks passed!"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed! Please check the logs."
             ./deploy.sh
 
