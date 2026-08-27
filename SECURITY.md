@@ -13,8 +13,9 @@ The table below describes which release lines receive security updates.
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+Please report vulnerabilities privately through GitHub Security Advisories:
+https://github.com/TruongQuocAnh76/SE2025-16.2/security/advisories/new
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+After you submit a report, we will acknowledge receipt within 3 business days.
+We will share status updates during triage and notify you when the report is
+accepted, declined, or fixed.
